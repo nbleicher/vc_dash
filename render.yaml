@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: vc-dash-api
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm run server:start
+    autoDeploy: true
+    envVars:
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: API_PORT
+        value: 10000
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false

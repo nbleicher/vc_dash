@@ -1,0 +1,5 @@
+export { DashboardPage } from './DashboardPage'
+export { MetricsPage } from './MetricsPage'
+export { SettingsPage } from './SettingsPage'
+export { TasksPage } from './TasksPage'
+export { VaultPage } from './VaultPage'

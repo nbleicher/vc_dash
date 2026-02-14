@@ -1,0 +1,79 @@
+import { useEffect, useState } from 'react'
+import type {
+  Agent,
+  AttendanceRecord,
+  AuditRecord,
+  PerfHistory,
+  QaRecord,
+  Snapshot,
+  VaultDoc,
+  VaultMeeting,
+  WeeklyTarget,
+} from '../types'
+import type { DataStore } from './store.types'
+
+function useStoredState<T>(key: string, initial: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+  const [value, setValue] = useState<T>(() => {
+    const raw = localStorage.getItem(key)
+    if (!raw) return initial
+    try {
+      return JSON.parse(raw) as T
+    } catch {
+      return initial
+    }
+  })
+
+  useEffect(() => {
+    localStorage.setItem(key, JSON.stringify(value))
+  }, [key, value])
+
+  return [value, setValue]
+}
+
+export function useDataStore(): DataStore {
+  const [loggedIn, setLoggedIn] = useStoredState<boolean>('vc_logged_in', false)
+  const [agents, setAgents] = useStoredState<Agent[]>('vc_agents', [])
+  const [snapshots, setSnapshots] = useStoredState<Snapshot[]>('vc_snapshots', [])
+  const [perfHistory, setPerfHistory] = useStoredState<PerfHistory[]>('vc_perf_history', [])
+  const [qaRecords, setQaRecords] = useStoredState<QaRecord[]>('vc_qa_records', [])
+  const [auditRecords, setAuditRecords] = useStoredState<AuditRecord[]>('vc_audit_records', [])
+  const [attendance, setAttendance] = useStoredState<AttendanceRecord[]>('vc_attendance', [])
+  const [weeklyTargets, setWeeklyTargets] = useStoredState<WeeklyTarget[]>('vc_weekly_targets', [])
+  const [vaultMeetings, setVaultMeetings] = useStoredState<VaultMeeting[]>('vc_vault_meetings', [])
+  const [vaultDocs, setVaultDocs] = useStoredState<VaultDoc[]>('vc_vault_docs', [])
+
+  return {
+    loggedIn,
+    setLoggedIn,
+    login: async (username: string, password: string) => {
+      if (username === 'admin' && password === 'admin') {
+        setLoggedIn(true)
+        return
+      }
+      throw new Error('Invalid credentials.')
+    },
+    logout: async () => setLoggedIn(false),
+    reload: async () => undefined,
+    isLoading: false,
+    error: null,
+    clearError: () => undefined,
+    agents,
+    setAgents,
+    snapshots,
+    setSnapshots,
+    perfHistory,
+    setPerfHistory,
+    qaRecords,
+    setQaRecords,
+    auditRecords,
+    setAuditRecords,
+    attendance,
+    setAttendance,
+    weeklyTargets,
+    setWeeklyTargets,
+    vaultMeetings,
+    setVaultMeetings,
+    vaultDocs,
+    setVaultDocs,
+  }
+}

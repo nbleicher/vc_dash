@@ -1,0 +1,2 @@
+-- Initial schema lives in server/src/db/schema.ts for runtime portability.
+-- This SQL file documents the baseline migration identifier.

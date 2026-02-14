@@ -1,0 +1,437 @@
+import { useEffect, useMemo, useState } from 'react'
+import type { DataStore } from '../data'
+import { SLOT_CONFIG } from '../constants'
+import type {
+  HistorySort,
+  MetricsScope,
+  PerfHistory,
+  RankMetric,
+  RankPeriod,
+  Snapshot,
+  TaskPage,
+  VaultHistoryView,
+  VaultScope,
+} from '../types'
+import { computeMetrics, estDateKey, estParts, formatTimestamp, monFriDatesForWeek, uid, weekKeyMonFri } from '../utils'
+
+type SlotConfig = (typeof SLOT_CONFIG)[number]
+
+export function useAppData(store: DataStore) {
+  const { agents, snapshots, perfHistory, qaRecords, auditRecords, attendance, weeklyTargets, setPerfHistory, setSnapshots } = store
+
+  const [now, setNow] = useState<Date>(new Date())
+  const [taskPage, setTaskPage] = useState<TaskPage>('attendance')
+  const [metricsScope, setMetricsScope] = useState<MetricsScope>('house')
+  const [metricsAgentId, setMetricsAgentId] = useState('')
+  const [vaultAgentId, setVaultAgentId] = useState('')
+  const [vaultHistoryView, setVaultHistoryView] = useState<VaultHistoryView>('attendance')
+  const [vaultScope, setVaultScope] = useState<VaultScope>('agent')
+  const [historySort, setHistorySort] = useState<HistorySort>('newest')
+  const [rankMetric, setRankMetric] = useState<RankMetric>('Sales')
+  const [rankPeriod, setRankPeriod] = useState<RankPeriod>('day')
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 30_000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  const activeAgents = useMemo(() => agents.filter((a) => a.active), [agents])
+  const todayKey = useMemo(() => estDateKey(now), [now])
+  const currentWeekKey = useMemo(() => weekKeyMonFri(now), [now])
+  const weekDates = useMemo(() => monFriDatesForWeek(currentWeekKey), [currentWeekKey])
+  const est = estParts(now)
+
+  const todaysSnapshots = useMemo(() => snapshots.filter((s) => s.dateKey === todayKey), [snapshots, todayKey])
+  const lastSnapshotLabel = useMemo(() => {
+    if (todaysSnapshots.length === 0) return 'N/A'
+    const sorted = [...todaysSnapshots].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    return `${sorted[0].slotLabel} (${formatTimestamp(sorted[0].updatedAt)})`
+  }, [todaysSnapshots])
+
+  const liveByAgent = useMemo(() => {
+    const map = new Map<string, Snapshot>()
+    for (const agent of activeAgents) {
+      const items = todaysSnapshots
+        .filter((s) => s.agentId === agent.id)
+        .sort((a, b) => SLOT_CONFIG.findIndex((x) => x.key === b.slot) - SLOT_CONFIG.findIndex((x) => x.key === a.slot))
+      if (items.length > 0) map.set(agent.id, items[0])
+    }
+    return map
+  }, [activeAgents, todaysSnapshots])
+
+  const houseLive = useMemo(() => {
+    let totalCalls = 0
+    let totalSales = 0
+    for (const snap of liveByAgent.values()) {
+      totalCalls += snap.billableCalls
+      totalSales += snap.sales
+    }
+    const metrics = computeMetrics(totalCalls, totalSales)
+    return { totalCalls, totalSales, marketing: metrics.marketing, cpa: metrics.cpa, cvr: metrics.cvr }
+  }, [liveByAgent])
+
+  useEffect(() => {
+    const tryFreeze = (): void => {
+      const p = estParts(new Date())
+      if (p.hour < 18 || (p.hour === 18 && p.minute < 30)) return
+      const dateKey = estDateKey(new Date())
+      if (perfHistory.some((r) => r.dateKey === dateKey)) return
+      const frozenRows: PerfHistory[] = []
+      for (const agent of activeAgents) {
+        const exact5pm = snapshots.find((s) => s.dateKey === dateKey && s.slot === '17:00' && s.agentId === agent.id)
+        const latest = snapshots
+          .filter((s) => s.dateKey === dateKey && s.agentId === agent.id)
+          .sort((a, b) => SLOT_CONFIG.findIndex((x) => x.key === b.slot) - SLOT_CONFIG.findIndex((x) => x.key === a.slot))[0]
+        const source = exact5pm ?? latest
+        if (!source) continue
+        const m = computeMetrics(source.billableCalls, source.sales)
+        frozenRows.push({
+          id: uid('perf'),
+          dateKey,
+          agentId: agent.id,
+          billableCalls: source.billableCalls,
+          sales: source.sales,
+          marketing: m.marketing,
+          cpa: m.cpa,
+          cvr: m.cvr,
+          frozenAt: new Date().toISOString(),
+        })
+      }
+      if (frozenRows.length > 0) setPerfHistory((prev) => [...prev, ...frozenRows])
+    }
+    tryFreeze()
+    const id = window.setInterval(tryFreeze, 60_000)
+    return () => window.clearInterval(id)
+  }, [activeAgents, perfHistory, setPerfHistory, snapshots])
+
+  const actionQa = useMemo(() => qaRecords.filter((q) => q.status === 'Check Recording'), [qaRecords])
+  const actionAudit = useMemo(
+    () => auditRecords.filter((a) => a.currentStatus !== 'pending_cms' && !(a.mgmtNotified && a.outreachMade)),
+    [auditRecords],
+  )
+  const incompleteQaAgentsToday = useMemo(() => {
+    const completed = new Set(qaRecords.filter((r) => r.dateKey === todayKey).map((r) => r.agentId))
+    return activeAgents.filter((agent) => !completed.has(agent.id))
+  }, [activeAgents, qaRecords, todayKey])
+  const incompleteAuditAgentsToday = useMemo(() => {
+    const completed = new Set(auditRecords.filter((r) => r.discoveryTs.slice(0, 10) === todayKey).map((r) => r.agentId))
+    return activeAgents.filter((agent) => !completed.has(agent.id))
+  }, [activeAgents, auditRecords, todayKey])
+
+  const floorCapacity = useMemo(() => {
+    const entries = attendance.filter((a) => a.weekKey === currentWeekKey && activeAgents.some((x) => x.id === a.agentId))
+    return entries.reduce((acc, a) => acc + a.percent, 0) / 100
+  }, [attendance, currentWeekKey, activeAgents])
+  const weekTarget = useMemo(() => weeklyTargets.find((w) => w.weekKey === currentWeekKey) ?? null, [weeklyTargets, currentWeekKey])
+  const weekTrend = useMemo(() => {
+    const activeIds = new Set(activeAgents.map((a) => a.id))
+    let totalSales = 0
+    let totalMarketing = 0
+    for (const row of perfHistory) {
+      if (!weekDates.includes(row.dateKey) || row.dateKey === todayKey || !activeIds.has(row.agentId)) continue
+      totalSales += row.sales
+      totalMarketing += row.marketing
+    }
+    for (const [agentId, snap] of liveByAgent.entries()) {
+      if (!activeIds.has(agentId)) continue
+      totalSales += snap.sales
+      totalMarketing += snap.billableCalls * 15
+    }
+    const currentCpa = totalSales > 0 ? totalMarketing / totalSales : null
+    const salesProgress = weekTarget && weekTarget.targetSales > 0 ? Math.min((totalSales / weekTarget.targetSales) * 100, 100) : null
+    const cpaTarget = weekTarget?.targetCpa ?? null
+    const cpaDelta = currentCpa === null || cpaTarget === null ? null : currentCpa - cpaTarget
+    return { totalSales, currentCpa, salesProgress, cpaTarget, cpaDelta }
+  }, [activeAgents, liveByAgent, perfHistory, todayKey, weekDates, weekTarget])
+
+  const currentMinuteOfDay = est.hour * 60 + est.minute
+  const attendanceDoneToday = useMemo(
+    () =>
+      activeAgents.every((agent) =>
+        attendance.some((a) => a.agentId === agent.id && a.dateKey === todayKey && a.percent >= 0 && a.percent <= 100),
+      ),
+    [activeAgents, attendance, todayKey],
+  )
+  const attendanceAlert = currentMinuteOfDay >= 10 * 60 && activeAgents.length > 0 && !attendanceDoneToday
+  const overdueSlots = useMemo(
+    () =>
+      SLOT_CONFIG.filter((slot) => slot.minuteOfDay <= currentMinuteOfDay).filter((slot) =>
+        activeAgents.some((agent) => !todaysSnapshots.some((s) => s.agentId === agent.id && s.slot === slot.key)),
+      ),
+    [activeAgents, currentMinuteOfDay, todaysSnapshots],
+  )
+  const intraAlert = overdueSlots.length > 0 && activeAgents.length > 0
+
+  const effectiveMetricsAgentId = useMemo(
+    () => (activeAgents.some((a) => a.id === metricsAgentId) ? metricsAgentId : activeAgents[0]?.id ?? ''),
+    [activeAgents, metricsAgentId],
+  )
+  const selectedMetricAgent = useMemo(
+    () => (metricsScope === 'agent' ? agents.find((a) => a.id === effectiveMetricsAgentId) ?? null : null),
+    [agents, effectiveMetricsAgentId, metricsScope],
+  )
+  const metricsScopeData = useMemo(() => {
+    const inScope = (agentId: string): boolean =>
+      metricsScope === 'house' || (metricsScope === 'agent' && agentId === effectiveMetricsAgentId)
+    const dailyRows = perfHistory.filter((p) => p.dateKey === todayKey && inScope(p.agentId))
+    const weeklyRows = perfHistory.filter((p) => weekDates.includes(p.dateKey) && inScope(p.agentId))
+    const monthlyRows = perfHistory.filter((p) => p.dateKey.startsWith(todayKey.slice(0, 7)) && inScope(p.agentId))
+    if (metricsScope === 'house') {
+      for (const snap of liveByAgent.values()) {
+        dailyRows.push({
+          id: 'live',
+          dateKey: todayKey,
+          agentId: snap.agentId,
+          billableCalls: snap.billableCalls,
+          sales: snap.sales,
+          marketing: snap.billableCalls * 15,
+          cpa: null,
+          cvr: null,
+          frozenAt: '',
+        })
+      }
+    } else if (selectedMetricAgent) {
+      const snap = liveByAgent.get(selectedMetricAgent.id)
+      if (snap) {
+        dailyRows.push({
+          id: 'live',
+          dateKey: todayKey,
+          agentId: selectedMetricAgent.id,
+          billableCalls: snap.billableCalls,
+          sales: snap.sales,
+          marketing: snap.billableCalls * 15,
+          cpa: null,
+          cvr: null,
+          frozenAt: '',
+        })
+      }
+    }
+    const aggregate = (rows: PerfHistory[]) => {
+      const calls = rows.reduce((acc, r) => acc + r.billableCalls, 0)
+      const sales = rows.reduce((acc, r) => acc + r.sales, 0)
+      const m = computeMetrics(calls, sales)
+      return { calls, sales, marketing: m.marketing, cpa: m.cpa, cvr: m.cvr }
+    }
+    return { daily: aggregate(dailyRows), weekly: aggregate(weeklyRows), monthly: aggregate(monthlyRows) }
+  }, [metricsScope, effectiveMetricsAgentId, perfHistory, selectedMetricAgent, todayKey, weekDates, liveByAgent])
+
+  const rankRows = useMemo(() => {
+    const byAgent = new Map<string, { calls: number; sales: number; marketing: number }>()
+    let periodDates: Set<string> = new Set([todayKey])
+    if (rankPeriod === 'week') {
+      periodDates = new Set(monFriDatesForWeek(weekKeyMonFri(now)))
+    } else if (rankPeriod === 'month') {
+      const prefix = `${est.year}-${String(est.month).padStart(2, '0')}-`
+      periodDates = new Set(perfHistory.filter((x) => x.dateKey.startsWith(prefix)).map((x) => x.dateKey))
+      periodDates.add(todayKey)
+    }
+    for (const row of perfHistory.filter((x) => periodDates.has(x.dateKey))) {
+      const existing = byAgent.get(row.agentId) ?? { calls: 0, sales: 0, marketing: 0 }
+      existing.calls += row.billableCalls
+      existing.sales += row.sales
+      existing.marketing += row.marketing
+      byAgent.set(row.agentId, existing)
+    }
+    if (periodDates.has(todayKey)) {
+      for (const [agentId, snap] of liveByAgent.entries()) {
+        const existing = byAgent.get(agentId) ?? { calls: 0, sales: 0, marketing: 0 }
+        existing.calls += snap.billableCalls
+        existing.sales += snap.sales
+        existing.marketing += snap.billableCalls * 15
+        byAgent.set(agentId, existing)
+      }
+    }
+    const rows = activeAgents.map((agent) => {
+      const t = byAgent.get(agent.id) ?? { calls: 0, sales: 0, marketing: 0 }
+      return { agentName: agent.name, sales: t.sales, cpa: t.sales > 0 ? t.marketing / t.sales : null, cvr: t.calls > 0 ? t.sales / t.calls : null }
+    })
+    rows.sort((a, b) => {
+      if (rankMetric === 'Sales') return b.sales - a.sales
+      if (rankMetric === 'CVR') return (b.cvr ?? -1) - (a.cvr ?? -1)
+      return (a.cpa ?? Number.POSITIVE_INFINITY) - (b.cpa ?? Number.POSITIVE_INFINITY)
+    })
+    return rows
+  }, [activeAgents, est.month, est.year, liveByAgent, now, perfHistory, rankMetric, rankPeriod, todayKey])
+
+  const qaPassRate = useMemo(() => {
+    const rows = metricsScope === 'house' ? qaRecords : qaRecords.filter((r) => r.agentId === effectiveMetricsAgentId)
+    if (rows.length === 0) return null
+    return rows.filter((r) => r.decision === 'Good Sale').length / rows.length
+  }, [qaRecords, metricsScope, effectiveMetricsAgentId])
+  const auditRecoveryHours = useMemo(() => {
+    const rows =
+      metricsScope === 'house'
+        ? auditRecords.filter((r) => r.resolutionTs)
+        : auditRecords.filter((r) => r.agentId === effectiveMetricsAgentId && r.resolutionTs)
+    if (rows.length === 0) return null
+    const sum = rows.reduce(
+      (acc, row) =>
+        acc + Math.max(0, (new Date(row.resolutionTs!).getTime() - new Date(row.discoveryTs).getTime()) / 3_600_000),
+      0,
+    )
+    return sum / rows.length
+  }, [auditRecords, metricsScope, effectiveMetricsAgentId])
+  const activeAuditCount = useMemo(() => {
+    if (metricsScope === 'house') return actionAudit.length
+    return auditRecords.filter((r) => r.agentId === effectiveMetricsAgentId && !(r.mgmtNotified && r.outreachMade))
+      .length
+  }, [auditRecords, metricsScope, effectiveMetricsAgentId, actionAudit])
+
+  const effectiveVaultAgentId = useMemo(
+    () => (activeAgents.some((a) => a.id === vaultAgentId) ? vaultAgentId : activeAgents[0]?.id ?? ''),
+    [activeAgents, vaultAgentId],
+  )
+  const selectedVaultAgent = useMemo(
+    () => agents.find((a) => a.id === effectiveVaultAgentId) ?? null,
+    [agents, effectiveVaultAgentId],
+  )
+  const sortNewest = historySort === 'newest'
+
+  const vaultAttendanceHistory = useMemo(
+    () =>
+      attendance
+        .filter((a) => vaultScope === 'house' || (!!selectedVaultAgent && selectedVaultAgent.id === a.agentId))
+        .sort((a, b) => (sortNewest ? b.dateKey.localeCompare(a.dateKey) : a.dateKey.localeCompare(b.dateKey))),
+    [attendance, selectedVaultAgent, vaultScope, sortNewest],
+  )
+  const vaultQaHistory = useMemo(
+    () =>
+      qaRecords
+        .filter((q) => vaultScope === 'house' || (!!selectedVaultAgent && selectedVaultAgent.id === q.agentId))
+        .sort((a, b) => (sortNewest ? b.dateKey.localeCompare(a.dateKey) : a.dateKey.localeCompare(b.dateKey))),
+    [qaRecords, selectedVaultAgent, vaultScope, sortNewest],
+  )
+  const vaultAuditHistory = useMemo(
+    () =>
+      auditRecords
+        .filter((a) => vaultScope === 'house' || (!!selectedVaultAgent && selectedVaultAgent.id === a.agentId))
+        .sort((a, b) =>
+          sortNewest
+            ? new Date(b.discoveryTs).getTime() - new Date(a.discoveryTs).getTime()
+            : new Date(a.discoveryTs).getTime() - new Date(b.discoveryTs).getTime(),
+        ),
+    [auditRecords, selectedVaultAgent, vaultScope, sortNewest],
+  )
+  const weeklyTargetHistory = useMemo(
+    () =>
+      [...weeklyTargets]
+        .sort((a, b) => (sortNewest ? b.weekKey.localeCompare(a.weekKey) : a.weekKey.localeCompare(b.weekKey)))
+        .map((target) => {
+          const dates = monFriDatesForWeek(target.weekKey)
+          let actualSales = 0
+          let actualMarketing = 0
+          for (const row of perfHistory) {
+            if (!dates.includes(row.dateKey)) continue
+            actualSales += row.sales
+            actualMarketing += row.marketing
+          }
+          if (target.weekKey === currentWeekKey) {
+            for (const snap of liveByAgent.values()) {
+              actualSales += snap.sales
+              actualMarketing += snap.billableCalls * 15
+            }
+          }
+          const actualCpa = actualSales > 0 ? actualMarketing / actualSales : null
+          const salesDeltaPct =
+            target.targetSales > 0 ? ((actualSales - target.targetSales) / target.targetSales) * 100 : null
+          const cpaDeltaPct =
+            target.targetCpa > 0 && actualCpa !== null
+              ? ((actualCpa - target.targetCpa) / target.targetCpa) * 100
+              : null
+          return {
+            weekKey: target.weekKey,
+            targetSales: target.targetSales,
+            targetCpa: target.targetCpa,
+            actualSales,
+            actualCpa,
+            salesHit: actualSales >= target.targetSales,
+            cpaHit: actualCpa !== null ? actualCpa <= target.targetCpa : false,
+            salesDeltaPct,
+            cpaDeltaPct,
+            setAt: target.setAt,
+          }
+        }),
+    [weeklyTargets, perfHistory, currentWeekKey, liveByAgent, sortNewest],
+  )
+
+  const upsertSnapshot = (slot: SlotConfig, agentId: string, calls: number, sales: number): void => {
+    setSnapshots((prev) => {
+      const existing = prev.find((s) => s.dateKey === todayKey && s.slot === slot.key && s.agentId === agentId)
+      if (existing) {
+        return prev.map((s) =>
+          s.id === existing.id ? { ...s, billableCalls: calls, sales, updatedAt: new Date().toISOString() } : s,
+        )
+      }
+      return [
+        ...prev,
+        {
+          id: uid('snap'),
+          dateKey: todayKey,
+          slot: slot.key,
+          slotLabel: slot.label,
+          agentId,
+          billableCalls: calls,
+          sales,
+          updatedAt: new Date().toISOString(),
+        },
+      ]
+    })
+  }
+
+  return {
+    now,
+    est,
+    todayKey,
+    currentWeekKey,
+    weekDates,
+    activeAgents,
+    agents,
+    todaysSnapshots,
+    lastSnapshotLabel,
+    liveByAgent,
+    houseLive,
+    actionQa,
+    actionAudit,
+    incompleteQaAgentsToday,
+    incompleteAuditAgentsToday,
+    floorCapacity,
+    weekTarget,
+    weekTrend,
+    attendanceAlert,
+    intraAlert,
+    overdueSlots,
+    taskPage,
+    setTaskPage,
+    metricsScope,
+    setMetricsScope,
+    metricsAgentId,
+    setMetricsAgentId,
+    effectiveMetricsAgentId,
+    metricsScopeData,
+    rankRows,
+    rankMetric,
+    setRankMetric,
+    rankPeriod,
+    setRankPeriod,
+    qaPassRate,
+    auditRecoveryHours,
+    activeAuditCount,
+    vaultAgentId,
+    setVaultAgentId,
+    vaultHistoryView,
+    setVaultHistoryView,
+    vaultScope,
+    setVaultScope,
+    historySort,
+    setHistorySort,
+    effectiveVaultAgentId,
+    selectedVaultAgent,
+    vaultAttendanceHistory,
+    vaultQaHistory,
+    vaultAuditHistory,
+    weeklyTargetHistory,
+    snapshots,
+    store,
+    upsertSnapshot,
+  }
+}
