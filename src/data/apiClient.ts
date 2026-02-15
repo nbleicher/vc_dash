@@ -29,7 +29,7 @@ export class ApiClient {
   private readonly baseUrl: string
 
   constructor(baseUrl: string) {
-    this.baseUrl = baseUrl
+    this.baseUrl = baseUrl.replace(/\/+$/, '')
   }
 
   async login(username: string, password: string): Promise<void> {

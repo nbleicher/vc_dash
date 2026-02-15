@@ -18,7 +18,7 @@ export type AppConfig = {
   dbPath: string
   databaseUrl?: string
   jwtSecret: string
-  frontendOrigin: string
+  frontendOrigins: string[]
   adminUsername: string
   adminPassword: string
 }
@@ -31,6 +31,7 @@ declare module 'fastify' {
 }
 
 export async function buildApp(config: AppConfig) {
+  const normalizeOrigin = (value: string): string => value.trim().replace(/\/+$/, '')
   let store: StoreAdapter
   if (config.databaseUrl) {
     const postgresStore = new PostgresStore(config.databaseUrl)
@@ -41,7 +42,8 @@ export async function buildApp(config: AppConfig) {
     store = new SqliteStore(config.dbPath)
   }
 
-  const app = Fastify({ logger: true })
+  const allowedOrigins = new Set(config.frontendOrigins.map(normalizeOrigin).filter(Boolean))
+  const app = Fastify({ logger: true, trustProxy: true })
   app.decorate('store', store)
   app.decorate('authenticate', async function authenticate(request: FastifyRequest, reply: FastifyReply) {
     try {
@@ -57,8 +59,17 @@ export async function buildApp(config: AppConfig) {
   })
 
   await app.register(cors, {
-    origin: config.frontendOrigin,
+    origin(origin, callback) {
+      if (!origin) {
+        callback(null, true)
+        return
+      }
+      callback(null, allowedOrigins.has(normalizeOrigin(origin)))
+    },
     credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'OPTIONS'],
+    allowedHeaders: ['content-type', 'authorization'],
+    maxAge: 86400,
   })
   await app.register(cookie)
   await app.register(rateLimit, {
