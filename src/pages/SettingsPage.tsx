@@ -60,7 +60,7 @@ export function SettingsPage({
               {agents.map((a) => (
                 <tr key={a.id}>
                   <td>{a.name}</td>
-                  <td>{a.active ? <Badge variant="success">Active</Badge> : <Badge variant="warning">Deactivated</Badge>}</td>
+                  <td>{a.active ? <Badge variant="success">On Track</Badge> : <Badge variant="warning">Needs Review</Badge>}</td>
                   <td>{formatTimestamp(a.createdAt)}</td>
                   <td>
                     <Button

@@ -69,7 +69,7 @@ export function DashboardPage({
         <Card className="border-amber-200 bg-amber-50 text-amber-900">
           <div className="flex items-center justify-between gap-3">
             <strong>Attendance Alert</strong>
-            <Badge variant="warning">Needs Attention</Badge>
+            <Badge variant="warning">Needs Review</Badge>
           </div>
           <p>Attendance is incomplete for today after 10:00 AM EST.</p>
         </Card>
@@ -78,7 +78,7 @@ export function DashboardPage({
         <Card className="border-red-200 bg-red-50 text-red-900">
           <div className="flex items-center justify-between gap-3">
             <strong>Intra-Performance Alert</strong>
-            <Badge variant="danger">Overdue</Badge>
+            <Badge variant="danger">Critical</Badge>
           </div>
           <p>Intra-day performance is incomplete for: {overdueSlots.map((s) => s.label).join(', ')}.</p>
         </Card>
@@ -149,7 +149,10 @@ export function DashboardPage({
         <CardTitle>Action Center</CardTitle>
         <div className="grid gap-4 xl:grid-cols-2">
           <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <h3>Check Recordings</h3>
+            <div className="flex items-center justify-between gap-2">
+              <h3>Check Recordings</h3>
+              <Badge variant="warning">Needs Review</Badge>
+            </div>
             {actionQa.length === 0 && <p className="text-sm text-slate-500">N/A - no flagged QA items.</p>}
             {actionQa.map((q) => (
               <div key={q.id} className="alert-card">
@@ -164,7 +167,10 @@ export function DashboardPage({
             ))}
           </div>
           <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <h3>Action Needed (Audit)</h3>
+            <div className="flex items-center justify-between gap-2">
+              <h3>Action Needed (Audit)</h3>
+              <Badge variant="danger">Critical</Badge>
+            </div>
             {actionAudit.length === 0 && <p className="text-sm text-slate-500">N/A - no active Action Needed items.</p>}
             {actionAudit.map((a) => {
               const ageHrs = (now.getTime() - new Date(a.discoveryTs).getTime()) / 3_600_000
@@ -173,7 +179,7 @@ export function DashboardPage({
                   <p>
                     <strong>{agents.find((x) => x.id === a.agentId)?.name ?? 'Unknown Agent'}</strong> - {a.clientName}
                   </p>
-                  <p className="text-sm text-slate-500">
+                  <p className="status-text">
                     {a.carrier} | {a.currentStatus} | discovered {formatTimestamp(a.discoveryTs)}
                   </p>
                   <label className="flex items-center gap-2 text-sm text-slate-700">

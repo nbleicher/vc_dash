@@ -1,5 +1,5 @@
 import type { DataStore } from '../data'
-import { Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Textarea } from '../components'
+import { Badge, Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Textarea } from '../components'
 import type { VaultHistoryView, VaultScope, VaultMeeting } from '../types'
 import { formatNum, formatPctDelta, formatTimestamp } from '../utils'
 
@@ -86,7 +86,7 @@ export function VaultPage({
   return (
     <Card className="space-y-4">
       <CardTitle>Vault</CardTitle>
-      <div className="row-wrap">
+      <div className="row-wrap control-bar">
         <Field className="min-w-[220px]">
           <FieldLabel>Scope</FieldLabel>
           <Select value={vaultScope} onChange={(e) => setVaultScope(e.target.value as VaultScope)}>
@@ -249,7 +249,7 @@ export function VaultPage({
                       <tr key={row.id}>
                         <td>{agents.find((a) => a.id === row.agentId)?.name ?? 'Unknown'}</td>
                         <td>{row.dateKey}</td>
-                        <td>{row.percent}%</td>
+                        <td className="text-right tabular-nums">{row.percent}%</td>
                         <td>{row.notes || 'N/A'}</td>
                       </tr>
                     ))}
@@ -324,7 +324,9 @@ export function VaultPage({
                         <td>{formatTimestamp(row.discoveryTs)}</td>
                         <td>{row.carrier}</td>
                         <td>{row.clientName}</td>
-                        <td>{row.currentStatus}</td>
+                        <td>
+                          <Badge variant="warning">Needs Review</Badge>
+                        </td>
                         <td>{formatTimestamp(row.discoveryTs)}</td>
                         <td>{formatTimestamp(row.resolutionTs)}</td>
                       </tr>
@@ -363,14 +365,14 @@ export function VaultPage({
                     {weeklyTargetHistory.map((row) => (
                       <tr key={row.weekKey}>
                         <td>{row.weekKey}</td>
-                        <td>{row.targetSales}</td>
-                        <td>{row.actualSales}</td>
-                        <td>{row.salesHit ? 'Hit' : 'Miss'}</td>
-                        <td>{formatPctDelta(row.salesDeltaPct)}</td>
-                        <td>${formatNum(row.targetCpa)}</td>
-                        <td>{row.actualCpa === null ? 'N/A' : `$${formatNum(row.actualCpa)}`}</td>
-                        <td>{row.cpaHit ? 'Hit' : 'Miss'}</td>
-                        <td>{formatPctDelta(row.cpaDeltaPct)}</td>
+                        <td className="text-right tabular-nums">{row.targetSales}</td>
+                        <td className="text-right tabular-nums">{row.actualSales}</td>
+                        <td>{row.salesHit ? <Badge variant="success">On Track</Badge> : <Badge variant="warning">Needs Review</Badge>}</td>
+                        <td className="text-right tabular-nums">{formatPctDelta(row.salesDeltaPct)}</td>
+                        <td className="text-right tabular-nums">${formatNum(row.targetCpa)}</td>
+                        <td className="text-right tabular-nums">{row.actualCpa === null ? 'N/A' : `$${formatNum(row.actualCpa)}`}</td>
+                        <td>{row.cpaHit ? <Badge variant="success">On Track</Badge> : <Badge variant="danger">Critical</Badge>}</td>
+                        <td className="text-right tabular-nums">{formatPctDelta(row.cpaDeltaPct)}</td>
                         <td>{formatTimestamp(row.setAt)}</td>
                       </tr>
                     ))}

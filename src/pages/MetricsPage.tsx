@@ -42,7 +42,7 @@ export function MetricsPage({
   return (
     <Card className="space-y-4">
       <CardTitle>Metrics</CardTitle>
-      <div className="row-wrap">
+      <div className="row-wrap control-bar">
         <Field className="min-w-[220px]">
           <FieldLabel>Scope</FieldLabel>
           <Select value={metricsScope} onChange={(e) => setMetricsScope(e.target.value as MetricsScope)}>
@@ -95,7 +95,7 @@ export function MetricsPage({
       </div>
 
       <h3 className="mt-2">Agent Ranking</h3>
-      <div className="row-wrap">
+      <div className="row-wrap control-bar">
         <Field className="min-w-[180px]">
           <FieldLabel>Metric</FieldLabel>
           <Select value={rankMetric} onChange={(e) => setRankMetric(e.target.value as RankMetric)}>
@@ -119,9 +119,9 @@ export function MetricsPage({
             <tr>
               <th>Rank</th>
               <th>Agent</th>
-              <th>Sales</th>
-              <th>CPA</th>
-              <th>CVR</th>
+              <th className="text-right">Sales</th>
+              <th className="text-right">CPA</th>
+              <th className="text-right">CVR</th>
             </tr>
           </thead>
           <tbody>
@@ -134,9 +134,9 @@ export function MetricsPage({
               <tr key={row.agentName}>
                 <td>{idx + 1}</td>
                 <td>{row.agentName}</td>
-                <td>{row.sales}</td>
-                <td>{row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}</td>
-                <td>{row.cvr === null ? 'N/A' : `${formatNum(row.cvr * 100)}%`}</td>
+                <td className="text-right tabular-nums">{row.sales}</td>
+                <td className="text-right tabular-nums">{row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}</td>
+                <td className="text-right tabular-nums">{row.cvr === null ? 'N/A' : `${formatNum(row.cvr * 100)}%`}</td>
               </tr>
             ))}
           </tbody>

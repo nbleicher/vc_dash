@@ -1,4 +1,3 @@
-import { Button } from './ui'
 import type { TopPage } from '../types'
 
 type Props = {
@@ -16,16 +15,19 @@ export function TopNav({ topPage, setTopPage }: Props) {
   ]
 
   return (
-    <nav className="flex flex-wrap items-center gap-2" aria-label="Primary">
+    <nav className="flex w-full items-center justify-start gap-2 overflow-x-auto whitespace-nowrap pr-1" aria-label="Primary">
       {items.map((item) => (
-        <Button
+        <button
           key={item.key}
-          variant={topPage === item.key ? 'default' : 'secondary'}
           onClick={() => setTopPage(item.key)}
-          className="h-9"
+          className={`h-9 shrink-0 rounded-md border px-3 text-sm font-medium transition ${
+            topPage === item.key
+              ? 'border-blue-200 bg-blue-50 text-blue-700 shadow-sm'
+              : 'border-transparent bg-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-100 hover:text-slate-900'
+          }`}
         >
           {item.label}
-        </Button>
+        </button>
       ))}
     </nav>
   )

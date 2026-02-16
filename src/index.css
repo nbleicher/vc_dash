@@ -9,18 +9,15 @@
 
   body {
     @apply min-w-80 bg-background text-foreground antialiased;
-    background-image:
-      radial-gradient(circle at 15% 10%, rgba(37, 99, 235, 0.12) 0%, rgba(37, 99, 235, 0) 26%),
-      radial-gradient(circle at 85% 12%, rgba(14, 165, 233, 0.12) 0%, rgba(14, 165, 233, 0) 24%),
-      linear-gradient(to bottom, #f8fbff, #f4f7fb);
+    background-image: linear-gradient(180deg, #f8fbff 0%, #f3f7fc 52%, #eef3fa 100%);
   }
 
   h1 {
-    @apply text-2xl font-semibold tracking-tight;
+    @apply text-2xl font-semibold tracking-tight text-slate-900;
   }
 
   h2 {
-    @apply text-center text-xl font-semibold tracking-tight;
+    @apply text-xl font-semibold tracking-tight text-slate-900;
   }
 
   h3 {
@@ -32,7 +29,7 @@
   }
 
   th {
-    @apply bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600;
+    @apply sticky top-0 z-10 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600;
   }
 
   th,
@@ -46,8 +43,36 @@
     @apply rounded-xl2 border bg-surface p-5 shadow-soft;
   }
 
+  .top-shell {
+    @apply flex flex-wrap items-center justify-between gap-3;
+  }
+
+  .top-shell-nav {
+    @apply min-w-0 flex-1;
+  }
+
+  .top-shell-actions {
+    @apply flex items-center justify-end;
+  }
+
   .page-grid {
-    @apply grid gap-4;
+    @apply grid gap-5;
+  }
+
+  .page-head {
+    @apply flex flex-wrap items-start justify-between gap-3;
+  }
+
+  .page-head-copy {
+    @apply grid gap-1;
+  }
+
+  .page-kicker {
+    @apply text-xs font-semibold uppercase tracking-[0.14em] text-slate-500;
+  }
+
+  .page-subtext {
+    @apply text-sm text-slate-500;
   }
 
   .split {
@@ -62,12 +87,16 @@
     @apply flex flex-wrap items-end gap-3;
   }
 
+  .control-bar {
+    @apply rounded-xl border border-slate-200 bg-slate-50 p-3;
+  }
+
   .table-wrap {
-    @apply overflow-x-auto rounded-xl border border-border;
+    @apply overflow-x-auto rounded-xl border border-border bg-white;
   }
 
   .alert-card {
-    @apply rounded-xl border border-amber-200 bg-amber-50 p-3;
+    @apply rounded-xl border border-slate-200 bg-slate-50 p-3;
   }
 
   .stale-alert {
@@ -80,5 +109,9 @@
 
   .heat-red {
     @apply bg-red-100;
+  }
+
+  .status-text {
+    @apply text-sm font-medium text-slate-700;
   }
 }

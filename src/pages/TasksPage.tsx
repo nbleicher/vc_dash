@@ -67,7 +67,7 @@ export function TasksPage({
 
   return (
     <div className="page-grid">
-      <Card>
+      <Card className="control-bar">
         <Tabs value={taskPage} onChange={setTaskPage} items={taskItems} />
       </Card>
 
@@ -123,7 +123,7 @@ export function TasksPage({
       {taskPage === 'qa' && (
         <Card className="space-y-4">
           <CardTitle>Daily QA Log</CardTitle>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="control-bar">
             <strong>Daily QA Completion</strong>
             {incompleteQaAgentsToday.length > 0 ? (
               <p>
@@ -182,7 +182,7 @@ export function TasksPage({
       {taskPage === 'audit' && (
         <Card className="space-y-4">
           <CardTitle>Action Needed Audit</CardTitle>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="control-bar">
             <strong>Action Needed Audit Completion</strong>
             {incompleteAuditAgentsToday.length > 0 ? (
               <p>
