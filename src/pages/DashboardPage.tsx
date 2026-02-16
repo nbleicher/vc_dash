@@ -79,7 +79,7 @@ export function DashboardPage({
       )}
 
       <section className="panel">
-        <h2>Top — House Pulse</h2>
+        <h2>House Pulse</h2>
         <div className="stats-grid">
           <MetricCard title="Total Sales" value={houseLive.totalSales} />
           <MetricCard title="Total Billable Calls" value={houseLive.totalCalls} />

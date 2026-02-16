@@ -44,7 +44,6 @@ function App() {
     currentWeekKey,
     weekDates,
     activeAgents,
-    lastSnapshotLabel,
     houseLive,
     actionQa,
     actionAudit,
@@ -396,136 +395,141 @@ function App() {
 
   return (
     <div className="app-shell">
-      {(uiError || error) && (
-        <section className="alert-flash panel app-alert">
-          <strong>Action required</strong>
-          <p>{uiError ?? error}</p>
-          <button
-            type="button"
-            onClick={() => {
-              setUiError(null)
-              clearError()
-            }}
-          >
-            Dismiss
-          </button>
-        </section>
-      )}
-      <TopNav
-        topPage={topPage}
-        setTopPage={setTopPage}
-        todayKey={todayKey}
-        lastSnapshotLabel={lastSnapshotLabel}
-        onSignOut={() => void logout()}
-      />
+      <div className="app-layout">
+        <aside className="panel app-sidebar">
+          <TopNav topPage={topPage} setTopPage={setTopPage} />
+        </aside>
+        <div className="app-main">
+          <div className="app-main-actions">
+            <button className="topbar-signout" onClick={() => void logout()}>
+              Sign Out
+            </button>
+          </div>
+          {(uiError || error) && (
+            <section className="alert-flash panel app-alert">
+              <strong>Action required</strong>
+              <p>{uiError ?? error}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setUiError(null)
+                  clearError()
+                }}
+              >
+                Dismiss
+              </button>
+            </section>
+          )}
 
-      {topPage === 'dashboard' && (
-        <DashboardPage
-          agents={agents}
-          activeAgents={activeAgents}
-          todayKey={todayKey}
-          now={now}
-          houseLive={houseLive}
-          floorCapacity={floorCapacity}
-          weekTarget={weekTarget}
-          weekTrend={weekTrend}
-          actionQa={actionQa}
-          actionAudit={actionAudit}
-          attendanceAlert={attendanceAlert}
-          intraAlert={intraAlert}
-          overdueSlots={overdueSlots}
-          snapshots={snapshots}
-          onResolveQa={resolveQa}
-          onToggleAuditFlag={toggleAuditFlag}
-          onUpsertSnapshot={upsertSnapshot}
-        />
-      )}
+          {topPage === 'dashboard' && (
+            <DashboardPage
+              agents={agents}
+              activeAgents={activeAgents}
+              todayKey={todayKey}
+              now={now}
+              houseLive={houseLive}
+              floorCapacity={floorCapacity}
+              weekTarget={weekTarget}
+              weekTrend={weekTrend}
+              actionQa={actionQa}
+              actionAudit={actionAudit}
+              attendanceAlert={attendanceAlert}
+              intraAlert={intraAlert}
+              overdueSlots={overdueSlots}
+              snapshots={snapshots}
+              onResolveQa={resolveQa}
+              onToggleAuditFlag={toggleAuditFlag}
+              onUpsertSnapshot={upsertSnapshot}
+            />
+          )}
 
-      {topPage === 'tasks' && (
-        <TasksPage
-          taskPage={taskPage}
-          setTaskPage={setTaskPage}
-          activeAgents={activeAgents}
-          attendance={attendance}
-          weekDates={weekDates}
-          weekTarget={weekTarget}
-          qaForm={qaForm}
-          setQaForm={setQaForm}
-          auditForm={auditForm}
-          setAuditForm={setAuditForm}
-          incompleteQaAgentsToday={incompleteQaAgentsToday}
-          incompleteAuditAgentsToday={incompleteAuditAgentsToday}
-          onSetAttendancePercent={setAttendancePercent}
-          onSaveWeeklyTarget={saveWeeklyTarget}
-          onQaSubmit={handleQaSubmit}
-          onAuditSubmit={handleAuditSubmit}
-        />
-      )}
+          {topPage === 'tasks' && (
+            <TasksPage
+              taskPage={taskPage}
+              setTaskPage={setTaskPage}
+              activeAgents={activeAgents}
+              attendance={attendance}
+              weekDates={weekDates}
+              weekTarget={weekTarget}
+              qaForm={qaForm}
+              setQaForm={setQaForm}
+              auditForm={auditForm}
+              setAuditForm={setAuditForm}
+              incompleteQaAgentsToday={incompleteQaAgentsToday}
+              incompleteAuditAgentsToday={incompleteAuditAgentsToday}
+              onSetAttendancePercent={setAttendancePercent}
+              onSaveWeeklyTarget={saveWeeklyTarget}
+              onQaSubmit={handleQaSubmit}
+              onAuditSubmit={handleAuditSubmit}
+            />
+          )}
 
-      {topPage === 'metrics' && (
-        <MetricsPage
-          metricsScope={metricsScope}
-          setMetricsScope={setMetricsScope}
-          setMetricsAgentId={setMetricsAgentId}
-          effectiveMetricsAgentId={effectiveMetricsAgentId}
-          activeAgents={activeAgents}
-          metricsScopeData={metricsScopeData}
-          qaPassRate={qaPassRate}
-          auditRecoveryHours={auditRecoveryHours}
-          activeAuditCount={activeAuditCount}
-          rankRows={rankRows}
-          rankMetric={rankMetric}
-          setRankMetric={setRankMetric}
-          rankPeriod={rankPeriod}
-          setRankPeriod={setRankPeriod}
-        />
-      )}
+          {topPage === 'metrics' && (
+            <MetricsPage
+              metricsScope={metricsScope}
+              setMetricsScope={setMetricsScope}
+              setMetricsAgentId={setMetricsAgentId}
+              effectiveMetricsAgentId={effectiveMetricsAgentId}
+              activeAgents={activeAgents}
+              metricsScopeData={metricsScopeData}
+              qaPassRate={qaPassRate}
+              auditRecoveryHours={auditRecoveryHours}
+              activeAuditCount={activeAuditCount}
+              rankRows={rankRows}
+              rankMetric={rankMetric}
+              setRankMetric={setRankMetric}
+              rankPeriod={rankPeriod}
+              setRankPeriod={setRankPeriod}
+            />
+          )}
 
-      {topPage === 'vault' && (
-        <VaultPage
-          vaultScope={vaultScope}
-          setVaultScope={setVaultScope}
-          setVaultAgentId={setVaultAgentId}
-          effectiveVaultAgentId={effectiveVaultAgentId}
-          selectedVaultAgent={selectedVaultAgent}
-          activeAgents={activeAgents}
-          vaultHistoryView={vaultHistoryView}
-          setVaultHistoryView={setVaultHistoryView}
-          historySort={historySort}
-          setHistorySort={setHistorySort}
-          agents={agents}
-          vaultDocs={vaultDocs}
-          vaultMeetings={vaultMeetings}
-          meetingForm={meetingForm}
-          setMeetingForm={setMeetingForm}
-          attendanceNoteDraft={attendanceNoteDraft}
-          setAttendanceNoteDraft={setAttendanceNoteDraft}
-          vaultAttendanceHistory={vaultAttendanceHistory}
-          vaultQaHistory={vaultQaHistory}
-          vaultAuditHistory={vaultAuditHistory}
-          weeklyTargetHistory={weeklyTargetHistory}
-          onSaveAttendanceNote={saveAttendanceNote}
-          onAddMeeting={addMeeting}
-          onPdfUpload={handlePdfUpload}
-        />
-      )}
+          {topPage === 'vault' && (
+            <VaultPage
+              vaultScope={vaultScope}
+              setVaultScope={setVaultScope}
+              setVaultAgentId={setVaultAgentId}
+              effectiveVaultAgentId={effectiveVaultAgentId}
+              selectedVaultAgent={selectedVaultAgent}
+              activeAgents={activeAgents}
+              vaultHistoryView={vaultHistoryView}
+              setVaultHistoryView={setVaultHistoryView}
+              historySort={historySort}
+              setHistorySort={setHistorySort}
+              agents={agents}
+              vaultDocs={vaultDocs}
+              vaultMeetings={vaultMeetings}
+              meetingForm={meetingForm}
+              setMeetingForm={setMeetingForm}
+              attendanceNoteDraft={attendanceNoteDraft}
+              setAttendanceNoteDraft={setAttendanceNoteDraft}
+              vaultAttendanceHistory={vaultAttendanceHistory}
+              vaultQaHistory={vaultQaHistory}
+              vaultAuditHistory={vaultAuditHistory}
+              weeklyTargetHistory={weeklyTargetHistory}
+              onSaveAttendanceNote={saveAttendanceNote}
+              onAddMeeting={addMeeting}
+              onPdfUpload={handlePdfUpload}
+            />
+          )}
 
-      {topPage === 'settings' && (
-        <SettingsPage
-          agents={agents}
-          setAgents={setAgents}
-          newAgent={newAgent}
-          setNewAgent={setNewAgent}
-          exportFlags={exportFlags}
-          setExportFlags={setExportFlags}
-          onAddAgent={handleAddAgent}
-          onRunExport={runExport}
-        />
-      )}
+          {topPage === 'settings' && (
+            <SettingsPage
+              agents={agents}
+              setAgents={setAgents}
+              newAgent={newAgent}
+              setNewAgent={setNewAgent}
+              exportFlags={exportFlags}
+              setExportFlags={setExportFlags}
+              onAddAgent={handleAddAgent}
+              onRunExport={runExport}
+            />
+          )}
 
-      <footer className="muted app-footer">
-        Current EST time: {String(est.hour).padStart(2, '0')}:{String(est.minute).padStart(2, '0')}
-      </footer>
+          <footer className="muted app-footer">
+            Current EST time: {String(est.hour).padStart(2, '0')}:{String(est.minute).padStart(2, '0')}
+          </footer>
+        </div>
+      </div>
     </div>
   )
 }
