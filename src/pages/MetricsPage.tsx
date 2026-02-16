@@ -1,4 +1,4 @@
-import { MetricCard } from '../components'
+import { Card, CardTitle, DataTable, Field, FieldLabel, MetricCard, Select, TableWrap } from '../components'
 import type { MetricsScope, RankMetric, RankPeriod } from '../types'
 import { formatNum } from '../utils'
 
@@ -40,19 +40,19 @@ export function MetricsPage({
   setRankPeriod,
 }: Props) {
   return (
-    <section className="panel">
-      <h2>Metrics</h2>
-      <div className="row gap-sm wrap controls-row vault-controls">
-        <label>
-          Scope
-          <select value={metricsScope} onChange={(e) => setMetricsScope(e.target.value as MetricsScope)}>
+    <Card className="space-y-4">
+      <CardTitle>Metrics</CardTitle>
+      <div className="row-wrap">
+        <Field className="min-w-[220px]">
+          <FieldLabel>Scope</FieldLabel>
+          <Select value={metricsScope} onChange={(e) => setMetricsScope(e.target.value as MetricsScope)}>
             <option value="house">House (All Agents)</option>
             <option value="agent">Selected Agent</option>
-          </select>
-        </label>
-        <label>
-          Agent
-          <select
+          </Select>
+        </Field>
+        <Field className="min-w-[220px]">
+          <FieldLabel>Agent</FieldLabel>
+          <Select
             value={effectiveMetricsAgentId}
             onChange={(e) => setMetricsAgentId(e.target.value)}
             disabled={metricsScope === 'house'}
@@ -62,10 +62,10 @@ export function MetricsPage({
                 {a.name}
               </option>
             ))}
-          </select>
-        </label>
+          </Select>
+        </Field>
       </div>
-      <div className="stats-grid">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <MetricCard title="Daily Sales" value={metricsScopeData.daily.sales} />
         <MetricCard
           title="Daily CPA"
@@ -94,27 +94,27 @@ export function MetricsPage({
         <MetricCard title="Active Action Needed" value={activeAuditCount} />
       </div>
 
-      <h3>Agent Ranking</h3>
-      <div className="row gap-sm wrap controls-row">
-        <label>
-          Metric
-          <select value={rankMetric} onChange={(e) => setRankMetric(e.target.value as RankMetric)}>
+      <h3 className="mt-2">Agent Ranking</h3>
+      <div className="row-wrap">
+        <Field className="min-w-[180px]">
+          <FieldLabel>Metric</FieldLabel>
+          <Select value={rankMetric} onChange={(e) => setRankMetric(e.target.value as RankMetric)}>
             <option>Sales</option>
             <option>CPA</option>
             <option>CVR</option>
-          </select>
-        </label>
-        <label>
-          Period
-          <select value={rankPeriod} onChange={(e) => setRankPeriod(e.target.value as RankPeriod)}>
+          </Select>
+        </Field>
+        <Field className="min-w-[180px]">
+          <FieldLabel>Period</FieldLabel>
+          <Select value={rankPeriod} onChange={(e) => setRankPeriod(e.target.value as RankPeriod)}>
             <option value="day">Day</option>
             <option value="week">Week</option>
             <option value="month">Month</option>
-          </select>
-        </label>
+          </Select>
+        </Field>
       </div>
-      <div className="table-wrap">
-        <table>
+      <TableWrap>
+        <DataTable>
           <thead>
             <tr>
               <th>Rank</th>
@@ -140,8 +140,8 @@ export function MetricsPage({
               </tr>
             ))}
           </tbody>
-        </table>
-      </div>
-    </section>
+        </DataTable>
+      </TableWrap>
+    </Card>
   )
 }

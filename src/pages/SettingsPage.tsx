@@ -1,4 +1,5 @@
 import type { DataStore } from '../data'
+import { Badge, Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, TableWrap } from '../components'
 import type { ExportFlags } from '../types'
 import { formatTimestamp } from '../utils'
 
@@ -24,19 +25,24 @@ export function SettingsPage({
   onRunExport,
 }: Props) {
   return (
-    <>
-      <section className="panel">
-        <h2>Settings - Agent Management</h2>
-        <form className="row gap-sm wrap settings-add-form" onSubmit={onAddAgent}>
-          <input
+    <div className="page-grid">
+      <Card className="space-y-4">
+        <CardTitle>Settings - Agent Management</CardTitle>
+        <form className="row-wrap" onSubmit={onAddAgent}>
+          <Field className="min-w-[280px]">
+            <FieldLabel>Add Agent</FieldLabel>
+            <Input
             value={newAgent}
             onChange={(e) => setNewAgent(e.target.value)}
             placeholder="Add agent name"
-          />
-          <button type="submit">Add Agent</button>
+            />
+          </Field>
+          <Button type="submit" variant="default" className="mt-5">
+            Add Agent
+          </Button>
         </form>
-        <div className="table-wrap">
-          <table>
+        <TableWrap>
+          <DataTable>
             <thead>
               <tr>
                 <th>Agent</th>
@@ -54,10 +60,11 @@ export function SettingsPage({
               {agents.map((a) => (
                 <tr key={a.id}>
                   <td>{a.name}</td>
-                  <td>{a.active ? 'Active' : 'Deactivated'}</td>
+                  <td>{a.active ? <Badge variant="success">Active</Badge> : <Badge variant="warning">Deactivated</Badge>}</td>
                   <td>{formatTimestamp(a.createdAt)}</td>
                   <td>
-                    <button
+                    <Button
+                      variant={a.active ? 'danger' : 'secondary'}
                       onClick={() =>
                         setAgents((prev) =>
                           prev.map((x) => (x.id === a.id ? { ...x, active: !x.active } : x))
@@ -65,20 +72,20 @@ export function SettingsPage({
                       }
                     >
                       {a.active ? 'Deactivate' : 'Reactivate'}
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
-      </section>
+          </DataTable>
+        </TableWrap>
+      </Card>
 
-      <section className="panel">
-        <h2>Export (CSV)</h2>
-        <div className="row wrap gap-sm export-controls">
+      <Card className="space-y-4">
+        <CardTitle>Export (CSV)</CardTitle>
+        <div className="row-wrap">
           {(Object.keys(exportFlags) as Array<keyof ExportFlags>).map((key) => (
-            <label key={key} className="inline">
+            <label key={key} className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
               <input
                 type="checkbox"
                 checked={exportFlags[key]}
@@ -87,9 +94,11 @@ export function SettingsPage({
               {key}
             </label>
           ))}
-          <button onClick={onRunExport}>Download CSV</button>
+          <Button onClick={onRunExport} variant="default">
+            Download CSV
+          </Button>
         </div>
-      </section>
-    </>
+      </Card>
+    </div>
   )
 }

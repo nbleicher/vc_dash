@@ -1,4 +1,5 @@
 import type { DataStore } from '../data'
+import { Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Textarea } from '../components'
 import type { VaultHistoryView, VaultScope, VaultMeeting } from '../types'
 import { formatNum, formatPctDelta, formatTimestamp } from '../utils'
 
@@ -83,19 +84,19 @@ export function VaultPage({
   onPdfUpload,
 }: Props) {
   return (
-    <section className="panel">
-      <h2>Vault</h2>
-      <div className="row gap-sm wrap controls-row vault-controls">
-        <label>
-          Scope
-          <select value={vaultScope} onChange={(e) => setVaultScope(e.target.value as VaultScope)}>
+    <Card className="space-y-4">
+      <CardTitle>Vault</CardTitle>
+      <div className="row-wrap">
+        <Field className="min-w-[220px]">
+          <FieldLabel>Scope</FieldLabel>
+          <Select value={vaultScope} onChange={(e) => setVaultScope(e.target.value as VaultScope)}>
             <option value="agent">Selected Agent</option>
             <option value="house">House (All Agents)</option>
-          </select>
-        </label>
-        <label>
-          Agent
-          <select
+          </Select>
+        </Field>
+        <Field className="min-w-[220px]">
+          <FieldLabel>Agent</FieldLabel>
+          <Select
             value={effectiveVaultAgentId}
             onChange={(e) => setVaultAgentId(e.target.value)}
             disabled={vaultScope === 'house'}
@@ -105,11 +106,11 @@ export function VaultPage({
                 {a.name}
               </option>
             ))}
-          </select>
-        </label>
-        <label>
-          History Type
-          <select
+          </Select>
+        </Field>
+        <Field className="min-w-[260px]">
+          <FieldLabel>History Type</FieldLabel>
+          <Select
             value={vaultHistoryView}
             onChange={(e) => setVaultHistoryView(e.target.value as VaultHistoryView)}
           >
@@ -117,50 +118,50 @@ export function VaultPage({
             <option value="qa">Daily QA History</option>
             <option value="audit">Action Needed History</option>
             <option value="targets">Weekly Target History</option>
-          </select>
-        </label>
-        <label>
-          Sort
-          <select value={historySort} onChange={(e) => setHistorySort(e.target.value as 'newest' | 'oldest')}>
+          </Select>
+        </Field>
+        <Field className="min-w-[180px]">
+          <FieldLabel>Sort</FieldLabel>
+          <Select value={historySort} onChange={(e) => setHistorySort(e.target.value as 'newest' | 'oldest')}>
             <option value="newest">Newest first</option>
             <option value="oldest">Oldest first</option>
-          </select>
-        </label>
+          </Select>
+        </Field>
       </div>
       {!selectedVaultAgent ? (
-        <p className="muted">N/A - add/select an active agent.</p>
+        <p className="text-sm text-slate-500">N/A - add/select an active agent.</p>
       ) : (
         <>
           <div className="split">
-            <div className="panel vault-subpanel">
+            <Card className="space-y-3 bg-slate-50">
               <h3>Attendance Context Note</h3>
-              <input
+              <Input
                 value={meetingForm.dateKey}
                 onChange={(e) => setMeetingForm((prev) => ({ ...prev, dateKey: e.target.value }))}
                 placeholder="YYYY-MM-DD"
               />
-              <textarea
+              <Textarea
                 value={attendanceNoteDraft}
                 onChange={(e) => setAttendanceNoteDraft(e.target.value)}
                 placeholder="Attendance note"
               />
-              <button onClick={() => onSaveAttendanceNote(selectedVaultAgent.id, meetingForm.dateKey)}>
+              <Button variant="default" onClick={() => onSaveAttendanceNote(selectedVaultAgent.id, meetingForm.dateKey)}>
                 Save Attendance Note
-              </button>
-            </div>
-            <div className="panel vault-subpanel">
+              </Button>
+            </Card>
+            <Card className="bg-slate-50">
               <h3>Performance Meeting</h3>
               <form onSubmit={onAddMeeting} className="form-grid">
-                <label>
-                  Date
-                  <input
+                <Field>
+                  <FieldLabel>Date</FieldLabel>
+                  <Input
                     value={meetingForm.dateKey}
                     onChange={(e) => setMeetingForm((prev) => ({ ...prev, dateKey: e.target.value }))}
                   />
-                </label>
-                <label>
-                  Type
-                  <select
+                </Field>
+                <Field>
+                  <FieldLabel>Type</FieldLabel>
+                  <Select
                     value={meetingForm.meetingType}
                     onChange={(e) =>
                       setMeetingForm((prev) => ({
@@ -172,58 +173,64 @@ export function VaultPage({
                     <option>Coaching</option>
                     <option>Warning</option>
                     <option>Review</option>
-                  </select>
-                </label>
-                <label>
-                  Notes
-                  <textarea
+                  </Select>
+                </Field>
+                <Field className="md:col-span-2">
+                  <FieldLabel>Notes</FieldLabel>
+                  <Textarea
                     value={meetingForm.notes}
                     onChange={(e) => setMeetingForm((prev) => ({ ...prev, notes: e.target.value }))}
                   />
-                </label>
-                <label>
-                  Action Items
-                  <textarea
+                </Field>
+                <Field className="md:col-span-2">
+                  <FieldLabel>Action Items</FieldLabel>
+                  <Textarea
                     value={meetingForm.actionItems}
                     onChange={(e) => setMeetingForm((prev) => ({ ...prev, actionItems: e.target.value }))}
                   />
-                </label>
-                <button type="submit">Save Meeting</button>
+                </Field>
+                <Button type="submit" variant="default" className="w-fit">
+                  Save Meeting
+                </Button>
               </form>
-            </div>
+            </Card>
           </div>
 
           <div className="split">
-            <div className="panel vault-subpanel">
+            <Card className="space-y-3 bg-slate-50">
               <h3>PDF Uploads</h3>
-              <input type="file" accept=".pdf,application/pdf" onChange={onPdfUpload} />
-              <ul className="clean-list">
+              <Input type="file" accept=".pdf,application/pdf" onChange={onPdfUpload} className="h-auto py-2" />
+              <ul className="grid gap-2">
                 {vaultDocs.filter((d) => d.agentId === selectedVaultAgent.id).map((d) => (
-                  <li key={d.id}>
+                  <li key={d.id} className="rounded-lg bg-white px-3 py-2 text-sm text-slate-600">
                     {d.fileName} ({Math.round(d.fileSize / 1024)} KB) - {formatTimestamp(d.uploadedAt)}
                   </li>
                 ))}
-                {vaultDocs.filter((d) => d.agentId === selectedVaultAgent.id).length === 0 && <li>N/A</li>}
+                {vaultDocs.filter((d) => d.agentId === selectedVaultAgent.id).length === 0 && (
+                  <li className="rounded-lg bg-white px-3 py-2 text-sm text-slate-500">N/A</li>
+                )}
               </ul>
-            </div>
-            <div className="panel vault-subpanel">
+            </Card>
+            <Card className="space-y-3 bg-slate-50">
               <h3>Meeting Log</h3>
-              <ul className="clean-list">
+              <ul className="grid gap-2">
                 {vaultMeetings.filter((m) => m.agentId === selectedVaultAgent.id).map((m) => (
-                  <li key={m.id}>
+                  <li key={m.id} className="rounded-lg bg-white px-3 py-2 text-sm text-slate-600">
                     {m.dateKey} - {m.meetingType} - {m.notes || 'N/A'}
                   </li>
                 ))}
-                {vaultMeetings.filter((m) => m.agentId === selectedVaultAgent.id).length === 0 && <li>N/A</li>}
+                {vaultMeetings.filter((m) => m.agentId === selectedVaultAgent.id).length === 0 && (
+                  <li className="rounded-lg bg-white px-3 py-2 text-sm text-slate-500">N/A</li>
+                )}
               </ul>
-            </div>
+            </Card>
           </div>
 
           {vaultHistoryView === 'attendance' && (
-            <section className="panel">
+            <Card>
               <h3>Attendance History</h3>
-              <div className="table-wrap">
-                <table>
+              <TableWrap>
+                <DataTable>
                   <thead>
                     <tr>
                       <th>Agent</th>
@@ -247,16 +254,16 @@ export function VaultPage({
                       </tr>
                     ))}
                   </tbody>
-                </table>
-              </div>
-            </section>
+                </DataTable>
+              </TableWrap>
+            </Card>
           )}
 
           {vaultHistoryView === 'qa' && (
-            <section className="panel">
+            <Card>
               <h3>Daily QA History</h3>
-              <div className="table-wrap">
-                <table>
+              <TableWrap>
+                <DataTable>
                   <thead>
                     <tr>
                       <th>Agent</th>
@@ -284,16 +291,16 @@ export function VaultPage({
                       </tr>
                     ))}
                   </tbody>
-                </table>
-              </div>
-            </section>
+                </DataTable>
+              </TableWrap>
+            </Card>
           )}
 
           {vaultHistoryView === 'audit' && (
-            <section className="panel">
+            <Card>
               <h3>Action Needed History</h3>
-              <div className="table-wrap">
-                <table>
+              <TableWrap>
+                <DataTable>
                   <thead>
                     <tr>
                       <th>Agent</th>
@@ -323,16 +330,16 @@ export function VaultPage({
                       </tr>
                     ))}
                   </tbody>
-                </table>
-              </div>
-            </section>
+                </DataTable>
+              </TableWrap>
+            </Card>
           )}
 
           {vaultHistoryView === 'targets' && (
-            <section className="panel">
+            <Card>
               <h3>Weekly Target History (House)</h3>
-              <div className="table-wrap">
-                <table>
+              <TableWrap>
+                <DataTable>
                   <thead>
                     <tr>
                       <th>Week (Mon)</th>
@@ -368,12 +375,12 @@ export function VaultPage({
                       </tr>
                     ))}
                   </tbody>
-                </table>
-              </div>
-            </section>
+                </DataTable>
+              </TableWrap>
+            </Card>
           )}
         </>
       )}
-    </section>
+    </Card>
   )
 }

@@ -1,4 +1,5 @@
 import { WeeklyTargetEditor } from '../components'
+import { Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Tabs, Textarea } from '../components'
 import { CARRIERS, POLICY_STATUSES } from '../constants'
 import type { AttendanceRecord } from '../types'
 import type { AttendancePercent } from '../types'
@@ -57,33 +58,24 @@ export function TasksPage({
   onQaSubmit,
   onAuditSubmit,
 }: Props) {
+  const taskItems = [
+    { key: 'attendance' as const, label: 'Attendance' },
+    { key: 'qa' as const, label: 'Daily QA' },
+    { key: 'audit' as const, label: 'Action Needed Audit' },
+    { key: 'targets' as const, label: 'Weekly Targets' },
+  ]
+
   return (
-    <>
-      <section className="panel">
-        <div className="row gap-sm wrap task-tabs">
-          <button
-            className={taskPage === 'attendance' ? 'active-btn' : ''}
-            onClick={() => setTaskPage('attendance')}
-          >
-            Attendance
-          </button>
-          <button className={taskPage === 'qa' ? 'active-btn' : ''} onClick={() => setTaskPage('qa')}>
-            Daily QA
-          </button>
-          <button className={taskPage === 'audit' ? 'active-btn' : ''} onClick={() => setTaskPage('audit')}>
-            Action Needed Audit
-          </button>
-          <button className={taskPage === 'targets' ? 'active-btn' : ''} onClick={() => setTaskPage('targets')}>
-            Weekly Targets
-          </button>
-        </div>
-      </section>
+    <div className="page-grid">
+      <Card>
+        <Tabs value={taskPage} onChange={setTaskPage} items={taskItems} />
+      </Card>
 
       {taskPage === 'attendance' && (
-        <section className="panel">
-          <h2>Attendance (Mon-Fri)</h2>
-          <div className="table-wrap">
-            <table>
+        <Card className="space-y-4">
+          <CardTitle>Attendance (Mon-Fri)</CardTitle>
+          <TableWrap>
+            <DataTable>
               <thead>
                 <tr>
                   <th>Agent</th>
@@ -105,7 +97,7 @@ export function TasksPage({
                       const row = attendance.find((a) => a.agentId === agent.id && a.dateKey === d)
                       return (
                         <td key={d}>
-                          <select
+                          <Select
                             value={row?.percent ?? 100}
                             onChange={(e) =>
                               onSetAttendancePercent(agent.id, d, Number(e.target.value) as AttendancePercent)
@@ -116,22 +108,22 @@ export function TasksPage({
                             <option value={50}>50%</option>
                             <option value={25}>25%</option>
                             <option value={0}>0%</option>
-                          </select>
+                          </Select>
                         </td>
                       )
                     })}
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
-        </section>
+            </DataTable>
+          </TableWrap>
+        </Card>
       )}
 
       {taskPage === 'qa' && (
-        <section className="panel">
-          <h2>Daily QA Log</h2>
-          <div className="panel status-panel">
+        <Card className="space-y-4">
+          <CardTitle>Daily QA Log</CardTitle>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <strong>Daily QA Completion</strong>
             {incompleteQaAgentsToday.length > 0 ? (
               <p>
@@ -142,9 +134,9 @@ export function TasksPage({
             )}
           </div>
           <form onSubmit={onQaSubmit} className="form-grid">
-            <label>
-              Agent
-              <select
+            <Field>
+              <FieldLabel>Agent</FieldLabel>
+              <Select
                 value={qaForm.agentId}
                 onChange={(e) => setQaForm((prev) => ({ ...prev, agentId: e.target.value }))}
               >
@@ -154,41 +146,43 @@ export function TasksPage({
                     {a.name}
                   </option>
                 ))}
-              </select>
-            </label>
-            <label>
-              Client Name
-              <input
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel>Client Name</FieldLabel>
+              <Input
                 value={qaForm.clientName}
                 onChange={(e) => setQaForm((prev) => ({ ...prev, clientName: e.target.value }))}
               />
-            </label>
-            <label>
-              Decision
-              <select
+            </Field>
+            <Field>
+              <FieldLabel>Decision</FieldLabel>
+              <Select
                 value={qaForm.decision}
                 onChange={(e) => setQaForm((prev) => ({ ...prev, decision: e.target.value }))}
               >
                 <option>Good Sale</option>
                 <option>Check Recording</option>
-              </select>
-            </label>
-            <label>
-              Notes
-              <textarea
+              </Select>
+            </Field>
+            <Field className="md:col-span-2">
+              <FieldLabel>Notes</FieldLabel>
+              <Textarea
                 value={qaForm.notes}
                 onChange={(e) => setQaForm((prev) => ({ ...prev, notes: e.target.value }))}
               />
-            </label>
-            <button type="submit">Save QA</button>
+            </Field>
+            <Button type="submit" variant="default" className="w-fit">
+              Save QA
+            </Button>
           </form>
-        </section>
+        </Card>
       )}
 
       {taskPage === 'audit' && (
-        <section className="panel">
-          <h2>Action Needed Audit</h2>
-          <div className="panel status-panel">
+        <Card className="space-y-4">
+          <CardTitle>Action Needed Audit</CardTitle>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <strong>Action Needed Audit Completion</strong>
             {incompleteAuditAgentsToday.length > 0 ? (
               <p>
@@ -200,9 +194,9 @@ export function TasksPage({
             )}
           </div>
           <form onSubmit={onAuditSubmit} className="form-grid">
-            <label>
-              Agent
-              <select
+            <Field>
+              <FieldLabel>Agent</FieldLabel>
+              <Select
                 value={auditForm.agentId}
                 onChange={(e) => setAuditForm((prev) => ({ ...prev, agentId: e.target.value }))}
               >
@@ -212,11 +206,11 @@ export function TasksPage({
                     {a.name}
                   </option>
                 ))}
-              </select>
-            </label>
-            <label>
-              Carrier
-              <select
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel>Carrier</FieldLabel>
+              <Select
                 value={auditForm.carrier}
                 onChange={(e) => setAuditForm((prev) => ({ ...prev, carrier: e.target.value }))}
               >
@@ -225,25 +219,25 @@ export function TasksPage({
                     {c}
                   </option>
                 ))}
-              </select>
-            </label>
-            <label>
-              Client Name
-              <input
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel>Client Name</FieldLabel>
+              <Input
                 value={auditForm.clientName}
                 onChange={(e) => setAuditForm((prev) => ({ ...prev, clientName: e.target.value }))}
               />
-            </label>
-            <label>
-              Reason
-              <input
+            </Field>
+            <Field>
+              <FieldLabel>Reason</FieldLabel>
+              <Input
                 value={auditForm.reason}
                 onChange={(e) => setAuditForm((prev) => ({ ...prev, reason: e.target.value }))}
               />
-            </label>
-            <label>
-              Policy/DEN Status
-              <select
+            </Field>
+            <Field>
+              <FieldLabel>Policy/DEN Status</FieldLabel>
+              <Select
                 value={auditForm.currentStatus}
                 onChange={(e) => setAuditForm((prev) => ({ ...prev, currentStatus: e.target.value }))}
               >
@@ -252,20 +246,22 @@ export function TasksPage({
                     {s}
                   </option>
                 ))}
-              </select>
-            </label>
-            <button type="submit">Save Audit Entry</button>
+              </Select>
+            </Field>
+            <Button type="submit" variant="default" className="w-fit">
+              Save Audit Entry
+            </Button>
           </form>
-        </section>
+        </Card>
       )}
 
       {taskPage === 'targets' && (
-        <section className="panel">
-          <h2>Weekly Targets</h2>
-          <p className="muted">Set the current week sales and CPA goals here.</p>
+        <Card className="space-y-4">
+          <CardTitle>Weekly Targets</CardTitle>
+          <p className="text-sm text-slate-500">Set the current week sales and CPA goals here.</p>
           <WeeklyTargetEditor target={weekTarget} onSave={onSaveWeeklyTarget} />
-        </section>
+        </Card>
       )}
-    </>
+    </div>
   )
 }

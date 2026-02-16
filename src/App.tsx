@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LoginForm, TopNav } from './components'
+import { Button, Card, LoginForm, TopNav } from './components'
 import { useDataStore } from './data'
 import { useAppData } from './hooks'
 import { CARRIERS } from './constants'
@@ -39,7 +39,6 @@ function App() {
 
   const {
     now,
-    est,
     todayKey,
     currentWeekKey,
     weekDates,
@@ -373,18 +372,20 @@ function App() {
 
   if (isLoading) {
     return (
-      <div className="auth-shell">
-        <section className="panel auth-panel">
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <Card className="w-full max-w-md space-y-3">
           <h1>Loading dashboard...</h1>
           {error ? (
             <>
-              <p className="muted" role="alert">{error}</p>
-              <button type="button" onClick={() => void reload()}>
+              <p className="text-sm text-slate-500" role="alert">
+                {error}
+              </p>
+              <Button type="button" onClick={() => void reload()}>
                 Retry
-              </button>
+              </Button>
             </>
           ) : null}
-        </section>
+        </Card>
       </div>
     )
   }
@@ -394,30 +395,36 @@ function App() {
   }
 
   return (
-    <div className="app-shell">
-      <div className="app-layout">
-        <aside className="panel app-sidebar">
+    <div className="mx-auto max-w-[1480px] p-4 md:p-6">
+      <div className="grid items-start gap-4 xl:grid-cols-[320px_1fr]">
+        <aside className="panel sticky top-4 space-y-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Navigation</p>
+            <h1 className="mt-1 text-2xl">VC Operations Hub</h1>
+          </div>
           <TopNav topPage={topPage} setTopPage={setTopPage} />
         </aside>
-        <div className="app-main">
-          <div className="app-main-actions">
-            <button className="topbar-signout" onClick={() => void logout()}>
+        <main className="page-grid">
+          <div className="flex justify-end">
+            <Button variant="danger" onClick={() => void logout()}>
               Sign Out
-            </button>
+            </Button>
           </div>
           {(uiError || error) && (
-            <section className="alert-flash panel app-alert">
+            <section className="rounded-xl2 border border-red-200 bg-red-50 p-4 text-red-800 shadow-soft">
               <strong>Action required</strong>
               <p>{uiError ?? error}</p>
-              <button
+              <Button
                 type="button"
+                variant="danger"
+                className="mt-3"
                 onClick={() => {
                   setUiError(null)
                   clearError()
                 }}
               >
                 Dismiss
-              </button>
+              </Button>
             </section>
           )}
 
@@ -525,10 +532,7 @@ function App() {
             />
           )}
 
-          <footer className="muted app-footer">
-            Current EST time: {String(est.hour).padStart(2, '0')}:{String(est.minute).padStart(2, '0')}
-          </footer>
-        </div>
+        </main>
       </div>
     </div>
   )
