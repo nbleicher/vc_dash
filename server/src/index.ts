@@ -17,6 +17,9 @@ if (process.env.NODE_ENV === 'production') {
   if (!process.env.FRONTEND_ORIGIN) {
     throw new Error('Set FRONTEND_ORIGIN in production.')
   }
+  if (!process.env.DATABASE_URL?.trim()) {
+    throw new Error('Set DATABASE_URL in production.')
+  }
 }
 
 const app = await buildApp({

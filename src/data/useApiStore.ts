@@ -27,6 +27,7 @@ export function useDataStore(): DataStore {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [loggedIn, setLoggedInState] = useState(false)
+  const hasLoadedRemoteRef = useRef(false)
 
   const [agentsState, setAgentsState] = useState<Agent[]>([])
   const [snapshotsState, setSnapshotsState] = useState<Snapshot[]>([])
@@ -44,6 +45,7 @@ export function useDataStore(): DataStore {
       const me = await client.me()
       setLoggedInState(me)
       if (!me) {
+        hasLoadedRemoteRef.current = false
         setError(null)
         return
       }
@@ -59,8 +61,10 @@ export function useDataStore(): DataStore {
       setWeeklyTargetsState(state.weeklyTargets)
       setVaultMeetingsState(state.vaultMeetings)
       setVaultDocsState(state.vaultDocs)
+      hasLoadedRemoteRef.current = true
       setError(null)
     } catch (err) {
+      hasLoadedRemoteRef.current = false
       setError(err instanceof Error ? err.message : 'Failed to load data.')
     }
   }, [client])
@@ -94,17 +98,24 @@ export function useDataStore(): DataStore {
 
   const login = useCallback(
     async (username: string, password: string) => {
-      await client.login(username, password)
-      setLoggedInState(true)
-      setError(null)
+      hydratingRef.current = true
+      try {
+        await client.login(username, password)
+        setLoggedInState(true)
+        await loadFromApi()
+        setError(null)
+      } finally {
+        hydratingRef.current = false
+      }
     },
-    [client],
+    [client, loadFromApi],
   )
 
   const logout = useCallback(async () => {
     try {
       await client.logout()
       setLoggedInState(false)
+      hasLoadedRemoteRef.current = false
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to sign out.')
@@ -113,7 +124,7 @@ export function useDataStore(): DataStore {
 
   const syncCollection = useCallback(
     async <K extends Parameters<typeof client.putCollection>[0]>(key: K, value: Parameters<typeof client.putCollection<K>>[1]) => {
-      if (hydratingRef.current || !loggedIn) return
+      if (hydratingRef.current || !loggedIn || !hasLoadedRemoteRef.current) return
       try {
         await client.putCollection(key, value)
       } catch (err) {
@@ -176,8 +187,13 @@ export function useDataStore(): DataStore {
     logout,
     reload: async () => {
       setIsLoading(true)
-      await loadFromApi()
-      setIsLoading(false)
+      hydratingRef.current = true
+      try {
+        await loadFromApi()
+      } finally {
+        hydratingRef.current = false
+        setIsLoading(false)
+      }
     },
     isLoading,
     error,
