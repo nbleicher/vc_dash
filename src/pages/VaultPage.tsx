@@ -212,7 +212,11 @@ export function VaultPage({
                 <td>{row.carrier}</td>
                 <td>{row.clientName}</td>
                 <td>
-                  <Badge variant="warning">Needs Review</Badge>
+                  {row.currentStatus === 'no_action_needed' ? (
+                    <Badge variant="success">No Action Needed</Badge>
+                  ) : (
+                    <Badge variant="warning">Needs Review</Badge>
+                  )}
                 </td>
                 <td>{formatTimestamp(row.discoveryTs)}</td>
                 <td>{formatTimestamp(row.resolutionTs)}</td>
@@ -542,7 +546,11 @@ export function VaultPage({
                         <td>{row.carrier}</td>
                         <td>{row.clientName}</td>
                         <td>
-                          <Badge variant="warning">Needs Review</Badge>
+                          {row.currentStatus === 'no_action_needed' ? (
+                            <Badge variant="success">No Action Needed</Badge>
+                          ) : (
+                            <Badge variant="warning">Needs Review</Badge>
+                          )}
                         </td>
                         <td>{formatTimestamp(row.discoveryTs)}</td>
                         <td>{formatTimestamp(row.resolutionTs)}</td>

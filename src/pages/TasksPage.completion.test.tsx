@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { TasksPage } from './TasksPage'
 
@@ -26,6 +26,7 @@ function baseProps() {
     onSaveWeeklyTarget: vi.fn(),
     onQaSubmit: vi.fn((e?: { preventDefault?: () => void }) => e?.preventDefault?.()),
     onAuditSubmit: vi.fn((e?: { preventDefault?: () => void }) => e?.preventDefault?.()),
+    onAuditNoActionSubmit: vi.fn(),
   }
 }
 
@@ -105,5 +106,14 @@ describe('TasksPage completion boxes', () => {
   it('shows Audit success message when all completed', () => {
     render(<TasksPage {...baseProps()} taskPage="audit" incompleteAuditAgentsToday={[]} />)
     expect(screen.getByText('All active agents have Action Needed Audit completed for today.')).toBeInTheDocument()
+  })
+
+  it('allows marking no action needed from audit task', () => {
+    const props = baseProps()
+    render(<TasksPage {...props} taskPage="audit" />)
+    const auditSection = screen.getAllByText('Action Needed Audit').at(-1)?.closest('section')
+    expect(auditSection).not.toBeNull()
+    within(auditSection!).getByRole('button', { name: 'Mark No Action Needed' }).click()
+    expect(props.onAuditNoActionSubmit).toHaveBeenCalled()
   })
 })

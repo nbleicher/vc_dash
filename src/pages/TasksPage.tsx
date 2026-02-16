@@ -41,6 +41,7 @@ type Props = {
   onSaveWeeklyTarget: (sales: number, cpa: number) => void
   onQaSubmit: (e: React.FormEvent) => void
   onAuditSubmit: (e: React.FormEvent) => void
+  onAuditNoActionSubmit: () => void
 }
 
 export function TasksPage({
@@ -63,6 +64,7 @@ export function TasksPage({
   onSaveWeeklyTarget,
   onQaSubmit,
   onAuditSubmit,
+  onAuditNoActionSubmit,
 }: Props) {
   const renderMissingNames = (rows: Array<{ id: string; name: string }>) =>
     rows.map((agent, idx) => (
@@ -276,6 +278,9 @@ export function TasksPage({
             </Field>
             <Button type="submit" variant="default" className="w-fit">
               Save Audit Entry
+            </Button>
+            <Button type="button" variant="secondary" className="w-fit" onClick={onAuditNoActionSubmit}>
+              Mark No Action Needed
             </Button>
           </form>
         </Card>

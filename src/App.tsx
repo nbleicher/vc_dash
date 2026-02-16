@@ -235,6 +235,37 @@ function App() {
     setAuditForm({ agentId: '', carrier: CARRIERS[0], clientName: '', reason: '', currentStatus: 'pending_cms' })
   }
 
+  const handleAuditNoActionSubmit = (): void => {
+    const agentId = ensureAgentDefault(auditForm.agentId)
+    if (!agentId) return
+    const hasAnyToday = auditRecords.some((row) => row.agentId === agentId && row.discoveryTs.slice(0, 10) === todayKey)
+    if (hasAnyToday) {
+      const agentName = agents.find((a) => a.id === agentId)?.name ?? 'Agent'
+      const proceed = window.confirm(`Audit for ${agentName} already has an entry today. Submit "No Action Needed" anyway?`)
+      if (!proceed) return
+    }
+    const nowIso = new Date().toISOString()
+    setAuditRecords((prev) => [
+      ...prev.filter(
+        (row) =>
+          !(row.agentId === agentId && row.discoveryTs.slice(0, 10) === todayKey && row.currentStatus === 'no_action_needed'),
+      ),
+      {
+        id: uid('audit'),
+        agentId,
+        carrier: 'N/A',
+        clientName: 'N/A',
+        reason: 'No action needed for day',
+        currentStatus: 'no_action_needed',
+        discoveryTs: nowIso,
+        mgmtNotified: true,
+        outreachMade: true,
+        resolutionTs: nowIso,
+      },
+    ])
+    setAuditForm((prev) => ({ ...prev, agentId: '' }))
+  }
+
   const toggleAuditFlag = (id: string, field: 'mgmtNotified' | 'outreachMade'): void => {
     setAuditRecords((prev) =>
       prev.map((r) => {
@@ -628,6 +659,7 @@ function App() {
             onSaveWeeklyTarget={saveWeeklyTarget}
             onQaSubmit={handleQaSubmit}
             onAuditSubmit={handleAuditSubmit}
+            onAuditNoActionSubmit={handleAuditNoActionSubmit}
           />
         )}
 

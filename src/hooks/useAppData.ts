@@ -118,7 +118,10 @@ export function useAppData(store: DataStore) {
 
   const actionQa = useMemo(() => qaRecords.filter((q) => q.status === 'Check Recording'), [qaRecords])
   const actionAudit = useMemo(
-    () => auditRecords.filter((a) => a.currentStatus !== 'pending_cms' && !(a.mgmtNotified && a.outreachMade)),
+    () =>
+      auditRecords.filter(
+        (a) => a.currentStatus !== 'pending_cms' && a.currentStatus !== 'no_action_needed' && !(a.mgmtNotified && a.outreachMade),
+      ),
     [auditRecords],
   )
   const incompleteQaAgentsToday = useMemo(() => {
@@ -289,8 +292,9 @@ export function useAppData(store: DataStore) {
   }, [auditRecords, metricsScope, effectiveMetricsAgentId])
   const activeAuditCount = useMemo(() => {
     if (metricsScope === 'house') return actionAudit.length
-    return auditRecords.filter((r) => r.agentId === effectiveMetricsAgentId && !(r.mgmtNotified && r.outreachMade))
-      .length
+    return auditRecords.filter(
+      (r) => r.agentId === effectiveMetricsAgentId && r.currentStatus !== 'no_action_needed' && !(r.mgmtNotified && r.outreachMade),
+    ).length
   }, [auditRecords, metricsScope, effectiveMetricsAgentId, actionAudit])
 
   const effectiveVaultAgentId = useMemo(
