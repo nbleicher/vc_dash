@@ -27,7 +27,8 @@ If Railway build fails with `EBUSY ... rmdir '/app/node_modules/.vite'`:
 
 - Confirm `.dockerignore` includes `node_modules` and `dist`.
 - In Railway, clear build cache and redeploy.
-- Keep build command as `rm -rf node_modules && npm ci --include=dev`.
+- Ensure `nixpacks.toml` is present so Railway does not fall back to default `npm ci`.
+- If needed, set build command to `npm install --include=dev --no-audit --no-fund`.
 
 ## 3) Deploy frontend to Cloudflare Pages
 
