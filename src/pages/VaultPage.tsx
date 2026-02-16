@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { DataStore } from '../data'
 import { Badge, Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Textarea } from '../components'
 import type { VaultHistoryView, VaultScope, VaultMeeting } from '../types'
@@ -90,20 +90,20 @@ export function VaultPage({
   const [popupSearch, setPopupSearch] = useState('')
   const [popupPage, setPopupPage] = useState(1)
 
-  const agentName = (agentId: string): string => agents.find((a) => a.id === agentId)?.name ?? 'Unknown'
+  const agentNameById = useMemo(() => new Map(agents.map((agent) => [agent.id, agent.name])), [agents])
+  const agentName = useCallback((agentId: string): string => agentNameById.get(agentId) ?? 'Unknown', [agentNameById])
 
   useEffect(() => {
     if (!fullTableMode) return
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setFullTableMode(null)
+      if (e.key === 'Escape') {
+        setFullTableMode(null)
+        setPopupPage(1)
+      }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [fullTableMode])
-
-  useEffect(() => {
-    setPopupPage(1)
-  }, [popupSearch, fullTableMode])
 
   const qaFilteredRows = useMemo(() => {
     const q = popupSearch.trim().toLowerCase()
@@ -111,7 +111,7 @@ export function VaultPage({
     return vaultQaHistory.filter((row) =>
       [agentName(row.agentId), row.dateKey, row.clientName, row.decision, row.status, row.notes].join(' ').toLowerCase().includes(q),
     )
-  }, [popupSearch, vaultQaHistory, agents])
+  }, [popupSearch, vaultQaHistory, agentName])
 
   const auditFilteredRows = useMemo(() => {
     const q = popupSearch.trim().toLowerCase()
@@ -122,7 +122,7 @@ export function VaultPage({
         .toLowerCase()
         .includes(q),
     )
-  }, [popupSearch, vaultAuditHistory, agents])
+  }, [popupSearch, vaultAuditHistory, agentName])
 
   const filteredRowsCount = fullTableMode === 'qa' ? qaFilteredRows.length : auditFilteredRows.length
   const totalPages = Math.max(1, Math.ceil(filteredRowsCount / PAGE_SIZE))
@@ -137,7 +137,13 @@ export function VaultPage({
       <div className="mb-2 flex items-center justify-between gap-2">
         <h3>Daily QA History</h3>
         {showFullAction ? (
-          <Button variant="secondary" onClick={() => setFullTableMode('qa')}>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setFullTableMode('qa')
+              setPopupPage(1)
+            }}
+          >
             View Full Table
           </Button>
         ) : null}
@@ -181,7 +187,13 @@ export function VaultPage({
       <div className="mb-2 flex items-center justify-between gap-2">
         <h3>Action Needed History</h3>
         {showFullAction ? (
-          <Button variant="secondary" onClick={() => setFullTableMode('audit')}>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setFullTableMode('audit')
+              setPopupPage(1)
+            }}
+          >
             View Full Table
           </Button>
         ) : null}
@@ -470,6 +482,7 @@ export function VaultPage({
                 onClick={() => {
                   setFullTableMode(null)
                   setPopupSearch('')
+                  setPopupPage(1)
                 }}
               >
                 Close
@@ -481,7 +494,10 @@ export function VaultPage({
                 <Input
                   placeholder="Search by agent, date, client, status, notes..."
                   value={popupSearch}
-                  onChange={(e) => setPopupSearch(e.target.value)}
+                  onChange={(e) => {
+                    setPopupSearch(e.target.value)
+                    setPopupPage(1)
+                  }}
                 />
               </Field>
               <p className="text-sm text-slate-500">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Badge, Button, Card, CardTitle, Input, MetricCard, Select } from '../components'
 import { SLOT_CONFIG } from '../constants'
 import type { DataStore } from '../data'
@@ -78,28 +78,19 @@ export function DashboardPage({
     calls: 0,
     sales: 0,
   })
-
-  useEffect(() => {
-    setEntryForm((prev) => {
-      const defaultAgentId = activeAgents[0]?.id ?? ''
-      const safeAgentId = activeAgents.some((agent) => agent.id === prev.agentId) ? prev.agentId : defaultAgentId
-      const safeSlot = SLOT_CONFIG.some((slot) => slot.key === prev.slot) ? prev.slot : SLOT_CONFIG[0].key
-      const snap =
-        snapshots.find((item) => item.dateKey === todayKey && item.slot === safeSlot && item.agentId === safeAgentId) ?? null
-      return {
-        agentId: safeAgentId,
-        slot: safeSlot,
-        calls: snap?.billableCalls ?? prev.calls ?? 0,
-        sales: snap?.sales ?? prev.sales ?? 0,
-      }
-    })
-  }, [activeAgents, snapshots, todayKey])
-
-  const selectedSlot = SLOT_CONFIG.find((slot) => slot.key === entryForm.slot) ?? SLOT_CONFIG[0]
+  const defaultAgentId = activeAgents[0]?.id ?? ''
+  const safeAgentId = activeAgents.some((agent) => agent.id === entryForm.agentId) ? entryForm.agentId : defaultAgentId
+  const safeSlotKey = SLOT_CONFIG.some((slot) => slot.key === entryForm.slot) ? entryForm.slot : SLOT_CONFIG[0].key
+  const selectedSlot = SLOT_CONFIG.find((slot) => slot.key === safeSlotKey) ?? SLOT_CONFIG[0]
+  const selectionWasAdjusted = entryForm.agentId !== safeAgentId || entryForm.slot !== safeSlotKey
+  const selectedSnapshot =
+    snapshots.find((item) => item.dateKey === todayKey && item.slot === selectedSlot.key && item.agentId === safeAgentId) ?? null
+  const entryCalls = selectionWasAdjusted ? (selectedSnapshot?.billableCalls ?? 0) : entryForm.calls
+  const entrySales = selectionWasAdjusted ? (selectedSnapshot?.sales ?? 0) : entryForm.sales
   const selectedSubmission =
     intraSubmissions.find((item) => item.dateKey === todayKey && item.slot === selectedSlot.key) ?? null
   const selectedSlotEditable = isIntraSlotEditable(selectedSlot.key)
-  const entryCpa = entryForm.sales > 0 ? (entryForm.calls * 15) / entryForm.sales : null
+  const entryCpa = entrySales > 0 ? (entryCalls * 15) / entrySales : null
 
   const loadDraftForSelection = (agentId: string, slot: string): void => {
     const snap = snapshots.find((item) => item.dateKey === todayKey && item.slot === slot && item.agentId === agentId) ?? null
@@ -113,13 +104,13 @@ export function DashboardPage({
   }
 
   const handleSaveDraft = (): void => {
-    if (!entryForm.agentId) return
-    onUpsertSnapshot(selectedSlot, entryForm.agentId, Math.max(0, entryForm.calls), Math.max(0, entryForm.sales))
+    if (!safeAgentId) return
+    onUpsertSnapshot(selectedSlot, safeAgentId, Math.max(0, entryCalls), Math.max(0, entrySales))
   }
 
   const handleSubmitSlot = (): void => {
-    if (!entryForm.agentId) return
-    onUpsertSnapshot(selectedSlot, entryForm.agentId, Math.max(0, entryForm.calls), Math.max(0, entryForm.sales))
+    if (!safeAgentId) return
+    onUpsertSnapshot(selectedSlot, safeAgentId, Math.max(0, entryCalls), Math.max(0, entrySales))
     onSubmitIntraSlot(selectedSlot.key)
   }
 
@@ -280,8 +271,8 @@ export function DashboardPage({
                 Agent
                 <Select
                   className="mt-1"
-                  value={entryForm.agentId}
-                  onChange={(e) => loadDraftForSelection(e.target.value, entryForm.slot)}
+                  value={safeAgentId}
+                  onChange={(e) => loadDraftForSelection(e.target.value, safeSlotKey)}
                 >
                   <option value="">Select agent</option>
                   {activeAgents.map((agent) => (
@@ -295,8 +286,8 @@ export function DashboardPage({
                 Time
                 <Select
                   className="mt-1"
-                  value={entryForm.slot}
-                  onChange={(e) => loadDraftForSelection(entryForm.agentId, e.target.value)}
+                  value={safeSlotKey}
+                  onChange={(e) => loadDraftForSelection(safeAgentId, e.target.value)}
                 >
                   {SLOT_CONFIG.map((slot) => (
                     <option key={slot.key} value={slot.key}>
@@ -323,9 +314,16 @@ export function DashboardPage({
                   className="mt-1"
                   type="number"
                   min={0}
-                  value={entryForm.calls}
+                  value={entryCalls}
                   disabled={!selectedSlotEditable}
-                  onChange={(e) => setEntryForm((prev) => ({ ...prev, calls: Number(e.target.value) || 0 }))}
+                  onChange={(e) =>
+                    setEntryForm((prev) => ({
+                      ...prev,
+                      agentId: safeAgentId,
+                      slot: selectedSlot.key,
+                      calls: Number(e.target.value) || 0,
+                    }))
+                  }
                 />
               </label>
               <label className="text-sm font-medium text-slate-700">
@@ -334,9 +332,16 @@ export function DashboardPage({
                   className="mt-1"
                   type="number"
                   min={0}
-                  value={entryForm.sales}
+                  value={entrySales}
                   disabled={!selectedSlotEditable}
-                  onChange={(e) => setEntryForm((prev) => ({ ...prev, sales: Number(e.target.value) || 0 }))}
+                  onChange={(e) =>
+                    setEntryForm((prev) => ({
+                      ...prev,
+                      agentId: safeAgentId,
+                      slot: selectedSlot.key,
+                      sales: Number(e.target.value) || 0,
+                    }))
+                  }
                 />
               </label>
             </div>
