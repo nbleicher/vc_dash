@@ -13,6 +13,8 @@ coverage
 tmp
 temp
 .cache
+.vite
+**/.vite
 .env
 .env.*
 !.env.example
