@@ -1,4 +1,4 @@
-# Deploy Free Stack (Cloudflare Pages + Render + Supabase)
+# Deploy Free Stack (Cloudflare Pages + Railway + Supabase)
 
 ## 1) Provision Supabase Postgres (free)
 
@@ -6,28 +6,31 @@
 2. Run SQL migration from `supabase/migrations/20260214_app_state.sql`.
 3. Copy the pooled Postgres `DATABASE_URL`.
 
-## 2) Deploy backend to Render (free web service)
+## 2) Deploy backend API to Railway
 
-1. Connect this repository in Render.
-2. Use `render.yaml` (or set manually):
-   - build: `npm ci`
-   - start: `npm run server:start`
-3. Configure env vars:
+1. Create a Railway project and connect this repository.
+2. Create one service for this backend and use:
+   - Build command: `npm ci`
+   - Start command: `npm run server:start`
+3. Configure Railway variables:
+   - `API_HOST=0.0.0.0`
    - `DATABASE_URL` (Supabase)
    - `JWT_SECRET`
    - `ADMIN_USERNAME`
    - `ADMIN_PASSWORD`
    - `FRONTEND_ORIGIN` (Cloudflare Pages domain)
-4. Confirm `GET /health` returns `{ data: { ok: true, db: "ok" } }`.
+4. Keep `API_PORT` optional. The app now supports Railway `PORT` with `API_PORT` fallback.
+5. Configure health check path to `/health`.
+6. Confirm `GET /health` returns `{ data: { ok: true, db: "ok" } }`.
 
-## 3) Deploy frontend to Cloudflare Pages (free)
+## 3) Deploy frontend to Cloudflare Pages
 
 1. Create a Cloudflare Pages project from this repo.
 2. Build settings:
    - Build command: `npm run build`
    - Build output directory: `dist`
 3. Set environment variable:
-   - `VITE_API_URL` = your Render API URL
+   - `VITE_API_URL=https://<your-railway-service-domain>`
 
 ## 3.5) Set custom domain to `value.jawnix.com`
 
@@ -38,11 +41,10 @@
    - Name: `value`
    - Target: your Pages default domain (for example `<your-project>.pages.dev`)
 4. Wait for domain verification and SSL status to become Active in Cloudflare Pages.
-5. Update backend CORS origin in Render:
+5. Update backend CORS origin in Railway:
    - `FRONTEND_ORIGIN=https://value.jawnix.com`
 6. Confirm frontend build env in Cloudflare Pages:
-   - `VITE_API_URL` remains your Render API URL
-   - Optional: if you later set up an API subdomain (for example `api.jawnix.com`), point `VITE_API_URL` to that HTTPS URL instead.
+   - `VITE_API_URL=https://<your-railway-service-domain>`
 7. Redeploy backend and frontend after env/domain changes.
 
 Notes:
@@ -51,12 +53,11 @@ Notes:
 
 ### Copy/paste values for this domain
 
-Render (backend) environment values:
+Railway (backend) environment values:
 
 ```env
 FRONTEND_ORIGIN=https://value.jawnix.com
 API_HOST=0.0.0.0
-API_PORT=10000
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=<set-a-strong-password>
 JWT_SECRET=<set-a-long-random-secret>
@@ -66,7 +67,7 @@ DATABASE_URL=<supabase-pooled-connection-string>
 Cloudflare Pages (frontend) environment values:
 
 ```env
-VITE_API_URL=https://<your-render-service>.onrender.com
+VITE_API_URL=https://<your-railway-service-domain>
 ```
 
 DNS for your subdomain:
@@ -77,21 +78,38 @@ Name: value
 Target: <your-pages-project>.pages.dev
 ```
 
-### Verification checklist for `value.jawnix.com`
+## 4) Railway 24/7 cost envelope (low traffic)
 
-- Open `https://value.jawnix.com` and confirm the site loads.
-- Confirm SSL/TLS status is Active for the custom domain in Cloudflare Pages.
-- Login succeeds from `https://value.jawnix.com`.
-- Browser console shows no CORS errors during auth/data requests.
-- Logout succeeds and authenticated `/state` requests work as expected.
+Pricing formula (monthly):
 
-## 4) Cross-origin cookie/auth checks
+- Memory cost = `avg_ram_gb * 2,592,000 * 0.00000386`
+- CPU cost = `avg_vcpu * 2,592,000 * 0.00000772`
+- Volume cost = `volume_gb * 2,592,000 * 0.00000006`
+- Egress cost = `egress_gb * 0.05`
+- Add platform fee (`$1/month` after trial)
+
+Low-traffic examples for this backend:
+
+- 0.1 vCPU + 0.1 GB RAM average -> about `$2.99` compute/month
+- 0.2 vCPU + 0.25 GB RAM average -> about `$6.66` compute/month
+- Typical total for this app is often `$4-$9/month` including platform fee and light egress
+
+## 5) Migration cutover + rollback (Render -> Railway)
+
+1. Deploy Railway backend first and validate `/health`.
+2. Keep Render live while testing Railway with the same Supabase database.
+3. Update Cloudflare Pages `VITE_API_URL` to Railway and redeploy frontend.
+4. Smoke test: login/logout, writes/reads, and authenticated `/state` requests.
+5. Monitor Railway logs/metrics for errors.
+6. If issues occur, roll back by restoring Cloudflare `VITE_API_URL` to Render and redeploy frontend.
+
+## 6) Cross-origin cookie/auth checks
 
 1. Login from deployed frontend.
 2. Ensure sign-out works and no network/CORS errors appear.
 3. Verify authenticated routes (`/state`) function from browser.
 
-## 5) Data import (optional)
+## 7) Data import (optional)
 
 If you have local SQLite data to keep:
 

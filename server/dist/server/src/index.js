@@ -1,5 +1,5 @@
 import { buildApp } from './app.js';
-const port = Number(process.env.API_PORT ?? 8787);
+const port = Number(process.env.PORT ?? process.env.API_PORT ?? 8787);
 const host = process.env.API_HOST ?? '0.0.0.0';
 const frontendOrigins = (process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173')
     .split(',')
@@ -14,6 +14,9 @@ if (process.env.NODE_ENV === 'production') {
     }
     if (!process.env.FRONTEND_ORIGIN) {
         throw new Error('Set FRONTEND_ORIGIN in production.');
+    }
+    if (!process.env.DATABASE_URL?.trim()) {
+        throw new Error('Set DATABASE_URL in production.');
     }
 }
 const app = await buildApp({

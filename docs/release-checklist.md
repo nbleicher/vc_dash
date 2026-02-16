@@ -17,6 +17,8 @@
 - [ ] Tasks updates persist
 - [ ] Vault meeting/doc flows persist
 - [ ] CSV export endpoint returns data
+- [ ] Frontend `VITE_API_URL` points at the intended API host (Railway or rollback target)
+- [ ] Browser network panel shows no CORS/cookie errors during auth flow
 
 ## Rollback criteria
 
@@ -29,6 +31,6 @@ Rollback immediately if any of the following occurs:
 ## Rollback actions
 
 1. Re-deploy previous backend artifact.
-2. Re-deploy previous frontend artifact.
+2. Reset frontend `VITE_API_URL` to the previous API host and re-deploy frontend.
 3. Restore previous SQLite backup when required.
 4. Re-run smoke tests.
