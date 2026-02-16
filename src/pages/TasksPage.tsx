@@ -58,6 +58,14 @@ export function TasksPage({
   onQaSubmit,
   onAuditSubmit,
 }: Props) {
+  const renderMissingNames = (rows: Array<{ id: string; name: string }>) =>
+    rows.map((agent, idx) => (
+      <span key={agent.id}>
+        <strong>{agent.name}</strong>
+        {idx < rows.length - 1 ? ', ' : ''}
+      </span>
+    ))
+
   const taskItems = [
     { key: 'attendance' as const, label: 'Attendance' },
     { key: 'qa' as const, label: 'Daily QA' },
@@ -127,7 +135,7 @@ export function TasksPage({
             <strong>Daily QA Completion</strong>
             {incompleteQaAgentsToday.length > 0 ? (
               <p>
-                Missing ({incompleteQaAgentsToday.length}): {incompleteQaAgentsToday.map((a) => a.name).join(', ')}
+                Missing ({incompleteQaAgentsToday.length}): {renderMissingNames(incompleteQaAgentsToday)}
               </p>
             ) : (
               <p>All active agents have Daily QA completed for today.</p>
@@ -187,7 +195,7 @@ export function TasksPage({
             {incompleteAuditAgentsToday.length > 0 ? (
               <p>
                 Missing ({incompleteAuditAgentsToday.length}):{' '}
-                {incompleteAuditAgentsToday.map((a) => a.name).join(', ')}
+                {renderMissingNames(incompleteAuditAgentsToday)}
               </p>
             ) : (
               <p>All active agents have Action Needed Audit completed for today.</p>

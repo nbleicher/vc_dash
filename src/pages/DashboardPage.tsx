@@ -36,6 +36,7 @@ type Props = {
   snapshots: DataStore['snapshots']
   onResolveQa: (id: string) => void
   onToggleAuditFlag: (id: string, field: 'mgmtNotified' | 'outreachMade') => void
+  onGoToAttendance: () => void
   onUpsertSnapshot: (
     slot: (typeof SLOT_CONFIG)[number],
     agentId: string,
@@ -61,6 +62,7 @@ export function DashboardPage({
   snapshots,
   onResolveQa,
   onToggleAuditFlag,
+  onGoToAttendance,
   onUpsertSnapshot,
 }: Props) {
   return (
@@ -72,6 +74,9 @@ export function DashboardPage({
             <Badge variant="warning">Needs Review</Badge>
           </div>
           <p>Attendance is incomplete for today after 10:00 AM EST.</p>
+          <Button variant="default" className="mt-2" onClick={onGoToAttendance}>
+            Complete Attendance
+          </Button>
         </Card>
       )}
       {intraAlert && (

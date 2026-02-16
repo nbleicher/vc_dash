@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react'
 import type { DataStore } from '../data'
 import { Badge, Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Textarea } from '../components'
 import type { VaultHistoryView, VaultScope, VaultMeeting } from '../types'
@@ -57,6 +58,8 @@ type Props = {
   onPdfUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
 }
 
+const PAGE_SIZE = 50
+
 export function VaultPage({
   vaultScope,
   setVaultScope,
@@ -83,6 +86,144 @@ export function VaultPage({
   onAddMeeting,
   onPdfUpload,
 }: Props) {
+  const [fullTableMode, setFullTableMode] = useState<'qa' | 'audit' | null>(null)
+  const [popupSearch, setPopupSearch] = useState('')
+  const [popupPage, setPopupPage] = useState(1)
+
+  const agentName = (agentId: string): string => agents.find((a) => a.id === agentId)?.name ?? 'Unknown'
+
+  useEffect(() => {
+    if (!fullTableMode) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFullTableMode(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [fullTableMode])
+
+  useEffect(() => {
+    setPopupPage(1)
+  }, [popupSearch, fullTableMode])
+
+  const qaFilteredRows = useMemo(() => {
+    const q = popupSearch.trim().toLowerCase()
+    if (!q) return vaultQaHistory
+    return vaultQaHistory.filter((row) =>
+      [agentName(row.agentId), row.dateKey, row.clientName, row.decision, row.status, row.notes].join(' ').toLowerCase().includes(q),
+    )
+  }, [popupSearch, vaultQaHistory, agents])
+
+  const auditFilteredRows = useMemo(() => {
+    const q = popupSearch.trim().toLowerCase()
+    if (!q) return vaultAuditHistory
+    return vaultAuditHistory.filter((row) =>
+      [agentName(row.agentId), formatTimestamp(row.discoveryTs), row.carrier, row.clientName, row.currentStatus]
+        .join(' ')
+        .toLowerCase()
+        .includes(q),
+    )
+  }, [popupSearch, vaultAuditHistory, agents])
+
+  const filteredRowsCount = fullTableMode === 'qa' ? qaFilteredRows.length : auditFilteredRows.length
+  const totalPages = Math.max(1, Math.ceil(filteredRowsCount / PAGE_SIZE))
+  const safePage = Math.min(popupPage, totalPages)
+  const start = (safePage - 1) * PAGE_SIZE
+
+  const qaPagedRows = qaFilteredRows.slice(start, start + PAGE_SIZE)
+  const auditPagedRows = auditFilteredRows.slice(start, start + PAGE_SIZE)
+
+  const renderQaHistoryCard = (rows: Props['vaultQaHistory'], showFullAction = false) => (
+    <Card>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3>Daily QA History</h3>
+        {showFullAction ? (
+          <Button variant="secondary" onClick={() => setFullTableMode('qa')}>
+            View Full Table
+          </Button>
+        ) : null}
+      </div>
+      <TableWrap>
+        <DataTable>
+          <thead>
+            <tr>
+              <th>Agent</th>
+              <th>Date</th>
+              <th>Client</th>
+              <th>Decision</th>
+              <th>Status</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={6}>N/A</td>
+              </tr>
+            )}
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td>{agentName(row.agentId)}</td>
+                <td>{row.dateKey}</td>
+                <td>{row.clientName}</td>
+                <td>{row.decision}</td>
+                <td>{row.status}</td>
+                <td>{row.notes || 'N/A'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </DataTable>
+      </TableWrap>
+    </Card>
+  )
+
+  const renderAuditHistoryCard = (rows: Props['vaultAuditHistory'], showFullAction = false) => (
+    <Card>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3>Action Needed History</h3>
+        {showFullAction ? (
+          <Button variant="secondary" onClick={() => setFullTableMode('audit')}>
+            View Full Table
+          </Button>
+        ) : null}
+      </div>
+      <TableWrap>
+        <DataTable>
+          <thead>
+            <tr>
+              <th>Agent</th>
+              <th>Discovered</th>
+              <th>Carrier</th>
+              <th>Client</th>
+              <th>Status</th>
+              <th>Timestamp 1</th>
+              <th>Timestamp 2</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={7}>N/A</td>
+              </tr>
+            )}
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td>{agentName(row.agentId)}</td>
+                <td>{formatTimestamp(row.discoveryTs)}</td>
+                <td>{row.carrier}</td>
+                <td>{row.clientName}</td>
+                <td>
+                  <Badge variant="warning">Needs Review</Badge>
+                </td>
+                <td>{formatTimestamp(row.discoveryTs)}</td>
+                <td>{formatTimestamp(row.resolutionTs)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </DataTable>
+      </TableWrap>
+    </Card>
+  )
+
   return (
     <Card className="space-y-4">
       <CardTitle>Vault</CardTitle>
@@ -94,32 +235,32 @@ export function VaultPage({
             <option value="house">House (All Agents)</option>
           </Select>
         </Field>
-        <Field className="min-w-[220px]">
-          <FieldLabel>Agent</FieldLabel>
-          <Select
-            value={effectiveVaultAgentId}
-            onChange={(e) => setVaultAgentId(e.target.value)}
-            disabled={vaultScope === 'house'}
-          >
-            {activeAgents.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field className="min-w-[260px]">
-          <FieldLabel>History Type</FieldLabel>
-          <Select
-            value={vaultHistoryView}
-            onChange={(e) => setVaultHistoryView(e.target.value as VaultHistoryView)}
-          >
-            <option value="attendance">Attendance History</option>
-            <option value="qa">Daily QA History</option>
-            <option value="audit">Action Needed History</option>
-            <option value="targets">Weekly Target History</option>
-          </Select>
-        </Field>
+        {vaultScope === 'agent' ? (
+          <>
+            <Field className="min-w-[220px]">
+              <FieldLabel>Agent</FieldLabel>
+              <Select value={effectiveVaultAgentId} onChange={(e) => setVaultAgentId(e.target.value)}>
+                {activeAgents.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field className="min-w-[260px]">
+              <FieldLabel>History Type</FieldLabel>
+              <Select
+                value={vaultHistoryView}
+                onChange={(e) => setVaultHistoryView(e.target.value as VaultHistoryView)}
+              >
+                <option value="attendance">Attendance History</option>
+                <option value="qa">Daily QA History</option>
+                <option value="audit">Action Needed History</option>
+                <option value="targets">Weekly Target History</option>
+              </Select>
+            </Field>
+          </>
+        ) : null}
         <Field className="min-w-[180px]">
           <FieldLabel>Sort</FieldLabel>
           <Select value={historySort} onChange={(e) => setHistorySort(e.target.value as 'newest' | 'oldest')}>
@@ -128,7 +269,12 @@ export function VaultPage({
           </Select>
         </Field>
       </div>
-      {!selectedVaultAgent ? (
+      {vaultScope === 'house' ? (
+        <div className="split">
+          {renderQaHistoryCard(vaultQaHistory, true)}
+          {renderAuditHistoryCard(vaultAuditHistory, true)}
+        </div>
+      ) : !selectedVaultAgent ? (
         <p className="text-sm text-slate-500">N/A - add/select an active agent.</p>
       ) : (
         <>
@@ -259,83 +405,9 @@ export function VaultPage({
             </Card>
           )}
 
-          {vaultHistoryView === 'qa' && (
-            <Card>
-              <h3>Daily QA History</h3>
-              <TableWrap>
-                <DataTable>
-                  <thead>
-                    <tr>
-                      <th>Agent</th>
-                      <th>Date</th>
-                      <th>Client</th>
-                      <th>Decision</th>
-                      <th>Status</th>
-                      <th>Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {vaultQaHistory.length === 0 && (
-                      <tr>
-                        <td colSpan={6}>N/A</td>
-                      </tr>
-                    )}
-                    {vaultQaHistory.map((row) => (
-                      <tr key={row.id}>
-                        <td>{agents.find((a) => a.id === row.agentId)?.name ?? 'Unknown'}</td>
-                        <td>{row.dateKey}</td>
-                        <td>{row.clientName}</td>
-                        <td>{row.decision}</td>
-                        <td>{row.status}</td>
-                        <td>{row.notes || 'N/A'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </DataTable>
-              </TableWrap>
-            </Card>
-          )}
+          {vaultHistoryView === 'qa' && renderQaHistoryCard(vaultQaHistory)}
 
-          {vaultHistoryView === 'audit' && (
-            <Card>
-              <h3>Action Needed History</h3>
-              <TableWrap>
-                <DataTable>
-                  <thead>
-                    <tr>
-                      <th>Agent</th>
-                      <th>Discovered</th>
-                      <th>Carrier</th>
-                      <th>Client</th>
-                      <th>Status</th>
-                      <th>Timestamp 1</th>
-                      <th>Timestamp 2</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {vaultAuditHistory.length === 0 && (
-                      <tr>
-                        <td colSpan={7}>N/A</td>
-                      </tr>
-                    )}
-                    {vaultAuditHistory.map((row) => (
-                      <tr key={row.id}>
-                        <td>{agents.find((a) => a.id === row.agentId)?.name ?? 'Unknown'}</td>
-                        <td>{formatTimestamp(row.discoveryTs)}</td>
-                        <td>{row.carrier}</td>
-                        <td>{row.clientName}</td>
-                        <td>
-                          <Badge variant="warning">Needs Review</Badge>
-                        </td>
-                        <td>{formatTimestamp(row.discoveryTs)}</td>
-                        <td>{formatTimestamp(row.resolutionTs)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </DataTable>
-              </TableWrap>
-            </Card>
-          )}
+          {vaultHistoryView === 'audit' && renderAuditHistoryCard(vaultAuditHistory)}
 
           {vaultHistoryView === 'targets' && (
             <Card>
@@ -382,6 +454,121 @@ export function VaultPage({
             </Card>
           )}
         </>
+      )}
+
+      {fullTableMode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+          <Card className="max-h-[88vh] w-full max-w-7xl overflow-hidden">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <h3>{fullTableMode === 'qa' ? 'Daily QA History' : 'Action Needed History'} - Full Table</h3>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setFullTableMode(null)
+                  setPopupSearch('')
+                }}
+              >
+                Close
+              </Button>
+            </div>
+            <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+              <Field className="min-w-[320px]">
+                <FieldLabel>Search</FieldLabel>
+                <Input
+                  placeholder="Search by agent, date, client, status, notes..."
+                  value={popupSearch}
+                  onChange={(e) => setPopupSearch(e.target.value)}
+                />
+              </Field>
+              <p className="text-sm text-slate-500">
+                Showing {filteredRowsCount === 0 ? 0 : start + 1}-{Math.min(start + PAGE_SIZE, filteredRowsCount)} of{' '}
+                {filteredRowsCount}
+              </p>
+            </div>
+            <TableWrap className="max-h-[58vh]">
+              {fullTableMode === 'qa' ? (
+                <DataTable>
+                  <thead>
+                    <tr>
+                      <th>Agent</th>
+                      <th>Date</th>
+                      <th>Client</th>
+                      <th>Decision</th>
+                      <th>Status</th>
+                      <th>Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {qaPagedRows.length === 0 && (
+                      <tr>
+                        <td colSpan={6}>No QA rows match this search.</td>
+                      </tr>
+                    )}
+                    {qaPagedRows.map((row) => (
+                      <tr key={row.id}>
+                        <td>{agentName(row.agentId)}</td>
+                        <td>{row.dateKey}</td>
+                        <td>{row.clientName}</td>
+                        <td>{row.decision}</td>
+                        <td>{row.status}</td>
+                        <td>{row.notes || 'N/A'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </DataTable>
+              ) : (
+                <DataTable>
+                  <thead>
+                    <tr>
+                      <th>Agent</th>
+                      <th>Discovered</th>
+                      <th>Carrier</th>
+                      <th>Client</th>
+                      <th>Status</th>
+                      <th>Timestamp 1</th>
+                      <th>Timestamp 2</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditPagedRows.length === 0 && (
+                      <tr>
+                        <td colSpan={7}>No audit rows match this search.</td>
+                      </tr>
+                    )}
+                    {auditPagedRows.map((row) => (
+                      <tr key={row.id}>
+                        <td>{agentName(row.agentId)}</td>
+                        <td>{formatTimestamp(row.discoveryTs)}</td>
+                        <td>{row.carrier}</td>
+                        <td>{row.clientName}</td>
+                        <td>
+                          <Badge variant="warning">Needs Review</Badge>
+                        </td>
+                        <td>{formatTimestamp(row.discoveryTs)}</td>
+                        <td>{formatTimestamp(row.resolutionTs)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </DataTable>
+              )}
+            </TableWrap>
+            <div className="mt-3 flex items-center justify-end gap-2">
+              <Button variant="secondary" disabled={safePage <= 1} onClick={() => setPopupPage((p) => Math.max(1, p - 1))}>
+                Previous
+              </Button>
+              <span className="text-sm text-slate-600">
+                Page {safePage} of {totalPages}
+              </span>
+              <Button
+                variant="secondary"
+                disabled={safePage >= totalPages}
+                onClick={() => setPopupPage((p) => Math.min(totalPages, p + 1))}
+              >
+                Next
+              </Button>
+            </div>
+          </Card>
+        </div>
       )}
     </Card>
   )

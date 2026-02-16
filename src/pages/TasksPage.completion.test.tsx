@@ -39,7 +39,9 @@ describe('TasksPage completion boxes', () => {
       />,
     )
     expect(screen.getByText('Daily QA Completion')).toBeInTheDocument()
-    expect(screen.getAllByText(/Missing \(2\): Alex, Jordan/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Missing \(2\):/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Alex', { selector: 'strong' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Jordan', { selector: 'strong' }).length).toBeGreaterThan(0)
   })
 
   it('shows QA success message when all completed', () => {
@@ -59,7 +61,9 @@ describe('TasksPage completion boxes', () => {
       />,
     )
     expect(screen.getByText('Action Needed Audit Completion')).toBeInTheDocument()
-    expect(screen.getAllByText(/Missing \(2\): Alex, Jordan/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Missing \(2\):/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Alex', { selector: 'strong' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Jordan', { selector: 'strong' }).length).toBeGreaterThan(0)
   })
 
   it('shows Audit success message when all completed', () => {

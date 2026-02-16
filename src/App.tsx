@@ -223,6 +223,11 @@ function App() {
       const existing = prev.find((a) => a.agentId === agentId && a.dateKey === dateKey)
       if (!existing)
         return [...prev, { id: uid('att'), weekKey: currentWeekKey, dateKey, agentId, percent, notes: '' }]
+      if (existing.percent !== percent) {
+        const agentName = agents.find((a) => a.id === agentId)?.name ?? 'Agent'
+        const proceed = window.confirm(`Attendance for ${agentName} on ${dateKey} already exists. Overwrite it?`)
+        if (!proceed) return prev
+      }
       return prev.map((a) => (a.id === existing.id ? { ...a, percent } : a))
     })
   }
@@ -457,6 +462,10 @@ function App() {
             snapshots={snapshots}
             onResolveQa={resolveQa}
             onToggleAuditFlag={toggleAuditFlag}
+            onGoToAttendance={() => {
+              setTopPage('tasks')
+              setTaskPage('attendance')
+            }}
             onUpsertSnapshot={upsertSnapshot}
           />
         )}
