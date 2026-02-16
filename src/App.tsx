@@ -236,8 +236,11 @@ function App() {
   }
 
   const handleAuditNoActionSubmit = (): void => {
-    const agentId = ensureAgentDefault(auditForm.agentId)
-    if (!agentId) return
+    if (!auditForm.agentId) {
+      setUiError('Select an agent before submitting No Action Needed.')
+      return
+    }
+    const agentId = auditForm.agentId
     const hasAnyToday = auditRecords.some((row) => row.agentId === agentId && row.discoveryTs.slice(0, 10) === todayKey)
     if (hasAnyToday) {
       const agentName = agents.find((a) => a.id === agentId)?.name ?? 'Agent'
@@ -263,6 +266,7 @@ function App() {
         resolutionTs: nowIso,
       },
     ])
+    setUiError(null)
     setAuditForm((prev) => ({ ...prev, agentId: '' }))
   }
 

@@ -276,11 +276,20 @@ export function TasksPage({
                 ))}
               </Select>
             </Field>
+            <p className="md:col-span-2 text-xs text-slate-500">
+              Select an agent, then choose either Save Audit Entry (issue found) or Submit No Action Needed (no issue found).
+            </p>
             <Button type="submit" variant="default" className="w-fit">
               Save Audit Entry
             </Button>
-            <Button type="button" variant="secondary" className="w-fit" onClick={onAuditNoActionSubmit}>
-              Mark No Action Needed
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-fit"
+              disabled={!auditForm.agentId}
+              onClick={onAuditNoActionSubmit}
+            >
+              Submit No Action Needed
             </Button>
           </form>
         </Card>

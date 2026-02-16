@@ -110,10 +110,10 @@ describe('TasksPage completion boxes', () => {
 
   it('allows marking no action needed from audit task', () => {
     const props = baseProps()
-    render(<TasksPage {...props} taskPage="audit" />)
+    render(<TasksPage {...props} taskPage="audit" auditForm={{ ...props.auditForm, agentId: 'a1' }} />)
     const auditSection = screen.getAllByText('Action Needed Audit').at(-1)?.closest('section')
     expect(auditSection).not.toBeNull()
-    within(auditSection!).getByRole('button', { name: 'Mark No Action Needed' }).click()
+    within(auditSection!).getByRole('button', { name: 'Submit No Action Needed' }).click()
     expect(props.onAuditNoActionSubmit).toHaveBeenCalled()
   })
 })
