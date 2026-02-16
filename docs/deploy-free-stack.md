@@ -10,7 +10,7 @@
 
 1. Create a Railway project and connect this repository.
 2. Create one service for this backend and use:
-   - Build command: `npm ci`
+   - Build command: `rm -rf node_modules && npm ci --include=dev`
    - Start command: `npm run server:start`
 3. Configure Railway variables:
    - `API_HOST=0.0.0.0`
@@ -22,6 +22,12 @@
 4. Keep `API_PORT` optional. The app now supports Railway `PORT` with `API_PORT` fallback.
 5. Configure health check path to `/health`.
 6. Confirm `GET /health` returns `{ data: { ok: true, db: "ok" } }`.
+
+If Railway build fails with `EBUSY ... rmdir '/app/node_modules/.vite'`:
+
+- Confirm `.dockerignore` includes `node_modules` and `dist`.
+- In Railway, clear build cache and redeploy.
+- Keep build command as `rm -rf node_modules && npm ci --include=dev`.
 
 ## 3) Deploy frontend to Cloudflare Pages
 
