@@ -27,7 +27,7 @@ export function SettingsPage({
     <>
       <section className="panel">
         <h2>Settings - Agent Management</h2>
-        <form className="row gap-sm" onSubmit={onAddAgent}>
+        <form className="row gap-sm wrap settings-add-form" onSubmit={onAddAgent}>
           <input
             value={newAgent}
             onChange={(e) => setNewAgent(e.target.value)}
@@ -76,7 +76,7 @@ export function SettingsPage({
 
       <section className="panel">
         <h2>Export (CSV)</h2>
-        <div className="row wrap gap-sm">
+        <div className="row wrap gap-sm export-controls">
           {(Object.keys(exportFlags) as Array<keyof ExportFlags>).map((key) => (
             <label key={key} className="inline">
               <input

@@ -12,6 +12,7 @@ import { metricsRoutes } from './routes/metrics.js';
 import { resourceRoutes } from './routes/resources.js';
 import { stateRoutes } from './routes/state.js';
 export async function buildApp(config) {
+    const normalizeOrigin = (value) => value.trim().replace(/\/+$/, '');
     let store;
     if (config.databaseUrl) {
         const postgresStore = new PostgresStore(config.databaseUrl);
@@ -22,7 +23,8 @@ export async function buildApp(config) {
         runMigrations(config.dbPath);
         store = new SqliteStore(config.dbPath);
     }
-    const app = Fastify({ logger: true });
+    const allowedOrigins = new Set(config.frontendOrigins.map(normalizeOrigin).filter(Boolean));
+    const app = Fastify({ logger: true, trustProxy: true });
     app.decorate('store', store);
     app.decorate('authenticate', async function authenticate(request, reply) {
         try {
@@ -38,8 +40,17 @@ export async function buildApp(config) {
         }
     });
     await app.register(cors, {
-        origin: config.frontendOrigin,
+        origin(origin, callback) {
+            if (!origin) {
+                callback(null, true);
+                return;
+            }
+            callback(null, allowedOrigins.has(normalizeOrigin(origin)));
+        },
         credentials: true,
+        methods: ['GET', 'HEAD', 'POST', 'PUT', 'OPTIONS'],
+        allowedHeaders: ['content-type', 'authorization'],
+        maxAge: 86400,
     });
     await app.register(cookie);
     await app.register(rateLimit, {

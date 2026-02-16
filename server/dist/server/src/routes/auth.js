@@ -25,16 +25,20 @@ export async function authRoutes(app, env) {
             });
         }
         const token = app.jwt.sign({ sub: 'admin', role: 'admin' }, { expiresIn: '12h' });
+        const isHttps = request.protocol === 'https';
+        const sameSite = isHttps ? 'none' : 'lax';
         reply.setCookie(cookieName(), token, {
             path: '/',
             httpOnly: true,
-            sameSite: 'lax',
-            secure: false,
+            sameSite,
+            secure: isHttps,
         });
         return reply.send({ data: { loggedIn: true, role: 'admin' } });
     });
-    app.post('/auth/logout', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (_request, reply) => {
-        reply.clearCookie(cookieName(), { path: '/' });
+    app.post('/auth/logout', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (request, reply) => {
+        const isHttps = request.protocol === 'https';
+        const sameSite = isHttps ? 'none' : 'lax';
+        reply.clearCookie(cookieName(), { path: '/', sameSite, secure: isHttps });
         return reply.send({ data: { loggedIn: false } });
     });
     app.get('/auth/me', { preHandler: [app.authenticate] }, async (_request, reply) => {

@@ -85,7 +85,7 @@ export function VaultPage({
   return (
     <section className="panel">
       <h2>Vault</h2>
-      <div className="row gap-sm vault-controls">
+      <div className="row gap-sm wrap controls-row vault-controls">
         <label>
           Scope
           <select value={vaultScope} onChange={(e) => setVaultScope(e.target.value as VaultScope)}>
@@ -132,7 +132,7 @@ export function VaultPage({
       ) : (
         <>
           <div className="split">
-            <div>
+            <div className="panel vault-subpanel">
               <h3>Attendance Context Note</h3>
               <input
                 value={meetingForm.dateKey}
@@ -148,7 +148,7 @@ export function VaultPage({
                 Save Attendance Note
               </button>
             </div>
-            <div>
+            <div className="panel vault-subpanel">
               <h3>Performance Meeting</h3>
               <form onSubmit={onAddMeeting} className="form-grid">
                 <label>
@@ -194,10 +194,10 @@ export function VaultPage({
           </div>
 
           <div className="split">
-            <div>
+            <div className="panel vault-subpanel">
               <h3>PDF Uploads</h3>
               <input type="file" accept=".pdf,application/pdf" onChange={onPdfUpload} />
-              <ul>
+              <ul className="clean-list">
                 {vaultDocs.filter((d) => d.agentId === selectedVaultAgent.id).map((d) => (
                   <li key={d.id}>
                     {d.fileName} ({Math.round(d.fileSize / 1024)} KB) - {formatTimestamp(d.uploadedAt)}
@@ -206,9 +206,9 @@ export function VaultPage({
                 {vaultDocs.filter((d) => d.agentId === selectedVaultAgent.id).length === 0 && <li>N/A</li>}
               </ul>
             </div>
-            <div>
+            <div className="panel vault-subpanel">
               <h3>Meeting Log</h3>
-              <ul>
+              <ul className="clean-list">
                 {vaultMeetings.filter((m) => m.agentId === selectedVaultAgent.id).map((m) => (
                   <li key={m.id}>
                     {m.dateKey} - {m.meetingType} - {m.notes || 'N/A'}

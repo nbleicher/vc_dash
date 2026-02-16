@@ -66,13 +66,13 @@ export function DashboardPage({
   return (
     <>
       {attendanceAlert && (
-        <section className="alert-flash panel">
+        <section className="alert-flash panel app-alert">
           <strong>Attendance Alert</strong>
           <p>Attendance is incomplete for today after 10:00 AM EST.</p>
         </section>
       )}
       {intraAlert && (
-        <section className="alert-flash panel">
+        <section className="alert-flash panel app-alert">
           <strong>Intra-Performance Alert</strong>
           <p>Intra-day performance is incomplete for: {overdueSlots.map((s) => s.label).join(', ')}.</p>
         </section>
@@ -142,7 +142,7 @@ export function DashboardPage({
       <section className="panel">
         <h2>Action Center</h2>
         <div className="split">
-          <div>
+          <div className="action-column">
             <h3>Check Recordings</h3>
             {actionQa.length === 0 && <p className="muted">N/A - no flagged QA items.</p>}
             {actionQa.map((q) => (
@@ -155,7 +155,7 @@ export function DashboardPage({
               </div>
             ))}
           </div>
-          <div>
+          <div className="action-column">
             <h3>Action Needed (Audit)</h3>
             {actionAudit.length === 0 && <p className="muted">N/A - no active Action Needed items.</p>}
             {actionAudit.map((a) => {

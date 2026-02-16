@@ -8,7 +8,7 @@ const dbPath = join(tempRoot, 'test.sqlite');
 const app = await buildApp({
     dbPath,
     jwtSecret: 'test-secret',
-    frontendOrigin: 'http://localhost:5173',
+    frontendOrigins: ['http://localhost:5173/'],
     adminUsername: 'admin',
     adminPassword: 'admin',
 });
@@ -55,6 +55,20 @@ describe('auth', () => {
     });
 });
 describe('state resources', () => {
+    it('responds to CORS preflight for state routes', async () => {
+        const res = await app.inject({
+            method: 'OPTIONS',
+            url: '/state/agents',
+            headers: {
+                origin: 'http://localhost:5173',
+                'access-control-request-method': 'PUT',
+                'access-control-request-headers': 'content-type',
+            },
+        });
+        expect(res.statusCode).toBe(204);
+        expect(String(res.headers['access-control-allow-methods'] ?? '')).toContain('PUT');
+        expect(res.headers['access-control-allow-origin']).toBe('http://localhost:5173');
+    });
     it('writes and reads agents collection', async () => {
         const putRes = await app.inject({
             method: 'PUT',

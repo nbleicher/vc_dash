@@ -17,18 +17,26 @@ export function LoginForm({ onLogin, error }: Props) {
   return (
     <div className="auth-shell">
       <form className="panel auth-panel" onSubmit={handleSubmit}>
-        <h1>vc.jawnix.com</h1>
-        <p className="muted">Management login (default: admin / admin)</p>
-        {error ? <p className="muted" role="alert">{error}</p> : null}
-        <label>
-          Username
-          <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="admin" />
-        </label>
-        <label>
-          Password
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="admin" />
-        </label>
-        <button type="submit">Sign In</button>
+        <h1 className="auth-title">vc.jawnix.com</h1>
+        <p className="muted auth-subtitle">Management login (default: admin / admin)</p>
+        {error ? (
+          <p className="auth-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <div className="form-grid auth-fields">
+          <label>
+            Username
+            <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="admin" />
+          </label>
+          <label>
+            Password
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="admin" />
+          </label>
+        </div>
+        <button type="submit" className="auth-submit">
+          Sign In
+        </button>
       </form>
     </div>
   )

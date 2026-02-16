@@ -42,7 +42,7 @@ export function MetricsPage({
   return (
     <section className="panel">
       <h2>Metrics</h2>
-      <div className="row gap-sm vault-controls">
+      <div className="row gap-sm wrap controls-row vault-controls">
         <label>
           Scope
           <select value={metricsScope} onChange={(e) => setMetricsScope(e.target.value as MetricsScope)}>
@@ -95,7 +95,7 @@ export function MetricsPage({
       </div>
 
       <h3>Agent Ranking</h3>
-      <div className="row gap-sm">
+      <div className="row gap-sm wrap controls-row">
         <label>
           Metric
           <select value={rankMetric} onChange={(e) => setRankMetric(e.target.value as RankMetric)}>

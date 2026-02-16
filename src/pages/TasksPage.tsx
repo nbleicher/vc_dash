@@ -60,7 +60,7 @@ export function TasksPage({
   return (
     <>
       <section className="panel">
-        <div className="row gap-sm">
+        <div className="row gap-sm wrap task-tabs">
           <button
             className={taskPage === 'attendance' ? 'active-btn' : ''}
             onClick={() => setTaskPage('attendance')}
@@ -131,7 +131,7 @@ export function TasksPage({
       {taskPage === 'qa' && (
         <section className="panel">
           <h2>Daily QA Log</h2>
-          <div className="panel">
+          <div className="panel status-panel">
             <strong>Daily QA Completion</strong>
             {incompleteQaAgentsToday.length > 0 ? (
               <p>
@@ -188,7 +188,7 @@ export function TasksPage({
       {taskPage === 'audit' && (
         <section className="panel">
           <h2>Action Needed Audit</h2>
-          <div className="panel">
+          <div className="panel status-panel">
             <strong>Action Needed Audit Completion</strong>
             {incompleteAuditAgentsToday.length > 0 ? (
               <p>

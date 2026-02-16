@@ -397,7 +397,7 @@ function App() {
   return (
     <div className="app-shell">
       {(uiError || error) && (
-        <section className="alert-flash panel">
+        <section className="alert-flash panel app-alert">
           <strong>Action required</strong>
           <p>{uiError ?? error}</p>
           <button
@@ -523,7 +523,7 @@ function App() {
         />
       )}
 
-      <footer className="muted">
+      <footer className="muted app-footer">
         Current EST time: {String(est.hour).padStart(2, '0')}:{String(est.minute).padStart(2, '0')}
       </footer>
     </div>

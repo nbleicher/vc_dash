@@ -17,12 +17,20 @@ export function WeeklyTargetEditor({ target, onSave }: Props) {
   return (
     <div className="target-box">
       <h3>Weekly Targets (set on Monday)</h3>
-      <form key={formKey} className="row gap-sm" onSubmit={onSubmit}>
-        <label>Target Sales Count<input name="targetSales" type="number" min={0} defaultValue={target?.targetSales ?? 0} /></label>
-        <label>Target CPA<input name="targetCpa" type="number" min={0} defaultValue={target?.targetCpa ?? 0} /></label>
+      <form key={formKey} className="row gap-sm wrap" onSubmit={onSubmit}>
+        <label>
+          Target Sales Count
+          <input name="targetSales" type="number" min={0} defaultValue={target?.targetSales ?? 0} />
+        </label>
+        <label>
+          Target CPA
+          <input name="targetCpa" type="number" min={0} defaultValue={target?.targetCpa ?? 0} />
+        </label>
         <button type="submit">Save Target</button>
       </form>
-      <p className="muted">Current: Sales {target ? target.targetSales : 'N/A'} | CPA {target ? `$${target.targetCpa}` : 'N/A'}</p>
+      <p className="muted">
+        Current: Sales {target ? target.targetSales : 'N/A'} | CPA {target ? `$${target.targetCpa}` : 'N/A'}
+      </p>
     </div>
   )
 }
