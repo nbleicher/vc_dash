@@ -130,9 +130,10 @@ function App() {
   const isIntraSlotEditable = (slot: string): boolean => {
     const slotIndex = SLOT_CONFIG.findIndex((item) => item.key === slot)
     if (slotIndex === -1) return false
+    const preEntryMinutes = 15
     const current = estParts(now)
     const currentMinute = current.hour * 60 + current.minute + current.second / 60
-    const startMinute = SLOT_CONFIG[slotIndex].minuteOfDay
+    const startMinute = Math.max(0, SLOT_CONFIG[slotIndex].minuteOfDay - preEntryMinutes)
     const endMinute = SLOT_CONFIG[slotIndex + 1]?.minuteOfDay ?? 24 * 60
     return currentMinute >= startMinute && currentMinute < endMinute
   }
@@ -335,7 +336,7 @@ function App() {
   const submitIntraSlot = (slot: string): void => {
     if (!SLOT_CONFIG.some((item) => item.key === slot)) return
     if (!isIntraSlotEditable(slot)) {
-      setUiError(`The ${slot} slot is locked and can no longer be edited.`)
+      setUiError(`The ${slot} slot is outside its edit window. Entries open 15 minutes before each slot.`)
       return
     }
     const nowIso = new Date().toISOString()
@@ -376,7 +377,7 @@ function App() {
     sales: number,
   ): void => {
     if (!isIntraSlotEditable(slot.key)) {
-      setUiError(`The ${slot.label} window has closed. Select a current editable slot.`)
+      setUiError(`The ${slot.label} window is not editable yet or has closed. Edits open 15 minutes before slot time.`)
       return
     }
     upsertSnapshot(slot, agentId, calls, sales)
