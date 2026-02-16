@@ -3,7 +3,9 @@ import type { SetStateAction } from 'react'
 import type {
   Agent,
   AttendanceRecord,
+  AttendanceSubmission,
   AuditRecord,
+  IntraSubmission,
   PerfHistory,
   QaRecord,
   Snapshot,
@@ -32,6 +34,8 @@ export function useDataStore(): DataStore {
   const [qaRecordsState, setQaRecordsState] = useState<QaRecord[]>([])
   const [auditRecordsState, setAuditRecordsState] = useState<AuditRecord[]>([])
   const [attendanceState, setAttendanceState] = useState<AttendanceRecord[]>([])
+  const [attendanceSubmissionsState, setAttendanceSubmissionsState] = useState<AttendanceSubmission[]>([])
+  const [intraSubmissionsState, setIntraSubmissionsState] = useState<IntraSubmission[]>([])
   const [weeklyTargetsState, setWeeklyTargetsState] = useState<WeeklyTarget[]>([])
   const [vaultMeetingsState, setVaultMeetingsState] = useState<VaultMeeting[]>([])
   const [vaultDocsState, setVaultDocsState] = useState<VaultDoc[]>([])
@@ -50,6 +54,8 @@ export function useDataStore(): DataStore {
       setQaRecordsState(state.qaRecords)
       setAuditRecordsState(state.auditRecords)
       setAttendanceState(state.attendance)
+      setAttendanceSubmissionsState(state.attendanceSubmissions ?? [])
+      setIntraSubmissionsState(state.intraSubmissions ?? [])
       setWeeklyTargetsState(state.weeklyTargets)
       setVaultMeetingsState(state.vaultMeetings)
       setVaultDocsState(state.vaultDocs)
@@ -80,6 +86,8 @@ export function useDataStore(): DataStore {
   const setQaRecords = wrapSetter(setQaRecordsState)
   const setAuditRecords = wrapSetter(setAuditRecordsState)
   const setAttendance = wrapSetter(setAttendanceState)
+  const setAttendanceSubmissions = wrapSetter(setAttendanceSubmissionsState)
+  const setIntraSubmissions = wrapSetter(setIntraSubmissionsState)
   const setWeeklyTargets = wrapSetter(setWeeklyTargetsState)
   const setVaultMeetings = wrapSetter(setVaultMeetingsState)
   const setVaultDocs = wrapSetter(setVaultDocsState)
@@ -146,6 +154,12 @@ export function useDataStore(): DataStore {
     void syncCollection('attendance', attendanceState)
   }, [attendanceState, syncCollection])
   useEffect(() => {
+    void syncCollection('attendanceSubmissions', attendanceSubmissionsState)
+  }, [attendanceSubmissionsState, syncCollection])
+  useEffect(() => {
+    void syncCollection('intraSubmissions', intraSubmissionsState)
+  }, [intraSubmissionsState, syncCollection])
+  useEffect(() => {
     void syncCollection('weeklyTargets', weeklyTargetsState)
   }, [weeklyTargetsState, syncCollection])
   useEffect(() => {
@@ -180,6 +194,10 @@ export function useDataStore(): DataStore {
     setAuditRecords,
     attendance: attendanceState,
     setAttendance,
+    attendanceSubmissions: attendanceSubmissionsState,
+    setAttendanceSubmissions,
+    intraSubmissions: intraSubmissionsState,
+    setIntraSubmissions,
     weeklyTargets: weeklyTargetsState,
     setWeeklyTargets,
     vaultMeetings: vaultMeetingsState,

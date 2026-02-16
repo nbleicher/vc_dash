@@ -10,6 +10,7 @@ type Props = {
   setTaskPage: (p: 'attendance' | 'qa' | 'audit' | 'targets') => void
   activeAgents: DataStore['agents']
   attendance: AttendanceRecord[]
+  attendanceSubmissions: DataStore['attendanceSubmissions']
   weekDates: string[]
   weekTarget: { weekKey: string; targetSales: number; targetCpa: number; setAt: string } | null
   qaForm: { agentId: string; clientName: string; decision: string; notes: string }
@@ -35,6 +36,7 @@ type Props = {
   incompleteQaAgentsToday: Array<{ id: string; name: string }>
   incompleteAuditAgentsToday: Array<{ id: string; name: string }>
   onSetAttendancePercent: (agentId: string, dateKey: string, percent: AttendancePercent) => void
+  onSubmitAttendanceDay: (dateKey: string) => void
   onSaveWeeklyTarget: (sales: number, cpa: number) => void
   onQaSubmit: (e: React.FormEvent) => void
   onAuditSubmit: (e: React.FormEvent) => void
@@ -45,6 +47,7 @@ export function TasksPage({
   setTaskPage,
   activeAgents,
   attendance,
+  attendanceSubmissions,
   weekDates,
   weekTarget,
   qaForm,
@@ -54,6 +57,7 @@ export function TasksPage({
   incompleteQaAgentsToday,
   incompleteAuditAgentsToday,
   onSetAttendancePercent,
+  onSubmitAttendanceDay,
   onSaveWeeklyTarget,
   onQaSubmit,
   onAuditSubmit,
@@ -125,6 +129,22 @@ export function TasksPage({
               </tbody>
             </DataTable>
           </TableWrap>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+            {weekDates.map((dateKey) => {
+              const submission = attendanceSubmissions.find((item) => item.dateKey === dateKey)
+              return (
+                <div key={dateKey} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-sm font-medium text-slate-700">{dateKey}</p>
+                  <Button type="button" variant="default" className="mt-2 w-full" onClick={() => onSubmitAttendanceDay(dateKey)}>
+                    Submit Day
+                  </Button>
+                  <p className="mt-2 text-xs text-slate-500">
+                    {submission ? `Submitted: ${new Date(submission.submittedAt).toLocaleString()}` : 'Not submitted'}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
         </Card>
       )}
 

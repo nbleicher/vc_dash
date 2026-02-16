@@ -10,6 +10,8 @@ const keys = [
     'qaRecords',
     'auditRecords',
     'attendance',
+    'attendanceSubmissions',
+    'intraSubmissions',
     'weeklyTargets',
     'vaultMeetings',
     'vaultDocs',

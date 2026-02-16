@@ -34,6 +34,8 @@ export class PostgresStore implements StoreAdapter {
       qaRecords: await this.getCollection('qaRecords'),
       auditRecords: await this.getCollection('auditRecords'),
       attendance: await this.getCollection('attendance'),
+      attendanceSubmissions: await this.getCollection('attendanceSubmissions'),
+      intraSubmissions: await this.getCollection('intraSubmissions'),
       weeklyTargets: await this.getCollection('weeklyTargets'),
       vaultMeetings: await this.getCollection('vaultMeetings'),
       vaultDocs: await this.getCollection('vaultDocs'),

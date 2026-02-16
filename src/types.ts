@@ -73,6 +73,25 @@ export type AttendanceRecord = {
   notes: string
 }
 
+export type AttendanceSubmission = {
+  id: string
+  dateKey: string
+  submittedAt: string
+  updatedAt: string
+  submittedBy: string
+  daySignature: string
+}
+
+export type IntraSubmission = {
+  id: string
+  dateKey: string
+  slot: string
+  submittedAt: string
+  updatedAt: string
+  submittedBy: string
+  slotSignature: string
+}
+
 export type WeeklyTarget = {
   weekKey: string
   targetSales: number

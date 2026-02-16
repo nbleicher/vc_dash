@@ -17,7 +17,19 @@ import { computeMetrics, estDateKey, estParts, formatTimestamp, monFriDatesForWe
 type SlotConfig = (typeof SLOT_CONFIG)[number]
 
 export function useAppData(store: DataStore) {
-  const { agents, snapshots, perfHistory, qaRecords, auditRecords, attendance, weeklyTargets, setPerfHistory, setSnapshots } = store
+  const {
+    agents,
+    snapshots,
+    perfHistory,
+    qaRecords,
+    auditRecords,
+    attendance,
+    attendanceSubmissions,
+    intraSubmissions,
+    weeklyTargets,
+    setPerfHistory,
+    setSnapshots,
+  } = store
 
   const [now, setNow] = useState<Date>(new Date())
   const [taskPage, setTaskPage] = useState<TaskPage>('attendance')
@@ -145,20 +157,17 @@ export function useAppData(store: DataStore) {
   }, [activeAgents, liveByAgent, perfHistory, todayKey, weekDates, weekTarget])
 
   const currentMinuteOfDay = est.hour * 60 + est.minute
-  const attendanceDoneToday = useMemo(
-    () =>
-      activeAgents.every((agent) =>
-        attendance.some((a) => a.agentId === agent.id && a.dateKey === todayKey && a.percent >= 0 && a.percent <= 100),
-      ),
-    [activeAgents, attendance, todayKey],
+  const attendanceSubmittedToday = useMemo(
+    () => attendanceSubmissions.some((submission) => submission.dateKey === todayKey),
+    [attendanceSubmissions, todayKey],
   )
-  const attendanceAlert = currentMinuteOfDay >= 10 * 60 && activeAgents.length > 0 && !attendanceDoneToday
+  const attendanceAlert = currentMinuteOfDay >= 10 * 60 && activeAgents.length > 0 && !attendanceSubmittedToday
   const overdueSlots = useMemo(
     () =>
-      SLOT_CONFIG.filter((slot) => slot.minuteOfDay <= currentMinuteOfDay).filter((slot) =>
-        activeAgents.some((agent) => !todaysSnapshots.some((s) => s.agentId === agent.id && s.slot === slot.key)),
+      SLOT_CONFIG.filter((slot) => slot.minuteOfDay <= currentMinuteOfDay).filter(
+        (slot) => !intraSubmissions.some((submission) => submission.dateKey === todayKey && submission.slot === slot.key),
       ),
-    [activeAgents, currentMinuteOfDay, todaysSnapshots],
+    [currentMinuteOfDay, intraSubmissions, todayKey],
   )
   const intraAlert = overdueSlots.length > 0 && activeAgents.length > 0
 
@@ -431,6 +440,8 @@ export function useAppData(store: DataStore) {
     vaultAuditHistory,
     weeklyTargetHistory,
     snapshots,
+    attendanceSubmissions,
+    intraSubmissions,
     store,
     upsertSnapshot,
   }

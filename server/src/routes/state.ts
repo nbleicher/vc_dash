@@ -9,6 +9,8 @@ const keySchema = z.enum([
   'qaRecords',
   'auditRecords',
   'attendance',
+  'attendanceSubmissions',
+  'intraSubmissions',
   'weeklyTargets',
   'vaultMeetings',
   'vaultDocs',

@@ -14,6 +14,8 @@ const resourceConfigs: Array<Config<keyof StoreState>> = [
   { path: 'qa-records', key: 'qaRecords', idField: 'id' },
   { path: 'audit-records', key: 'auditRecords', idField: 'id' },
   { path: 'attendance', key: 'attendance', idField: 'id' },
+  { path: 'attendance-submissions', key: 'attendanceSubmissions', idField: 'id' },
+  { path: 'intra-submissions', key: 'intraSubmissions', idField: 'id' },
   { path: 'weekly-targets', key: 'weeklyTargets', idField: 'weekKey' },
   { path: 'vault-meetings', key: 'vaultMeetings', idField: 'id' },
   { path: 'vault-docs', key: 'vaultDocs', idField: 'id' },

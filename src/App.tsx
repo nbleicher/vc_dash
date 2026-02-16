@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Button, Card, LoginForm, TopNav } from './components'
 import { useDataStore } from './data'
 import { useAppData } from './hooks'
-import { CARRIERS } from './constants'
+import { CARRIERS, SLOT_CONFIG } from './constants'
 import type { AttendancePercent, ExportFlags, QaRecord, TopPage, VaultMeeting } from './types'
 import { csvEscape, estDateKey, uid } from './utils'
 import { DashboardPage } from './pages/DashboardPage'
@@ -23,6 +23,10 @@ function App() {
     setAuditRecords,
     attendance,
     setAttendance,
+    attendanceSubmissions,
+    setAttendanceSubmissions,
+    intraSubmissions,
+    setIntraSubmissions,
     setWeeklyTargets,
     vaultMeetings,
     setVaultMeetings,
@@ -83,6 +87,8 @@ function App() {
     vaultAuditHistory,
     weeklyTargetHistory,
     snapshots,
+    attendanceSubmissions: dataAttendanceSubmissions,
+    intraSubmissions: dataIntraSubmissions,
     upsertSnapshot,
   } = data
 
@@ -118,6 +124,22 @@ function App() {
   })
 
   const ensureAgentDefault = (agentId: string): string => (agentId ? agentId : activeAgents[0]?.id ?? '')
+
+  const buildAttendanceDaySignature = (dateKey: string): string =>
+    [...activeAgents]
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((agent) => {
+        const row = attendance.find((item) => item.agentId === agent.id && item.dateKey === dateKey)
+        return `${agent.id}:${row?.percent ?? 'NA'}`
+      })
+      .join('|')
+
+  const buildIntraSlotSignature = (dateKey: string, slot: string): string =>
+    snapshots
+      .filter((item) => item.dateKey === dateKey && item.slot === slot)
+      .sort((a, b) => a.agentId.localeCompare(b.agentId))
+      .map((item) => `${item.agentId}:${item.billableCalls}:${item.sales}`)
+      .join('|')
 
   const [uiError, setUiError] = useState<string | null>(null)
   const pageMeta: Record<TopPage, { title: string; subtitle: string }> = {
@@ -229,6 +251,70 @@ function App() {
         if (!proceed) return prev
       }
       return prev.map((a) => (a.id === existing.id ? { ...a, percent } : a))
+    })
+  }
+
+  const submitAttendanceDay = (dateKey: string): void => {
+    const nowIso = new Date().toISOString()
+    const nextSignature = buildAttendanceDaySignature(dateKey)
+    const existing = attendanceSubmissions.find((submission) => submission.dateKey === dateKey)
+    if (existing && existing.daySignature !== nextSignature) {
+      const proceed = window.confirm(`Attendance for ${dateKey} was already submitted. Overwrite submission?`)
+      if (!proceed) return
+    }
+    setAttendanceSubmissions((prev) => {
+      const current = prev.find((submission) => submission.dateKey === dateKey)
+      if (!current) {
+        return [
+          ...prev,
+          {
+            id: uid('att_submit'),
+            dateKey,
+            submittedAt: nowIso,
+            updatedAt: nowIso,
+            submittedBy: 'manual',
+            daySignature: nextSignature,
+          },
+        ]
+      }
+      return prev.map((submission) =>
+        submission.id === current.id
+          ? { ...submission, updatedAt: nowIso, submittedAt: nowIso, submittedBy: 'manual', daySignature: nextSignature }
+          : submission,
+      )
+    })
+  }
+
+  const submitIntraSlot = (slot: string): void => {
+    if (!SLOT_CONFIG.some((item) => item.key === slot)) return
+    const nowIso = new Date().toISOString()
+    const existing = intraSubmissions.find((submission) => submission.dateKey === todayKey && submission.slot === slot)
+    if (existing) {
+      const proceed = window.confirm(`Intra-day entry for ${slot} is already submitted. Re-submit this hour?`)
+      if (!proceed) return
+    }
+    const slotSignature = buildIntraSlotSignature(todayKey, slot)
+    setIntraSubmissions((prev) => {
+      const current = prev.find((submission) => submission.dateKey === todayKey && submission.slot === slot)
+      if (!current) {
+        return [
+          ...prev,
+          {
+            id: uid('intra_submit'),
+            dateKey: todayKey,
+            slot,
+            submittedAt: nowIso,
+            updatedAt: nowIso,
+            submittedBy: 'manual',
+            slotSignature,
+          },
+        ]
+      }
+      return prev.map((submission) =>
+        submission.id === current.id
+          ? { ...submission, updatedAt: nowIso, submittedAt: nowIso, submittedBy: 'manual', slotSignature }
+          : submission,
+      )
     })
   }
 
@@ -460,6 +546,7 @@ function App() {
             intraAlert={intraAlert}
             overdueSlots={overdueSlots}
             snapshots={snapshots}
+            intraSubmissions={dataIntraSubmissions}
             onResolveQa={resolveQa}
             onToggleAuditFlag={toggleAuditFlag}
             onGoToAttendance={() => {
@@ -467,6 +554,7 @@ function App() {
               setTaskPage('attendance')
             }}
             onUpsertSnapshot={upsertSnapshot}
+            onSubmitIntraSlot={submitIntraSlot}
           />
         )}
 
@@ -476,6 +564,7 @@ function App() {
             setTaskPage={setTaskPage}
             activeAgents={activeAgents}
             attendance={attendance}
+            attendanceSubmissions={dataAttendanceSubmissions}
             weekDates={weekDates}
             weekTarget={weekTarget}
             qaForm={qaForm}
@@ -485,6 +574,7 @@ function App() {
             incompleteQaAgentsToday={incompleteQaAgentsToday}
             incompleteAuditAgentsToday={incompleteAuditAgentsToday}
             onSetAttendancePercent={setAttendancePercent}
+            onSubmitAttendanceDay={submitAttendanceDay}
             onSaveWeeklyTarget={saveWeeklyTarget}
             onQaSubmit={handleQaSubmit}
             onAuditSubmit={handleAuditSubmit}

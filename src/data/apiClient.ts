@@ -1,7 +1,9 @@
 import type {
   Agent,
   AttendanceRecord,
+  AttendanceSubmission,
   AuditRecord,
+  IntraSubmission,
   PerfHistory,
   QaRecord,
   Snapshot,
@@ -17,6 +19,8 @@ export type StoreCollections = {
   qaRecords: QaRecord[]
   auditRecords: AuditRecord[]
   attendance: AttendanceRecord[]
+  attendanceSubmissions: AttendanceSubmission[]
+  intraSubmissions: IntraSubmission[]
   weeklyTargets: WeeklyTarget[]
   vaultMeetings: VaultMeeting[]
   vaultDocs: VaultDoc[]

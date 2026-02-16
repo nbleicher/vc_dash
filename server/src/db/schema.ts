@@ -63,6 +63,25 @@ CREATE TABLE IF NOT EXISTS attendance (
   notes TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS attendance_submissions (
+  id TEXT PRIMARY KEY,
+  dateKey TEXT NOT NULL,
+  submittedAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL,
+  submittedBy TEXT NOT NULL,
+  daySignature TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS intra_submissions (
+  id TEXT PRIMARY KEY,
+  dateKey TEXT NOT NULL,
+  slot TEXT NOT NULL,
+  submittedAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL,
+  submittedBy TEXT NOT NULL,
+  slotSignature TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS weekly_targets (
   weekKey TEXT PRIMARY KEY,
   targetSales INTEGER NOT NULL,

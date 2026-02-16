@@ -2,6 +2,20 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import App from './App'
 
+const emptyState = {
+  agents: [],
+  snapshots: [],
+  perfHistory: [],
+  qaRecords: [],
+  auditRecords: [],
+  attendance: [],
+  attendanceSubmissions: [],
+  intraSubmissions: [],
+  weeklyTargets: [],
+  vaultMeetings: [],
+  vaultDocs: [],
+}
+
 describe('App smoke', () => {
   it('sends logout request without content-type when no body is present', async () => {
     const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
@@ -17,20 +31,7 @@ describe('App smoke', () => {
         return {
           ok: true,
           status: 200,
-          text: async () =>
-            JSON.stringify({
-              data: {
-                agents: [],
-                snapshots: [],
-                perfHistory: [],
-                qaRecords: [],
-                auditRecords: [],
-                attendance: [],
-                weeklyTargets: [],
-                vaultMeetings: [],
-                vaultDocs: [],
-              },
-            }),
+          text: async () => JSON.stringify({ data: emptyState }),
         }
       }
       if (url.endsWith('/auth/logout')) {
@@ -86,20 +87,7 @@ describe('App smoke', () => {
         return {
           ok: true,
           status: 200,
-          text: async () =>
-            JSON.stringify({
-              data: {
-                agents: [],
-                snapshots: [],
-                perfHistory: [],
-                qaRecords: [],
-                auditRecords: [],
-                attendance: [],
-                weeklyTargets: [],
-                vaultMeetings: [],
-                vaultDocs: [],
-              },
-            }),
+          text: async () => JSON.stringify({ data: emptyState }),
         }
       }
       if (url.endsWith('/state/agents') && init?.method === 'PUT') {
@@ -128,4 +116,5 @@ describe('App smoke', () => {
     )
     expect(putCall).toBeTruthy()
   })
+
 })

@@ -2,7 +2,9 @@ import type { Dispatch, SetStateAction } from 'react'
 import type {
   Agent,
   AttendanceRecord,
+  AttendanceSubmission,
   AuditRecord,
+  IntraSubmission,
   PerfHistory,
   QaRecord,
   Snapshot,
@@ -38,6 +40,12 @@ export interface DataStore {
 
   attendance: AttendanceRecord[]
   setAttendance: Dispatch<SetStateAction<AttendanceRecord[]>>
+
+  attendanceSubmissions: AttendanceSubmission[]
+  setAttendanceSubmissions: Dispatch<SetStateAction<AttendanceSubmission[]>>
+
+  intraSubmissions: IntraSubmission[]
+  setIntraSubmissions: Dispatch<SetStateAction<IntraSubmission[]>>
 
   weeklyTargets: WeeklyTarget[]
   setWeeklyTargets: Dispatch<SetStateAction<WeeklyTarget[]>>

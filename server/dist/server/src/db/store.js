@@ -15,6 +15,8 @@ export class SqliteStore {
             qaRecords: this.getQaRecords(),
             auditRecords: this.getAuditRecords(),
             attendance: this.getAttendance(),
+            attendanceSubmissions: this.getAttendanceSubmissions(),
+            intraSubmissions: this.getIntraSubmissions(),
             weeklyTargets: this.getWeeklyTargets(),
             vaultMeetings: this.getVaultMeetings(),
             vaultDocs: this.getVaultDocs(),
@@ -75,6 +77,22 @@ export class SqliteStore {
                             .run(row);
                     }
                     break;
+                case 'attendanceSubmissions':
+                    this.db.prepare('DELETE FROM attendance_submissions').run();
+                    for (const row of rows) {
+                        this.db
+                            .prepare('INSERT INTO attendance_submissions (id,dateKey,submittedAt,updatedAt,submittedBy,daySignature) VALUES (@id,@dateKey,@submittedAt,@updatedAt,@submittedBy,@daySignature)')
+                            .run(row);
+                    }
+                    break;
+                case 'intraSubmissions':
+                    this.db.prepare('DELETE FROM intra_submissions').run();
+                    for (const row of rows) {
+                        this.db
+                            .prepare('INSERT INTO intra_submissions (id,dateKey,slot,submittedAt,updatedAt,submittedBy,slotSignature) VALUES (@id,@dateKey,@slot,@submittedAt,@updatedAt,@submittedBy,@slotSignature)')
+                            .run(row);
+                    }
+                    break;
                 case 'weeklyTargets':
                     this.db.prepare('DELETE FROM weekly_targets').run();
                     for (const row of rows) {
@@ -132,6 +150,16 @@ export class SqliteStore {
     getAttendance() {
         return this.db
             .prepare('SELECT id,weekKey,dateKey,agentId,percent,notes FROM attendance')
+            .all();
+    }
+    getAttendanceSubmissions() {
+        return this.db
+            .prepare('SELECT id,dateKey,submittedAt,updatedAt,submittedBy,daySignature FROM attendance_submissions')
+            .all();
+    }
+    getIntraSubmissions() {
+        return this.db
+            .prepare('SELECT id,dateKey,slot,submittedAt,updatedAt,submittedBy,slotSignature FROM intra_submissions')
             .all();
     }
     getWeeklyTargets() {

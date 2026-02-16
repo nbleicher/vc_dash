@@ -1,4 +1,5 @@
-import { Badge, Button, Card, CardTitle, DataTable, MetricCard, TableWrap } from '../components'
+import { useEffect, useState } from 'react'
+import { Badge, Button, Card, CardTitle, Input, MetricCard, Select } from '../components'
 import { SLOT_CONFIG } from '../constants'
 import type { DataStore } from '../data'
 import { formatNum, formatTimestamp } from '../utils'
@@ -34,6 +35,7 @@ type Props = {
   intraAlert: boolean
   overdueSlots: Array<{ label: string }>
   snapshots: DataStore['snapshots']
+  intraSubmissions: DataStore['intraSubmissions']
   onResolveQa: (id: string) => void
   onToggleAuditFlag: (id: string, field: 'mgmtNotified' | 'outreachMade') => void
   onGoToAttendance: () => void
@@ -43,6 +45,7 @@ type Props = {
     calls: number,
     sales: number
   ) => void
+  onSubmitIntraSlot: (slot: string) => void
 }
 
 export function DashboardPage({
@@ -60,11 +63,41 @@ export function DashboardPage({
   intraAlert,
   overdueSlots,
   snapshots,
+  intraSubmissions,
   onResolveQa,
   onToggleAuditFlag,
   onGoToAttendance,
   onUpsertSnapshot,
+  onSubmitIntraSlot,
 }: Props) {
+  const [slotDrafts, setSlotDrafts] = useState<Record<string, { agentId: string; calls: number; sales: number }>>({})
+
+  useEffect(() => {
+    setSlotDrafts((prev) => {
+      const next: Record<string, { agentId: string; calls: number; sales: number }> = {}
+      for (const slot of SLOT_CONFIG) {
+        const prior = prev[slot.key]
+        const fallbackAgentId = activeAgents[0]?.id ?? ''
+        const selectedAgentId = activeAgents.some((agent) => agent.id === prior?.agentId) ? prior.agentId : fallbackAgentId
+        const snap =
+          snapshots.find((item) => item.dateKey === todayKey && item.slot === slot.key && item.agentId === selectedAgentId) ??
+          null
+        next[slot.key] = {
+          agentId: selectedAgentId,
+          calls: snap?.billableCalls ?? prior?.calls ?? 0,
+          sales: snap?.sales ?? prior?.sales ?? 0,
+        }
+      }
+      return next
+    })
+  }, [activeAgents, snapshots, todayKey])
+
+  const handleSaveSlotDraft = (slot: (typeof SLOT_CONFIG)[number]): void => {
+    const draft = slotDrafts[slot.key]
+    if (!draft || !draft.agentId) return
+    onUpsertSnapshot(slot, draft.agentId, Math.max(0, draft.calls), Math.max(0, draft.sales))
+  }
+
   return (
     <div className="page-grid">
       {attendanceAlert && (
@@ -213,66 +246,103 @@ export function DashboardPage({
 
       <Card className="space-y-4">
         <CardTitle>Intra-Day Performance Entry</CardTitle>
-        <TableWrap>
-          <DataTable>
-            <thead>
-              <tr>
-                <th>Agent</th>
-                {SLOT_CONFIG.map((slot) => (
-                  <th key={slot.key}>{slot.label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {activeAgents.length === 0 && (
-                <tr>
-                  <td colSpan={SLOT_CONFIG.length + 1}>N/A - no active agents.</td>
-                </tr>
-              )}
-              {activeAgents.map((agent) => (
-                <tr key={agent.id}>
-                  <td>{agent.name}</td>
-                  {SLOT_CONFIG.map((slot) => {
-                    const snap =
-                      snapshots.find(
-                        (s) => s.dateKey === todayKey && s.slot === slot.key && s.agentId === agent.id
-                      ) ?? null
-                    const calls = snap?.billableCalls ?? 0
-                    const sales = snap?.sales ?? 0
-                    const cpa = sales > 0 ? (calls * 15) / sales : null
-                    const cellClass =
-                      cpa !== null && cpa > 190 ? 'heat-red' : cpa !== null && cpa > 130 ? 'heat-yellow' : ''
-                    return (
-                      <td key={slot.key} className={cellClass}>
-                        <label className="text-xs font-medium text-slate-600">
-                          Calls
-                          <input
-                            className="mt-1 h-9 w-full rounded-md border border-slate-300 px-2 text-sm"
-                            type="number"
-                            min={0}
-                            value={calls}
-                            onChange={(e) => onUpsertSnapshot(slot, agent.id, Number(e.target.value), sales)}
-                          />
-                        </label>
-                        <label className="mt-2 block text-xs font-medium text-slate-600">
-                          Sales
-                          <input
-                            className="mt-1 h-9 w-full rounded-md border border-slate-300 px-2 text-sm"
-                            type="number"
-                            min={0}
-                            value={sales}
-                            onChange={(e) => onUpsertSnapshot(slot, agent.id, calls, Number(e.target.value))}
-                          />
-                        </label>
-                        <div className="mt-1 text-xs text-slate-500">CPA: {cpa === null ? 'N/A' : `$${formatNum(cpa)}`}</div>
-                      </td>
-                    )
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </DataTable>
-        </TableWrap>
+        {activeAgents.length === 0 ? (
+          <p className="text-sm text-slate-500">N/A - no active agents.</p>
+        ) : (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {SLOT_CONFIG.map((slot) => {
+              const draft = slotDrafts[slot.key] ?? { agentId: '', calls: 0, sales: 0 }
+              const submission =
+                intraSubmissions.find((item) => item.dateKey === todayKey && item.slot === slot.key) ?? null
+              const cpa = draft.sales > 0 ? (draft.calls * 15) / draft.sales : null
+              return (
+                <div key={slot.key} className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3>{slot.label}</h3>
+                    <Badge variant={submission ? 'success' : 'warning'}>{submission ? 'Submitted' : 'Pending'}</Badge>
+                  </div>
+                  <label className="text-sm font-medium text-slate-700">
+                    Agent
+                    <Select
+                      className="mt-1"
+                      value={draft.agentId}
+                      onChange={(e) => {
+                        const nextAgentId = e.target.value
+                        const snap =
+                          snapshots.find(
+                            (item) => item.dateKey === todayKey && item.slot === slot.key && item.agentId === nextAgentId,
+                          ) ?? null
+                        setSlotDrafts((prev) => ({
+                          ...prev,
+                          [slot.key]: {
+                            agentId: nextAgentId,
+                            calls: snap?.billableCalls ?? 0,
+                            sales: snap?.sales ?? 0,
+                          },
+                        }))
+                      }}
+                    >
+                      <option value="">Select agent</option>
+                      {activeAgents.map((agent) => (
+                        <option key={agent.id} value={agent.id}>
+                          {agent.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </label>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      Calls
+                      <Input
+                        className="mt-1"
+                        type="number"
+                        min={0}
+                        value={draft.calls}
+                        onChange={(e) =>
+                          setSlotDrafts((prev) => ({
+                            ...prev,
+                            [slot.key]: { ...draft, calls: Number(e.target.value) || 0 },
+                          }))
+                        }
+                      />
+                    </label>
+                    <label className="text-sm font-medium text-slate-700">
+                      Sales
+                      <Input
+                        className="mt-1"
+                        type="number"
+                        min={0}
+                        value={draft.sales}
+                        onChange={(e) =>
+                          setSlotDrafts((prev) => ({
+                            ...prev,
+                            [slot.key]: { ...draft, sales: Number(e.target.value) || 0 },
+                          }))
+                        }
+                      />
+                    </label>
+                  </div>
+                  <p className="text-xs text-slate-500">CPA: {cpa === null ? 'N/A' : `$${formatNum(cpa)}`}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="secondary" onClick={() => handleSaveSlotDraft(slot)}>
+                      Save Draft
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="default"
+                      onClick={() => {
+                        handleSaveSlotDraft(slot)
+                        onSubmitIntraSlot(slot.key)
+                      }}
+                    >
+                      Submit Hour
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </Card>
     </div>
   )

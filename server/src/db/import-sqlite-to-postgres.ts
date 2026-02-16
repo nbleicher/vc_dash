@@ -13,6 +13,8 @@ const keys: EntityKey[] = [
   'qaRecords',
   'auditRecords',
   'attendance',
+  'attendanceSubmissions',
+  'intraSubmissions',
   'weeklyTargets',
   'vaultMeetings',
   'vaultDocs',

@@ -2,7 +2,9 @@ import Database from 'better-sqlite3'
 import type {
   Agent,
   AttendanceRecord,
+  AttendanceSubmission,
   AuditRecord,
+  IntraSubmission,
   PerfHistory,
   QaRecord,
   Snapshot,
@@ -32,6 +34,8 @@ export class SqliteStore implements StoreAdapter {
       qaRecords: this.getQaRecords(),
       auditRecords: this.getAuditRecords(),
       attendance: this.getAttendance(),
+      attendanceSubmissions: this.getAttendanceSubmissions(),
+      intraSubmissions: this.getIntraSubmissions(),
       weeklyTargets: this.getWeeklyTargets(),
       vaultMeetings: this.getVaultMeetings(),
       vaultDocs: this.getVaultDocs(),
@@ -100,6 +104,26 @@ export class SqliteStore implements StoreAdapter {
             this.db
               .prepare(
                 'INSERT INTO attendance (id,weekKey,dateKey,agentId,percent,notes) VALUES (@id,@weekKey,@dateKey,@agentId,@percent,@notes)',
+              )
+              .run(row)
+          }
+          break
+        case 'attendanceSubmissions':
+          this.db.prepare('DELETE FROM attendance_submissions').run()
+          for (const row of rows as AttendanceSubmission[]) {
+            this.db
+              .prepare(
+                'INSERT INTO attendance_submissions (id,dateKey,submittedAt,updatedAt,submittedBy,daySignature) VALUES (@id,@dateKey,@submittedAt,@updatedAt,@submittedBy,@daySignature)',
+              )
+              .run(row)
+          }
+          break
+        case 'intraSubmissions':
+          this.db.prepare('DELETE FROM intra_submissions').run()
+          for (const row of rows as IntraSubmission[]) {
+            this.db
+              .prepare(
+                'INSERT INTO intra_submissions (id,dateKey,slot,submittedAt,updatedAt,submittedBy,slotSignature) VALUES (@id,@dateKey,@slot,@submittedAt,@updatedAt,@submittedBy,@slotSignature)',
               )
               .run(row)
           }
@@ -194,6 +218,18 @@ export class SqliteStore implements StoreAdapter {
     return this.db
       .prepare('SELECT id,weekKey,dateKey,agentId,percent,notes FROM attendance')
       .all() as AttendanceRecord[]
+  }
+
+  private getAttendanceSubmissions(): AttendanceSubmission[] {
+    return this.db
+      .prepare('SELECT id,dateKey,submittedAt,updatedAt,submittedBy,daySignature FROM attendance_submissions')
+      .all() as AttendanceSubmission[]
+  }
+
+  private getIntraSubmissions(): IntraSubmission[] {
+    return this.db
+      .prepare('SELECT id,dateKey,slot,submittedAt,updatedAt,submittedBy,slotSignature FROM intra_submissions')
+      .all() as IntraSubmission[]
   }
 
   private getWeeklyTargets(): WeeklyTarget[] {

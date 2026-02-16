@@ -62,6 +62,25 @@ export type AttendanceRecord = {
   notes: string
 }
 
+export type AttendanceSubmission = {
+  id: string
+  dateKey: string
+  submittedAt: string
+  updatedAt: string
+  submittedBy: string
+  daySignature: string
+}
+
+export type IntraSubmission = {
+  id: string
+  dateKey: string
+  slot: string
+  submittedAt: string
+  updatedAt: string
+  submittedBy: string
+  slotSignature: string
+}
+
 export type WeeklyTarget = {
   weekKey: string
   targetSales: number
@@ -93,6 +112,8 @@ export type StoreState = {
   qaRecords: QaRecord[]
   auditRecords: AuditRecord[]
   attendance: AttendanceRecord[]
+  attendanceSubmissions: AttendanceSubmission[]
+  intraSubmissions: IntraSubmission[]
   weeklyTargets: WeeklyTarget[]
   vaultMeetings: VaultMeeting[]
   vaultDocs: VaultDoc[]

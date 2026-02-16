@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import type {
   Agent,
   AttendanceRecord,
+  AttendanceSubmission,
   AuditRecord,
+  IntraSubmission,
   PerfHistory,
   QaRecord,
   Snapshot,
@@ -38,6 +40,11 @@ export function useDataStore(): DataStore {
   const [qaRecords, setQaRecords] = useStoredState<QaRecord[]>('vc_qa_records', [])
   const [auditRecords, setAuditRecords] = useStoredState<AuditRecord[]>('vc_audit_records', [])
   const [attendance, setAttendance] = useStoredState<AttendanceRecord[]>('vc_attendance', [])
+  const [attendanceSubmissions, setAttendanceSubmissions] = useStoredState<AttendanceSubmission[]>(
+    'vc_attendance_submissions',
+    [],
+  )
+  const [intraSubmissions, setIntraSubmissions] = useStoredState<IntraSubmission[]>('vc_intra_submissions', [])
   const [weeklyTargets, setWeeklyTargets] = useStoredState<WeeklyTarget[]>('vc_weekly_targets', [])
   const [vaultMeetings, setVaultMeetings] = useStoredState<VaultMeeting[]>('vc_vault_meetings', [])
   const [vaultDocs, setVaultDocs] = useStoredState<VaultDoc[]>('vc_vault_docs', [])
@@ -69,6 +76,10 @@ export function useDataStore(): DataStore {
     setAuditRecords,
     attendance,
     setAttendance,
+    attendanceSubmissions,
+    setAttendanceSubmissions,
+    intraSubmissions,
+    setIntraSubmissions,
     weeklyTargets,
     setWeeklyTargets,
     vaultMeetings,

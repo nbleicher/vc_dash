@@ -11,6 +11,7 @@ function baseProps() {
       { id: 'a2', name: 'Jordan', active: true, createdAt: new Date().toISOString() },
     ],
     attendance: [],
+    attendanceSubmissions: [],
     weekDates: ['2026-02-13'],
     weekTarget: null,
     qaForm: { agentId: '', clientName: '', decision: 'Good Sale', notes: '' },
@@ -20,6 +21,7 @@ function baseProps() {
     incompleteQaAgentsToday: [] as Array<{ id: string; name: string }>,
     incompleteAuditAgentsToday: [] as Array<{ id: string; name: string }>,
     onSetAttendancePercent: vi.fn(),
+    onSubmitAttendanceDay: vi.fn(),
     onSaveWeeklyTarget: vi.fn(),
     onQaSubmit: vi.fn((e?: { preventDefault?: () => void }) => e?.preventDefault?.()),
     onAuditSubmit: vi.fn((e?: { preventDefault?: () => void }) => e?.preventDefault?.()),
@@ -27,6 +29,39 @@ function baseProps() {
 }
 
 describe('TasksPage completion boxes', () => {
+  it('renders per-day attendance submit controls', () => {
+    render(
+      <TasksPage
+        {...baseProps()}
+        taskPage="attendance"
+        weekDates={['2026-02-13', '2026-02-14', '2026-02-15']}
+      />,
+    )
+    expect(screen.getAllByRole('button', { name: 'Submit Day' })).toHaveLength(3)
+    expect(screen.getAllByText('Not submitted').length).toBeGreaterThan(0)
+  })
+
+  it('shows submitted status for submitted attendance day', () => {
+    render(
+      <TasksPage
+        {...baseProps()}
+        taskPage="attendance"
+        weekDates={['2026-02-15']}
+        attendanceSubmissions={[
+          {
+            id: 'att_sub_1',
+            dateKey: '2026-02-15',
+            submittedAt: '2026-02-15T15:58:00.000Z',
+            updatedAt: '2026-02-15T15:58:00.000Z',
+            submittedBy: 'manual',
+            daySignature: 'a1:100|a2:100',
+          },
+        ]}
+      />,
+    )
+    expect(screen.getByText(/Submitted:/)).toBeInTheDocument()
+  })
+
   it('shows QA missing-agent list when incomplete', () => {
     render(
       <TasksPage
