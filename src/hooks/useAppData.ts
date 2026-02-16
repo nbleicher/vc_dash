@@ -169,7 +169,8 @@ export function useAppData(store: DataStore) {
       ),
     [currentMinuteOfDay, intraSubmissions, todayKey],
   )
-  const intraAlert = overdueSlots.length > 0 && activeAgents.length > 0
+  const intraAlertWindowOpen = currentMinuteOfDay >= 10 * 60 && currentMinuteOfDay <= 19 * 60
+  const intraAlert = intraAlertWindowOpen && overdueSlots.length > 0 && activeAgents.length > 0
 
   const effectiveMetricsAgentId = useMemo(
     () => (activeAgents.some((a) => a.id === metricsAgentId) ? metricsAgentId : activeAgents[0]?.id ?? ''),
@@ -187,7 +188,7 @@ export function useAppData(store: DataStore) {
     const monthlyRows = perfHistory.filter((p) => p.dateKey.startsWith(todayKey.slice(0, 7)) && inScope(p.agentId))
     if (metricsScope === 'house') {
       for (const snap of liveByAgent.values()) {
-        dailyRows.push({
+        const liveRow: PerfHistory = {
           id: 'live',
           dateKey: todayKey,
           agentId: snap.agentId,
@@ -197,12 +198,15 @@ export function useAppData(store: DataStore) {
           cpa: null,
           cvr: null,
           frozenAt: '',
-        })
+        }
+        dailyRows.push(liveRow)
+        weeklyRows.push(liveRow)
+        monthlyRows.push(liveRow)
       }
     } else if (selectedMetricAgent) {
       const snap = liveByAgent.get(selectedMetricAgent.id)
       if (snap) {
-        dailyRows.push({
+        const liveRow: PerfHistory = {
           id: 'live',
           dateKey: todayKey,
           agentId: selectedMetricAgent.id,
@@ -212,7 +216,10 @@ export function useAppData(store: DataStore) {
           cpa: null,
           cvr: null,
           frozenAt: '',
-        })
+        }
+        dailyRows.push(liveRow)
+        weeklyRows.push(liveRow)
+        monthlyRows.push(liveRow)
       }
     }
     const aggregate = (rows: PerfHistory[]) => {
