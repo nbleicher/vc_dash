@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import { Card, CardTitle, DataTable, Field, FieldLabel, MetricCard, Select, TableWrap } from '../components'
 import type { MetricsScope, RankMetric, RankPeriod } from '../types'
 import { formatNum } from '../utils'
@@ -39,50 +40,57 @@ export function MetricsPage({
   rankPeriod,
   setRankPeriod,
 }: Props) {
+  const [kpiPeriod, setKpiPeriod] = useState<'day' | 'week' | 'month'>('day')
+  const scopeValue = metricsScope === 'house' ? '__house__' : effectiveMetricsAgentId
+  const selectedPeriodMetrics = useMemo(() => {
+    if (kpiPeriod === 'day') return metricsScopeData.daily
+    if (kpiPeriod === 'week') return metricsScopeData.weekly
+    return metricsScopeData.monthly
+  }, [kpiPeriod, metricsScopeData.daily, metricsScopeData.monthly, metricsScopeData.weekly])
+  const periodLabel = kpiPeriod === 'day' ? 'Daily' : kpiPeriod === 'week' ? 'Weekly' : 'Monthly'
+
   return (
     <Card className="space-y-4">
       <CardTitle>Metrics</CardTitle>
       <div className="row-wrap control-bar">
-        <Field className="min-w-[220px]">
+        <Field className="min-w-[260px]">
           <FieldLabel>Scope</FieldLabel>
-          <Select value={metricsScope} onChange={(e) => setMetricsScope(e.target.value as MetricsScope)}>
-            <option value="house">House (All Agents)</option>
-            <option value="agent">Selected Agent</option>
-          </Select>
-        </Field>
-        <Field className="min-w-[220px]">
-          <FieldLabel>Agent</FieldLabel>
           <Select
-            value={effectiveMetricsAgentId}
-            onChange={(e) => setMetricsAgentId(e.target.value)}
-            disabled={metricsScope === 'house'}
+            value={scopeValue}
+            onChange={(e) => {
+              const next = e.target.value
+              if (next === '__house__') {
+                setMetricsScope('house')
+                return
+              }
+              setMetricsScope('agent')
+              setMetricsAgentId(next)
+            }}
           >
-            {activeAgents.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
+            <option value="__house__">House (All Agents)</option>
+            {activeAgents.map((agent) => (
+              <option key={agent.id} value={agent.id}>
+                {agent.name}
               </option>
             ))}
           </Select>
         </Field>
+        <Field className="min-w-[180px]">
+          <FieldLabel>KPI Period</FieldLabel>
+          <Select value={kpiPeriod} onChange={(e) => setKpiPeriod(e.target.value as 'day' | 'week' | 'month')}>
+            <option value="day">Day</option>
+            <option value="week">Week</option>
+            <option value="month">Month</option>
+          </Select>
+        </Field>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        <MetricCard title="Daily Sales" value={metricsScopeData.daily.sales} />
+        <MetricCard title={`${periodLabel} Sales`} value={selectedPeriodMetrics.sales} />
         <MetricCard
-          title="Daily CPA"
-          value={metricsScopeData.daily.cpa === null ? 'N/A' : `$${formatNum(metricsScopeData.daily.cpa)}`}
+          title={`${periodLabel} CPA`}
+          value={selectedPeriodMetrics.cpa === null ? 'N/A' : `$${formatNum(selectedPeriodMetrics.cpa)}`}
         />
-        <MetricCard title="Weekly Sales" value={metricsScopeData.weekly.sales} />
-        <MetricCard
-          title="Weekly CPA"
-          value={metricsScopeData.weekly.cpa === null ? 'N/A' : `$${formatNum(metricsScopeData.weekly.cpa)}`}
-        />
-        <MetricCard title="Monthly Sales" value={metricsScopeData.monthly.sales} />
-        <MetricCard
-          title="Monthly CVR"
-          value={
-            metricsScopeData.monthly.cvr === null ? 'N/A' : `${formatNum(metricsScopeData.monthly.cvr * 100)}%`
-          }
-        />
+        <MetricCard title={`${periodLabel} CVR`} value={selectedPeriodMetrics.cvr === null ? 'N/A' : `${formatNum(selectedPeriodMetrics.cvr * 100)}%`} />
         <MetricCard
           title="QA Pass Rate"
           value={qaPassRate === null ? 'N/A' : `${formatNum(qaPassRate * 100)}%`}
