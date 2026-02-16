@@ -4,7 +4,7 @@ import { useDataStore } from './data'
 import { useAppData } from './hooks'
 import { CARRIERS, SLOT_CONFIG } from './constants'
 import type { AttendancePercent, ExportFlags, QaRecord, TopPage, VaultMeeting } from './types'
-import { csvEscape, estDateKey, uid } from './utils'
+import { csvEscape, estDateKey, estParts, uid } from './utils'
 import { DashboardPage } from './pages/DashboardPage'
 import { MetricsPage } from './pages/MetricsPage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -23,6 +23,8 @@ function App() {
     setAuditRecords,
     attendance,
     setAttendance,
+    setSnapshots,
+    setPerfHistory,
     attendanceSubmissions,
     setAttendanceSubmissions,
     intraSubmissions,
@@ -124,6 +126,16 @@ function App() {
   })
 
   const ensureAgentDefault = (agentId: string): string => (agentId ? agentId : activeAgents[0]?.id ?? '')
+
+  const isIntraSlotEditable = (slot: string): boolean => {
+    const slotIndex = SLOT_CONFIG.findIndex((item) => item.key === slot)
+    if (slotIndex === -1) return false
+    const current = estParts(now)
+    const currentMinute = current.hour * 60 + current.minute + current.second / 60
+    const startMinute = SLOT_CONFIG[slotIndex].minuteOfDay
+    const endMinute = SLOT_CONFIG[slotIndex + 1]?.minuteOfDay ?? 24 * 60
+    return currentMinute >= startMinute && currentMinute < endMinute
+  }
 
   const buildAttendanceDaySignature = (dateKey: string): string =>
     [...activeAgents]
@@ -287,6 +299,10 @@ function App() {
 
   const submitIntraSlot = (slot: string): void => {
     if (!SLOT_CONFIG.some((item) => item.key === slot)) return
+    if (!isIntraSlotEditable(slot)) {
+      setUiError(`The ${slot} slot is locked and can no longer be edited.`)
+      return
+    }
     const nowIso = new Date().toISOString()
     const existing = intraSubmissions.find((submission) => submission.dateKey === todayKey && submission.slot === slot)
     if (existing) {
@@ -316,6 +332,19 @@ function App() {
           : submission,
       )
     })
+  }
+
+  const upsertIntraSnapshot = (
+    slot: (typeof SLOT_CONFIG)[number],
+    agentId: string,
+    calls: number,
+    sales: number,
+  ): void => {
+    if (!isIntraSlotEditable(slot.key)) {
+      setUiError(`The ${slot.label} window has closed. Select a current editable slot.`)
+      return
+    }
+    upsertSnapshot(slot, agentId, calls, sales)
   }
 
   const saveAttendanceNote = (agentId: string, dateKey: string): void => {
@@ -468,6 +497,25 @@ function App() {
     URL.revokeObjectURL(url)
   }
 
+  const clearHistory = (): void => {
+    const proceed = window.confirm(
+      'This will permanently clear all dashboard data (agents, attendance, snapshots, QA, audits, targets, vault). Continue?',
+    )
+    if (!proceed) return
+    setAgents([])
+    setQaRecords([])
+    setAuditRecords([])
+    setSnapshots([])
+    setAttendance([])
+    setAttendanceSubmissions([])
+    setIntraSubmissions([])
+    setPerfHistory([])
+    setWeeklyTargets([])
+    setVaultMeetings([])
+    setVaultDocs([])
+    setUiError(null)
+  }
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
@@ -553,8 +601,9 @@ function App() {
               setTopPage('tasks')
               setTaskPage('attendance')
             }}
-            onUpsertSnapshot={upsertSnapshot}
+            onUpsertSnapshot={upsertIntraSnapshot}
             onSubmitIntraSlot={submitIntraSlot}
+            isIntraSlotEditable={isIntraSlotEditable}
           />
         )}
 
@@ -562,6 +611,7 @@ function App() {
           <TasksPage
             taskPage={taskPage}
             setTaskPage={setTaskPage}
+            todayKey={todayKey}
             activeAgents={activeAgents}
             attendance={attendance}
             attendanceSubmissions={dataAttendanceSubmissions}
@@ -639,6 +689,7 @@ function App() {
             setExportFlags={setExportFlags}
             onAddAgent={handleAddAgent}
             onRunExport={runExport}
+            onClearHistory={clearHistory}
           />
         )}
       </main>

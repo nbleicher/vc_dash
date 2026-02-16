@@ -161,7 +161,7 @@ export function useAppData(store: DataStore) {
     () => attendanceSubmissions.some((submission) => submission.dateKey === todayKey),
     [attendanceSubmissions, todayKey],
   )
-  const attendanceAlert = currentMinuteOfDay >= 10 * 60 && activeAgents.length > 0 && !attendanceSubmittedToday
+  const attendanceAlert = currentMinuteOfDay >= 17 * 60 + 30 && activeAgents.length > 0 && !attendanceSubmittedToday
   const overdueSlots = useMemo(
     () =>
       SLOT_CONFIG.filter((slot) => slot.minuteOfDay <= currentMinuteOfDay).filter(

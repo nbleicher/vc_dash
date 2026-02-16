@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { DashboardPage } from './DashboardPage'
 
@@ -24,14 +24,15 @@ function baseProps() {
     onGoToAttendance: vi.fn(),
     onUpsertSnapshot: vi.fn(),
     onSubmitIntraSlot: vi.fn(),
+    isIntraSlotEditable: vi.fn(() => true),
   }
 }
 
 describe('DashboardPage intra-day entry', () => {
-  it('renders per-hour submit cards with agent dropdowns', () => {
+  it('renders combined intra-day form with agent/time dropdowns', () => {
     render(<DashboardPage {...baseProps()} />)
-    expect(screen.getAllByRole('button', { name: 'Submit Hour' })).toHaveLength(4)
-    expect(screen.getAllByRole('combobox')).toHaveLength(4)
+    expect(screen.getAllByRole('button', { name: 'Submit Hour' })).toHaveLength(1)
+    expect(screen.getAllByRole('combobox')).toHaveLength(2)
   })
 
   it('shows submitted badge for submitted slot', () => {
@@ -52,5 +53,15 @@ describe('DashboardPage intra-day entry', () => {
       />,
     )
     expect(screen.getByText('Submitted')).toBeInTheDocument()
+  })
+
+  it('disables actions when selected slot is locked', () => {
+    render(<DashboardPage {...baseProps()} isIntraSlotEditable={() => false} />)
+    const section = screen.getAllByText('Intra-Day Performance Entry').at(-1)?.closest('section')
+    expect(section).not.toBeNull()
+    const scope = within(section!)
+    expect(scope.getByText('Locked (Window Closed)')).toBeInTheDocument()
+    expect(scope.getByRole('button', { name: 'Save Draft' })).toBeDisabled()
+    expect(scope.getByRole('button', { name: 'Submit Hour' })).toBeDisabled()
   })
 })

@@ -8,6 +8,7 @@ import type { DataStore } from '../data'
 type Props = {
   taskPage: 'attendance' | 'qa' | 'audit' | 'targets'
   setTaskPage: (p: 'attendance' | 'qa' | 'audit' | 'targets') => void
+  todayKey: string
   activeAgents: DataStore['agents']
   attendance: AttendanceRecord[]
   attendanceSubmissions: DataStore['attendanceSubmissions']
@@ -45,6 +46,7 @@ type Props = {
 export function TasksPage({
   taskPage,
   setTaskPage,
+  todayKey,
   activeAgents,
   attendance,
   attendanceSubmissions,
@@ -129,21 +131,17 @@ export function TasksPage({
               </tbody>
             </DataTable>
           </TableWrap>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-            {weekDates.map((dateKey) => {
-              const submission = attendanceSubmissions.find((item) => item.dateKey === dateKey)
-              return (
-                <div key={dateKey} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-sm font-medium text-slate-700">{dateKey}</p>
-                  <Button type="button" variant="default" className="mt-2 w-full" onClick={() => onSubmitAttendanceDay(dateKey)}>
-                    Submit Day
-                  </Button>
-                  <p className="mt-2 text-xs text-slate-500">
-                    {submission ? `Submitted: ${new Date(submission.submittedAt).toLocaleString()}` : 'Not submitted'}
-                  </p>
-                </div>
-              )
-            })}
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="text-sm font-medium text-slate-700">Today ({todayKey})</p>
+            <Button type="button" variant="default" className="mt-2 w-full sm:w-auto" onClick={() => onSubmitAttendanceDay(todayKey)}>
+              Submit Day
+            </Button>
+            <p className="mt-2 text-xs text-slate-500">
+              {(() => {
+                const submission = attendanceSubmissions.find((item) => item.dateKey === todayKey)
+                return submission ? `Submitted: ${new Date(submission.submittedAt).toLocaleString()}` : 'Not submitted'
+              })()}
+            </p>
           </div>
         </Card>
       )}

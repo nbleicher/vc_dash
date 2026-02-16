@@ -46,6 +46,7 @@ type Props = {
     sales: number
   ) => void
   onSubmitIntraSlot: (slot: string) => void
+  isIntraSlotEditable: (slot: string) => boolean
 }
 
 export function DashboardPage({
@@ -69,33 +70,57 @@ export function DashboardPage({
   onGoToAttendance,
   onUpsertSnapshot,
   onSubmitIntraSlot,
+  isIntraSlotEditable,
 }: Props) {
-  const [slotDrafts, setSlotDrafts] = useState<Record<string, { agentId: string; calls: number; sales: number }>>({})
+  const [entryForm, setEntryForm] = useState<{ agentId: string; slot: string; calls: number; sales: number }>({
+    agentId: '',
+    slot: SLOT_CONFIG[0].key,
+    calls: 0,
+    sales: 0,
+  })
 
   useEffect(() => {
-    setSlotDrafts((prev) => {
-      const next: Record<string, { agentId: string; calls: number; sales: number }> = {}
-      for (const slot of SLOT_CONFIG) {
-        const prior = prev[slot.key]
-        const fallbackAgentId = activeAgents[0]?.id ?? ''
-        const selectedAgentId = activeAgents.some((agent) => agent.id === prior?.agentId) ? prior.agentId : fallbackAgentId
-        const snap =
-          snapshots.find((item) => item.dateKey === todayKey && item.slot === slot.key && item.agentId === selectedAgentId) ??
-          null
-        next[slot.key] = {
-          agentId: selectedAgentId,
-          calls: snap?.billableCalls ?? prior?.calls ?? 0,
-          sales: snap?.sales ?? prior?.sales ?? 0,
-        }
+    setEntryForm((prev) => {
+      const defaultAgentId = activeAgents[0]?.id ?? ''
+      const safeAgentId = activeAgents.some((agent) => agent.id === prev.agentId) ? prev.agentId : defaultAgentId
+      const safeSlot = SLOT_CONFIG.some((slot) => slot.key === prev.slot) ? prev.slot : SLOT_CONFIG[0].key
+      const snap =
+        snapshots.find((item) => item.dateKey === todayKey && item.slot === safeSlot && item.agentId === safeAgentId) ?? null
+      return {
+        agentId: safeAgentId,
+        slot: safeSlot,
+        calls: snap?.billableCalls ?? prev.calls ?? 0,
+        sales: snap?.sales ?? prev.sales ?? 0,
       }
-      return next
     })
   }, [activeAgents, snapshots, todayKey])
 
-  const handleSaveSlotDraft = (slot: (typeof SLOT_CONFIG)[number]): void => {
-    const draft = slotDrafts[slot.key]
-    if (!draft || !draft.agentId) return
-    onUpsertSnapshot(slot, draft.agentId, Math.max(0, draft.calls), Math.max(0, draft.sales))
+  const selectedSlot = SLOT_CONFIG.find((slot) => slot.key === entryForm.slot) ?? SLOT_CONFIG[0]
+  const selectedSubmission =
+    intraSubmissions.find((item) => item.dateKey === todayKey && item.slot === selectedSlot.key) ?? null
+  const selectedSlotEditable = isIntraSlotEditable(selectedSlot.key)
+  const entryCpa = entryForm.sales > 0 ? (entryForm.calls * 15) / entryForm.sales : null
+
+  const loadDraftForSelection = (agentId: string, slot: string): void => {
+    const snap = snapshots.find((item) => item.dateKey === todayKey && item.slot === slot && item.agentId === agentId) ?? null
+    setEntryForm((prev) => ({
+      ...prev,
+      agentId,
+      slot,
+      calls: snap?.billableCalls ?? 0,
+      sales: snap?.sales ?? 0,
+    }))
+  }
+
+  const handleSaveDraft = (): void => {
+    if (!entryForm.agentId) return
+    onUpsertSnapshot(selectedSlot, entryForm.agentId, Math.max(0, entryForm.calls), Math.max(0, entryForm.sales))
+  }
+
+  const handleSubmitSlot = (): void => {
+    if (!entryForm.agentId) return
+    onUpsertSnapshot(selectedSlot, entryForm.agentId, Math.max(0, entryForm.calls), Math.max(0, entryForm.sales))
+    onSubmitIntraSlot(selectedSlot.key)
   }
 
   return (
@@ -106,7 +131,7 @@ export function DashboardPage({
             <strong>Attendance Alert</strong>
             <Badge variant="warning">Needs Review</Badge>
           </div>
-          <p>Attendance is incomplete for today after 10:00 AM EST.</p>
+          <p>Attendance is incomplete for today after 5:30 PM EST.</p>
           <Button variant="default" className="mt-2" onClick={onGoToAttendance}>
             Complete Attendance
           </Button>
@@ -249,98 +274,83 @@ export function DashboardPage({
         {activeAgents.length === 0 ? (
           <p className="text-sm text-slate-500">N/A - no active agents.</p>
         ) : (
-          <div className="grid gap-3 lg:grid-cols-2">
-            {SLOT_CONFIG.map((slot) => {
-              const draft = slotDrafts[slot.key] ?? { agentId: '', calls: 0, sales: 0 }
-              const submission =
-                intraSubmissions.find((item) => item.dateKey === todayKey && item.slot === slot.key) ?? null
-              const cpa = draft.sales > 0 ? (draft.calls * 15) / draft.sales : null
-              return (
-                <div key={slot.key} className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3>{slot.label}</h3>
-                    <Badge variant={submission ? 'success' : 'warning'}>{submission ? 'Submitted' : 'Pending'}</Badge>
-                  </div>
-                  <label className="text-sm font-medium text-slate-700">
-                    Agent
-                    <Select
-                      className="mt-1"
-                      value={draft.agentId}
-                      onChange={(e) => {
-                        const nextAgentId = e.target.value
-                        const snap =
-                          snapshots.find(
-                            (item) => item.dateKey === todayKey && item.slot === slot.key && item.agentId === nextAgentId,
-                          ) ?? null
-                        setSlotDrafts((prev) => ({
-                          ...prev,
-                          [slot.key]: {
-                            agentId: nextAgentId,
-                            calls: snap?.billableCalls ?? 0,
-                            sales: snap?.sales ?? 0,
-                          },
-                        }))
-                      }}
-                    >
-                      <option value="">Select agent</option>
-                      {activeAgents.map((agent) => (
-                        <option key={agent.id} value={agent.id}>
-                          {agent.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </label>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <label className="text-sm font-medium text-slate-700">
-                      Calls
-                      <Input
-                        className="mt-1"
-                        type="number"
-                        min={0}
-                        value={draft.calls}
-                        onChange={(e) =>
-                          setSlotDrafts((prev) => ({
-                            ...prev,
-                            [slot.key]: { ...draft, calls: Number(e.target.value) || 0 },
-                          }))
-                        }
-                      />
-                    </label>
-                    <label className="text-sm font-medium text-slate-700">
-                      Sales
-                      <Input
-                        className="mt-1"
-                        type="number"
-                        min={0}
-                        value={draft.sales}
-                        onChange={(e) =>
-                          setSlotDrafts((prev) => ({
-                            ...prev,
-                            [slot.key]: { ...draft, sales: Number(e.target.value) || 0 },
-                          }))
-                        }
-                      />
-                    </label>
-                  </div>
-                  <p className="text-xs text-slate-500">CPA: {cpa === null ? 'N/A' : `$${formatNum(cpa)}`}</p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" variant="secondary" onClick={() => handleSaveSlotDraft(slot)}>
-                      Save Draft
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="default"
-                      onClick={() => {
-                        handleSaveSlotDraft(slot)
-                        onSubmitIntraSlot(slot.key)
-                      }}
-                    >
-                      Submit Hour
-                    </Button>
-                  </div>
-                </div>
-              )
-            })}
+          <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="text-sm font-medium text-slate-700">
+                Agent
+                <Select
+                  className="mt-1"
+                  value={entryForm.agentId}
+                  onChange={(e) => loadDraftForSelection(e.target.value, entryForm.slot)}
+                >
+                  <option value="">Select agent</option>
+                  {activeAgents.map((agent) => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.name}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+              <label className="text-sm font-medium text-slate-700">
+                Time
+                <Select
+                  className="mt-1"
+                  value={entryForm.slot}
+                  onChange={(e) => loadDraftForSelection(entryForm.agentId, e.target.value)}
+                >
+                  {SLOT_CONFIG.map((slot) => (
+                    <option key={slot.key} value={slot.key}>
+                      {slot.label}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={selectedSubmission ? 'success' : 'warning'}>
+                {selectedSubmission ? 'Submitted' : 'Pending'}
+              </Badge>
+              <Badge variant={selectedSlotEditable ? 'neutral' : 'danger'}>
+                {selectedSlotEditable ? 'Editable Window Open' : 'Locked (Window Closed)'}
+              </Badge>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="text-sm font-medium text-slate-700">
+                Calls
+                <Input
+                  className="mt-1"
+                  type="number"
+                  min={0}
+                  value={entryForm.calls}
+                  disabled={!selectedSlotEditable}
+                  onChange={(e) => setEntryForm((prev) => ({ ...prev, calls: Number(e.target.value) || 0 }))}
+                />
+              </label>
+              <label className="text-sm font-medium text-slate-700">
+                Sales
+                <Input
+                  className="mt-1"
+                  type="number"
+                  min={0}
+                  value={entryForm.sales}
+                  disabled={!selectedSlotEditable}
+                  onChange={(e) => setEntryForm((prev) => ({ ...prev, sales: Number(e.target.value) || 0 }))}
+                />
+              </label>
+            </div>
+
+            <p className="text-xs text-slate-500">CPA: {entryCpa === null ? 'N/A' : `$${formatNum(entryCpa)}`}</p>
+
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="secondary" disabled={!selectedSlotEditable} onClick={handleSaveDraft}>
+                Save Draft
+              </Button>
+              <Button type="button" variant="default" disabled={!selectedSlotEditable} onClick={handleSubmitSlot}>
+                Submit Hour
+              </Button>
+            </div>
           </div>
         )}
       </Card>

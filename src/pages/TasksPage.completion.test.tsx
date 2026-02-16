@@ -6,6 +6,7 @@ function baseProps() {
   return {
     taskPage: 'qa' as const,
     setTaskPage: vi.fn(),
+    todayKey: '2026-02-15',
     activeAgents: [
       { id: 'a1', name: 'Alex', active: true, createdAt: new Date().toISOString() },
       { id: 'a2', name: 'Jordan', active: true, createdAt: new Date().toISOString() },
@@ -37,7 +38,7 @@ describe('TasksPage completion boxes', () => {
         weekDates={['2026-02-13', '2026-02-14', '2026-02-15']}
       />,
     )
-    expect(screen.getAllByRole('button', { name: 'Submit Day' })).toHaveLength(3)
+    expect(screen.getAllByRole('button', { name: 'Submit Day' })).toHaveLength(1)
     expect(screen.getAllByText('Not submitted').length).toBeGreaterThan(0)
   })
 
