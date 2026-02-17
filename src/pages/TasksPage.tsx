@@ -5,6 +5,7 @@ import type { AttendanceRecord } from '../types'
 import type { AttendancePercent } from '../types'
 import type { SpiffRecord, TaskPage } from '../types'
 import type { DataStore } from '../data'
+import { formatDateKey, formatTimestamp } from '../utils'
 
 type Props = {
   taskPage: TaskPage
@@ -90,8 +91,8 @@ export function TasksPage({
     ))
 
   const taskItems = [
-    { key: 'spiff' as const, label: 'Spiff' },
     { key: 'attendance' as const, label: 'Attendance' },
+    { key: 'spiff' as const, label: 'Spiff' },
     { key: 'qa' as const, label: 'Daily QA' },
     { key: 'audit' as const, label: 'Action Needed Audit' },
     { key: 'targets' as const, label: 'Weekly Targets' },
@@ -132,7 +133,7 @@ export function TasksPage({
                 <tr>
                   <th>Agent</th>
                   {attendanceWeekDates.map((d) => (
-                    <th key={d}>{d}</th>
+                    <th key={d}>{formatDateKey(d)}</th>
                   ))}
                   <th>Week Spiff Total</th>
                 </tr>
@@ -204,7 +205,7 @@ export function TasksPage({
                 <tr>
                   <th>Agent</th>
                   {attendanceWeekDates.map((d) => (
-                    <th key={d}>{d}</th>
+                    <th key={d}>{formatDateKey(d)}</th>
                   ))}
                   <th>Week Base Pay</th>
                 </tr>
@@ -251,14 +252,14 @@ export function TasksPage({
             </DataTable>
           </TableWrap>
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <p className="text-sm font-medium text-slate-700">Today ({todayKey})</p>
+            <p className="text-sm font-medium text-slate-700">Today ({formatDateKey(todayKey)})</p>
             <Button type="button" variant="default" className="mt-2 w-full sm:w-auto" onClick={() => onSubmitAttendanceDay(todayKey)}>
               Submit Day
             </Button>
             <p className="mt-2 text-xs text-slate-500">
               {(() => {
                 const submission = attendanceSubmissions.find((item) => item.dateKey === todayKey)
-                return submission ? `Submitted: ${new Date(submission.submittedAt).toLocaleString()}` : 'Not submitted'
+                return submission ? `Submitted: ${formatTimestamp(submission.submittedAt)}` : 'Not submitted'
               })()}
             </p>
           </div>

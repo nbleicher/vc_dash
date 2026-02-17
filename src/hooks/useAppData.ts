@@ -12,7 +12,17 @@ import type {
   VaultHistoryView,
   VaultScope,
 } from '../types'
-import { computeMetrics, estDateKey, estParts, formatTimestamp, monFriDatesForWeek, uid, weekKeyMonFri } from '../utils'
+import {
+  computeMetrics,
+  estDateKey,
+  estParts,
+  formatDateKey,
+  formatTimestamp,
+  monFriDatesForWeek,
+  uid,
+  weekKeyFromDateKey,
+  weekKeyMonFri,
+} from '../utils'
 
 type SlotConfig = (typeof SLOT_CONFIG)[number]
 
@@ -59,15 +69,11 @@ export function useAppData(store: DataStore) {
     const weekKeys = new Set(attendance.map((row) => row.weekKey))
     for (const row of spiffRecords) weekKeys.add(row.weekKey)
     weekKeys.add(currentWeekKey)
-    const toShortDate = (dateKey: string): string => {
-      const [, month, day] = dateKey.split('-').map(Number)
-      return `${month}/${day}`
-    }
     return [...weekKeys]
       .sort((a, b) => b.localeCompare(a))
       .map((weekKey) => {
         const dates = monFriDatesForWeek(weekKey)
-        return { weekKey, label: `${toShortDate(dates[0])}-${toShortDate(dates[dates.length - 1])}` }
+        return { weekKey, label: `${formatDateKey(dates[0])}-${formatDateKey(dates[dates.length - 1])}` }
       })
   }, [attendance, spiffRecords, currentWeekKey])
   const effectiveAttendanceWeekKey = useMemo(
@@ -81,6 +87,7 @@ export function useAppData(store: DataStore) {
     () => monFriDatesForWeek(effectiveAttendanceWeekKey),
     [effectiveAttendanceWeekKey],
   )
+  const [selectedEodWeekKey, setSelectedEodWeekKey] = useState<string>(currentWeekKey)
 
   const todaysSnapshots = useMemo(() => snapshots.filter((s) => s.dateKey === todayKey), [snapshots, todayKey])
   const lastSnapshotLabel = useMemo(() => {
@@ -340,6 +347,103 @@ export function useAppData(store: DataStore) {
     ).length
   }, [auditRecords, metricsScope, effectiveMetricsAgentId, actionAudit])
 
+  const eodWeekOptions = useMemo(() => {
+    const options: Array<{ weekKey: string; label: string }> = [{ weekKey: currentWeekKey, label: 'Current Week' }]
+    for (let i = 1; i < 8; i += 1) {
+      const monday = new Date(Date.UTC(est.year, est.month - 1, est.day, 12, 0, 0))
+      monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7) - 7 * i)
+      const key = weekKeyMonFri(monday)
+      if (!options.some((item) => item.weekKey === key)) {
+        options.push({
+          weekKey: key,
+          label: i === 1 ? 'Last Week' : `${i} Weeks Ago`,
+        })
+      }
+    }
+    for (const row of perfHistory) {
+      const key = weekKeyFromDateKey(row.dateKey)
+      if (!options.some((item) => item.weekKey === key)) {
+        options.push({ weekKey: key, label: key })
+      }
+    }
+    return options
+  }, [currentWeekKey, est.day, est.month, est.year, perfHistory])
+
+  const effectiveEodWeekKey = useMemo(
+    () =>
+      eodWeekOptions.some((option) => option.weekKey === selectedEodWeekKey) ? selectedEodWeekKey : currentWeekKey,
+    [currentWeekKey, eodWeekOptions, selectedEodWeekKey],
+  )
+
+  const eodDateTotals = useMemo(() => {
+    const activeIds = new Set(activeAgents.map((agent) => agent.id))
+    const totalsByDate = new Map<string, { deals: number; marketing: number; updatedAt: string | null }>()
+    for (const row of perfHistory) {
+      if (!activeIds.has(row.agentId)) continue
+      if (row.dateKey === todayKey && liveByAgent.has(row.agentId)) continue
+      const existing = totalsByDate.get(row.dateKey) ?? { deals: 0, marketing: 0, updatedAt: null }
+      existing.deals += row.sales
+      existing.marketing += row.marketing
+      if (!existing.updatedAt || new Date(row.frozenAt).getTime() > new Date(existing.updatedAt).getTime()) {
+        existing.updatedAt = row.frozenAt
+      }
+      totalsByDate.set(row.dateKey, existing)
+    }
+    for (const snap of liveByAgent.values()) {
+      if (!activeIds.has(snap.agentId)) continue
+      const existing = totalsByDate.get(todayKey) ?? { deals: 0, marketing: 0, updatedAt: null }
+      existing.deals += snap.sales
+      existing.marketing += snap.billableCalls * 15
+      if (!existing.updatedAt || new Date(snap.updatedAt).getTime() > new Date(existing.updatedAt).getTime()) {
+        existing.updatedAt = snap.updatedAt
+      }
+      totalsByDate.set(todayKey, existing)
+    }
+    return totalsByDate
+  }, [activeAgents, liveByAgent, perfHistory, todayKey])
+
+  const eodWeeklyRows = useMemo(() => {
+    const dates = monFriDatesForWeek(effectiveEodWeekKey)
+    return dates.map((dateKey, idx) => {
+      const totals = eodDateTotals.get(dateKey) ?? { deals: 0, marketing: 0, updatedAt: null }
+      return {
+        dayLabel: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'][idx],
+        dateKey,
+        deals: totals.deals,
+        marketing: totals.marketing,
+        cpa: totals.deals > 0 ? totals.marketing / totals.deals : null,
+        updatedAt: totals.updatedAt,
+      }
+    })
+  }, [effectiveEodWeekKey, eodDateTotals])
+
+  const eodWeeklySummary = useMemo(() => {
+    const fridayKey = monFriDatesForWeek(effectiveEodWeekKey)[4]
+    const summary = eodWeeklyRows.reduce(
+      (acc, row) => {
+        acc.deals += row.deals
+        acc.marketing += row.marketing
+        if (row.updatedAt && (!acc.updatedAt || new Date(row.updatedAt).getTime() > new Date(acc.updatedAt).getTime())) {
+          acc.updatedAt = row.updatedAt
+        }
+        return acc
+      },
+      { deals: 0, marketing: 0, updatedAt: null as string | null },
+    )
+    const isAfterFridayCutoff = fridayKey < todayKey || (fridayKey === todayKey && currentMinuteOfDay >= 18 * 60 + 15)
+    return {
+      ...summary,
+      cpa: summary.deals > 0 ? summary.marketing / summary.deals : null,
+      finalized: isAfterFridayCutoff,
+    }
+  }, [currentMinuteOfDay, effectiveEodWeekKey, eodWeeklyRows, todayKey])
+
+  const monthLabel = useMemo(() => {
+    const parts = effectiveEodWeekKey.split('-').map(Number)
+    const date = new Date(Date.UTC(parts[0], (parts[1] ?? 1) - 1, parts[2] ?? 1))
+    return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(date)
+  }, [effectiveEodWeekKey])
+
   const effectiveVaultAgentId = useMemo(
     () => (activeAgents.some((a) => a.id === vaultAgentId) ? vaultAgentId : activeAgents[0]?.id ?? ''),
     [activeAgents, vaultAgentId],
@@ -471,6 +575,12 @@ export function useAppData(store: DataStore) {
     overdueSlots,
     taskPage,
     setTaskPage,
+    selectedEodWeekKey: effectiveEodWeekKey,
+    setSelectedEodWeekKey,
+    eodWeekOptions,
+    eodWeeklyRows,
+    eodWeeklySummary,
+    monthLabel,
     metricsScope,
     setMetricsScope,
     metricsAgentId,

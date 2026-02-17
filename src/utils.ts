@@ -38,12 +38,39 @@ export function estDateKey(date: Date): string {
   return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`
 }
 
+export function formatDateKey(dateKey: string): string {
+  const [yearRaw, monthRaw, dayRaw] = dateKey.split('-')
+  if (!yearRaw || !monthRaw || !dayRaw) return dateKey
+  const year = Number(yearRaw)
+  const month = Number(monthRaw)
+  const day = Number(dayRaw)
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return dateKey
+  return `${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}/${String(year).slice(-2)}`
+}
+
+export function formatWeekRangeLabel(weekKey: string): string {
+  const dates = monFriDatesForWeek(weekKey)
+  const [, startMonth, startDay] = dates[0].split('-').map(Number)
+  const [, endMonth, endDay] = dates[dates.length - 1].split('-').map(Number)
+  return `${startMonth}/${startDay}-${endMonth}/${endDay}`
+}
+
+export function weekKeyFromDateKey(dateKey: string): string {
+  const [y, m, d] = dateKey.split('-').map(Number)
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return dateKey
+  return weekKeyMonFri(new Date(Date.UTC(y, m - 1, d, 12, 0, 0)))
+}
+
 export function formatTimestamp(ts: string | null): string {
   if (!ts) return 'N/A'
   const d = new Date(ts)
   return new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
+    month: '2-digit',
+    day: '2-digit',
+    year: '2-digit',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
     timeZone: ZONE,
   }).format(d)
 }

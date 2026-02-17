@@ -10,6 +10,7 @@ export function TopNav({ topPage, setTopPage }: Props) {
     { key: 'dashboard', label: 'Dashboard' },
     { key: 'tasks', label: 'Tasks' },
     { key: 'metrics', label: 'Metrics' },
+    { key: 'eod', label: 'EOD' },
     { key: 'vault', label: 'Vault' },
     { key: 'settings', label: 'Settings' },
   ]

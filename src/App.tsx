@@ -4,9 +4,10 @@ import { useDataStore } from './data'
 import { useAppData } from './hooks'
 import { CARRIERS, SLOT_CONFIG } from './constants'
 import type { AttendancePercent, ExportFlags, QaRecord, TopPage, VaultMeeting } from './types'
-import { csvEscape, estDateKey, estParts, uid } from './utils'
+import { csvEscape, estDateKey, estParts, formatDateKey, uid } from './utils'
 import { DashboardPage } from './pages/DashboardPage'
 import { MetricsPage } from './pages/MetricsPage'
+import { EodPage } from './pages/EodPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { TasksPage } from './pages/TasksPage'
 import { VaultPage } from './pages/VaultPage'
@@ -67,6 +68,12 @@ function App() {
     overdueSlots,
     taskPage,
     setTaskPage,
+    selectedEodWeekKey,
+    setSelectedEodWeekKey,
+    eodWeekOptions,
+    eodWeeklyRows,
+    eodWeeklySummary,
+    monthLabel,
     metricsScope,
     setMetricsScope,
     setMetricsAgentId,
@@ -164,6 +171,7 @@ function App() {
     dashboard: { title: 'Dashboard', subtitle: 'Monitor floor performance, alerts, and intra-day activity.' },
     tasks: { title: 'Tasks', subtitle: 'Manage attendance, QA, audits, and weekly targets.' },
     metrics: { title: 'Metrics', subtitle: 'Track KPIs and ranking trends across house and agent scope.' },
+    eod: { title: 'EOD', subtitle: 'Review weekly totals and end-of-week house summary snapshots.' },
     vault: { title: 'Vault', subtitle: 'Review history, coaching notes, and document records.' },
     settings: { title: 'Settings', subtitle: 'Maintain agents and export operational data.' },
   }
@@ -300,7 +308,9 @@ function App() {
         return [...prev, { id: uid('att'), weekKey: selectedAttendanceWeekKey, dateKey, agentId, percent, notes: '' }]
       if (existing.percent !== percent) {
         const agentName = agents.find((a) => a.id === agentId)?.name ?? 'Agent'
-        const proceed = window.confirm(`Attendance for ${agentName} on ${dateKey} already exists. Overwrite it?`)
+        const proceed = window.confirm(
+          `Attendance for ${agentName} on ${formatDateKey(dateKey)} already exists. Overwrite it?`,
+        )
         if (!proceed) return prev
       }
       return prev.map((a) => (a.id === existing.id ? { ...a, percent } : a))
@@ -323,7 +333,9 @@ function App() {
     const nextSignature = buildAttendanceDaySignature(dateKey)
     const existing = attendanceSubmissions.find((submission) => submission.dateKey === dateKey)
     if (existing && existing.daySignature !== nextSignature) {
-      const proceed = window.confirm(`Attendance for ${dateKey} was already submitted. Overwrite submission?`)
+      const proceed = window.confirm(
+        `Attendance for ${formatDateKey(dateKey)} was already submitted. Overwrite submission?`,
+      )
       if (!proceed) return
     }
     setAttendanceSubmissions((prev) => {
@@ -707,6 +719,17 @@ function App() {
             setRankMetric={setRankMetric}
             rankPeriod={rankPeriod}
             setRankPeriod={setRankPeriod}
+          />
+        )}
+
+        {topPage === 'eod' && (
+          <EodPage
+            selectedEodWeekKey={selectedEodWeekKey}
+            setSelectedEodWeekKey={setSelectedEodWeekKey}
+            eodWeekOptions={eodWeekOptions}
+            eodWeeklyRows={eodWeeklyRows}
+            eodWeeklySummary={eodWeeklySummary}
+            monthLabel={monthLabel}
           />
         )}
 

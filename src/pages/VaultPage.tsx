@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { DataStore } from '../data'
 import { Badge, Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Textarea } from '../components'
 import type { VaultHistoryView, VaultScope, VaultMeeting } from '../types'
-import { formatNum, formatPctDelta, formatTimestamp } from '../utils'
+import { formatDateKey, formatNum, formatPctDelta, formatTimestamp } from '../utils'
 
 type Props = {
   vaultScope: VaultScope
@@ -109,7 +109,10 @@ export function VaultPage({
     const q = popupSearch.trim().toLowerCase()
     if (!q) return vaultQaHistory
     return vaultQaHistory.filter((row) =>
-      [agentName(row.agentId), row.dateKey, row.clientName, row.decision, row.status, row.notes].join(' ').toLowerCase().includes(q),
+      [agentName(row.agentId), formatDateKey(row.dateKey), row.clientName, row.decision, row.status, row.notes]
+        .join(' ')
+        .toLowerCase()
+        .includes(q),
     )
   }, [popupSearch, vaultQaHistory, agentName])
 
@@ -169,7 +172,7 @@ export function VaultPage({
             {rows.map((row) => (
               <tr key={row.id}>
                 <td>{agentName(row.agentId)}</td>
-                <td>{row.dateKey}</td>
+                <td>{formatDateKey(row.dateKey)}</td>
                 <td>{row.clientName}</td>
                 <td>{row.decision}</td>
                 <td>{row.status}</td>
@@ -300,7 +303,7 @@ export function VaultPage({
               <Input
                 value={meetingForm.dateKey}
                 onChange={(e) => setMeetingForm((prev) => ({ ...prev, dateKey: e.target.value }))}
-                placeholder="YYYY-MM-DD"
+                placeholder="MM/DD/YY"
               />
               <Textarea
                 value={attendanceNoteDraft}
@@ -378,7 +381,7 @@ export function VaultPage({
               <ul className="grid gap-2">
                 {vaultMeetings.filter((m) => m.agentId === selectedVaultAgent.id).map((m) => (
                   <li key={m.id} className="rounded-lg bg-white px-3 py-2 text-sm text-slate-600">
-                    {m.dateKey} - {m.meetingType} - {m.notes || 'N/A'}
+                    {formatDateKey(m.dateKey)} - {m.meetingType} - {m.notes || 'N/A'}
                   </li>
                 ))}
                 {vaultMeetings.filter((m) => m.agentId === selectedVaultAgent.id).length === 0 && (
@@ -410,7 +413,7 @@ export function VaultPage({
                     {vaultAttendanceHistory.map((row) => (
                       <tr key={row.id}>
                         <td>{agents.find((a) => a.id === row.agentId)?.name ?? 'Unknown'}</td>
-                        <td>{row.dateKey}</td>
+                        <td>{formatDateKey(row.dateKey)}</td>
                         <td className="text-right tabular-nums">{row.percent}%</td>
                         <td>{row.notes || 'N/A'}</td>
                       </tr>
@@ -452,7 +455,7 @@ export function VaultPage({
                     )}
                     {weeklyTargetHistory.map((row) => (
                       <tr key={row.weekKey}>
-                        <td>{row.weekKey}</td>
+                        <td>{formatDateKey(row.weekKey)}</td>
                         <td className="text-right tabular-nums">{row.targetSales}</td>
                         <td className="text-right tabular-nums">{row.actualSales}</td>
                         <td>{row.salesHit ? <Badge variant="success">On Track</Badge> : <Badge variant="warning">Needs Review</Badge>}</td>
@@ -527,7 +530,7 @@ export function VaultPage({
                     {qaPagedRows.map((row) => (
                       <tr key={row.id}>
                         <td>{agentName(row.agentId)}</td>
-                        <td>{row.dateKey}</td>
+                        <td>{formatDateKey(row.dateKey)}</td>
                         <td>{row.clientName}</td>
                         <td>{row.decision}</td>
                         <td>{row.status}</td>

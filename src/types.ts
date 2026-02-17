@@ -1,4 +1,4 @@
-export type TopPage = 'dashboard' | 'tasks' | 'metrics' | 'vault' | 'settings'
+export type TopPage = 'dashboard' | 'tasks' | 'metrics' | 'eod' | 'vault' | 'settings'
 export type TaskPage = 'spiff' | 'attendance' | 'qa' | 'audit' | 'targets'
 export type VaultHistoryView = 'attendance' | 'qa' | 'audit' | 'targets'
 export type VaultScope = 'agent' | 'house'
