@@ -149,7 +149,7 @@ export function VaultPage({
   const qaPagedRows = qaFilteredRows.slice(start, start + PAGE_SIZE)
   const auditPagedRows = auditFilteredRows.slice(start, start + PAGE_SIZE)
 
-  const canEditHistory = vaultScope === 'agent' && !!selectedVaultAgent
+  const canEditHistory = true
 
   const toLocalDateTimeInput = (iso: string | null): string => {
     if (!iso) return ''
@@ -680,16 +680,16 @@ export function VaultPage({
           </Select>
         </Field>
       </div>
+      {editError ? <p className="text-sm text-red-600">{editError}</p> : null}
       {vaultScope === 'house' ? (
         <div className="split">
-          {renderQaHistoryCard(vaultQaHistory, true)}
-          {renderAuditHistoryCard(vaultAuditHistory, true)}
+          {renderQaHistoryCard(vaultQaHistory, true, canEditHistory)}
+          {renderAuditHistoryCard(vaultAuditHistory, true, canEditHistory)}
         </div>
       ) : !selectedVaultAgent ? (
         <p className="text-sm text-slate-500">N/A - add/select an active agent.</p>
       ) : (
         <>
-          {editError ? <p className="text-sm text-red-600">{editError}</p> : null}
           {renderAgentHistorySection()}
           <Card className="bg-slate-50">
             <h3>Performance Meeting</h3>
