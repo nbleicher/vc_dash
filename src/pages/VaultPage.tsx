@@ -64,6 +64,7 @@ type Props = {
 }
 
 const PAGE_SIZE = 50
+const QUICK_VIEW_ROWS = 5
 
 export function VaultPage({
   vaultScope,
@@ -236,8 +237,10 @@ export function VaultPage({
     cancelAuditEdit()
   }
 
-  const renderQaHistoryCard = (rows: Props['vaultQaHistory'], showFullAction = false, allowEdit = false) => (
-    <Card>
+  const renderQaHistoryCard = (rows: Props['vaultQaHistory'], showFullAction = false, allowEdit = false) => {
+    const tableRows = showFullAction ? rows.slice(0, QUICK_VIEW_ROWS) : rows
+    return (
+      <Card>
       <div className="mb-2 flex items-center justify-between gap-2">
         <h3>Daily QA History</h3>
         {showFullAction ? (
@@ -266,12 +269,12 @@ export function VaultPage({
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 && (
+            {tableRows.length === 0 && (
               <tr>
                 <td colSpan={allowEdit ? 7 : 6}>N/A</td>
               </tr>
             )}
-            {rows.map((row) => (
+            {tableRows.map((row) => (
               <tr key={row.id}>
                 <td>
                   {allowEdit && editingQaId === row.id && qaDraft ? (
@@ -378,11 +381,19 @@ export function VaultPage({
           </tbody>
         </DataTable>
       </TableWrap>
+      {showFullAction && rows.length > QUICK_VIEW_ROWS ? (
+        <p className="mt-2 text-sm text-slate-500">
+          Showing {QUICK_VIEW_ROWS} of {rows.length}. Click "View Full Table" for all rows.
+        </p>
+      ) : null}
     </Card>
-  )
+    )
+  }
 
-  const renderAuditHistoryCard = (rows: Props['vaultAuditHistory'], showFullAction = false, allowEdit = false) => (
-    <Card>
+  const renderAuditHistoryCard = (rows: Props['vaultAuditHistory'], showFullAction = false, allowEdit = false) => {
+    const tableRows = showFullAction ? rows.slice(0, QUICK_VIEW_ROWS) : rows
+    return (
+      <Card>
       <div className="mb-2 flex items-center justify-between gap-2">
         <h3>Action Needed History</h3>
         {showFullAction ? (
@@ -412,12 +423,12 @@ export function VaultPage({
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 && (
+            {tableRows.length === 0 && (
               <tr>
                 <td colSpan={allowEdit ? 8 : 7}>N/A</td>
               </tr>
             )}
-            {rows.map((row) => (
+            {tableRows.map((row) => (
               <tr key={row.id}>
                 <td>
                   {allowEdit && editingAuditId === row.id && auditDraft ? (
@@ -543,8 +554,14 @@ export function VaultPage({
           </tbody>
         </DataTable>
       </TableWrap>
+      {showFullAction && rows.length > QUICK_VIEW_ROWS ? (
+        <p className="mt-2 text-sm text-slate-500">
+          Showing {QUICK_VIEW_ROWS} of {rows.length}. Click "View Full Table" for all rows.
+        </p>
+      ) : null}
     </Card>
-  )
+    )
+  }
 
   const renderAgentHistorySection = () => (
     <>
@@ -581,9 +598,9 @@ export function VaultPage({
         </Card>
       )}
 
-      {vaultHistoryView === 'qa' && renderQaHistoryCard(vaultQaHistory, false, canEditHistory)}
+      {vaultHistoryView === 'qa' && renderQaHistoryCard(vaultQaHistory, true, canEditHistory)}
 
-      {vaultHistoryView === 'audit' && renderAuditHistoryCard(vaultAuditHistory, false, canEditHistory)}
+      {vaultHistoryView === 'audit' && renderAuditHistoryCard(vaultAuditHistory, true, canEditHistory)}
 
       {vaultHistoryView === 'targets' && (
         <Card>
