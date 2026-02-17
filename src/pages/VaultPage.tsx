@@ -83,6 +83,7 @@ export function VaultPage({
   const [fullTableMode, setFullTableMode] = useState<'qa' | 'audit' | null>(null)
   const [popupSearch, setPopupSearch] = useState('')
   const [popupPage, setPopupPage] = useState(1)
+  const scopeValue = vaultScope === 'house' ? '__house__' : effectiveVaultAgentId
 
   const agentNameById = useMemo(() => new Map(agents.map((agent) => [agent.id, agent.name])), [agents])
   const agentName = useCallback((agentId: string): string => agentNameById.get(agentId) ?? 'Unknown', [agentNameById])
@@ -241,38 +242,41 @@ export function VaultPage({
     <Card className="space-y-4">
       <CardTitle>Vault</CardTitle>
       <div className="row-wrap control-bar">
-        <Field className="min-w-[220px]">
+        <Field className="min-w-[260px]">
           <FieldLabel>Scope</FieldLabel>
-          <Select value={vaultScope} onChange={(e) => setVaultScope(e.target.value as VaultScope)}>
-            <option value="agent">Selected Agent</option>
-            <option value="house">House (All Agents)</option>
+          <Select
+            value={scopeValue}
+            onChange={(e) => {
+              const next = e.target.value
+              if (next === '__house__') {
+                setVaultScope('house')
+                return
+              }
+              setVaultScope('agent')
+              setVaultAgentId(next)
+            }}
+          >
+            <option value="__house__">House (All Agents)</option>
+            {activeAgents.map((agent) => (
+              <option key={agent.id} value={agent.id}>
+                {agent.name}
+              </option>
+            ))}
           </Select>
         </Field>
         {vaultScope === 'agent' ? (
-          <>
-            <Field className="min-w-[220px]">
-              <FieldLabel>Agent</FieldLabel>
-              <Select value={effectiveVaultAgentId} onChange={(e) => setVaultAgentId(e.target.value)}>
-                {activeAgents.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field className="min-w-[260px]">
-              <FieldLabel>History Type</FieldLabel>
-              <Select
-                value={vaultHistoryView}
-                onChange={(e) => setVaultHistoryView(e.target.value as VaultHistoryView)}
-              >
-                <option value="attendance">Attendance History</option>
-                <option value="qa">Daily QA History</option>
-                <option value="audit">Action Needed History</option>
-                <option value="targets">Weekly Target History</option>
-              </Select>
-            </Field>
-          </>
+          <Field className="min-w-[260px]">
+            <FieldLabel>History Type</FieldLabel>
+            <Select
+              value={vaultHistoryView}
+              onChange={(e) => setVaultHistoryView(e.target.value as VaultHistoryView)}
+            >
+              <option value="attendance">Attendance History</option>
+              <option value="qa">Daily QA History</option>
+              <option value="audit">Action Needed History</option>
+              <option value="targets">Weekly Target History</option>
+            </Select>
+          </Field>
         ) : null}
         <Field className="min-w-[180px]">
           <FieldLabel>Sort</FieldLabel>
