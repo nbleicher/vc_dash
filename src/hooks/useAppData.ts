@@ -412,31 +412,45 @@ export function useAppData(store: DataStore) {
   )
 
   const eodDateTotals = useMemo(() => {
-    const activeIds = new Set(activeAgents.map((agent) => agent.id))
+    const dates = monFriDatesForWeek(effectiveEodWeekKey)
     const totalsByDate = new Map<string, { deals: number; marketing: number; updatedAt: string | null }>()
-    for (const row of perfHistory) {
-      if (!activeIds.has(row.agentId)) continue
-      if (row.dateKey === todayKey && liveByAgent.has(row.agentId)) continue
-      const existing = totalsByDate.get(row.dateKey) ?? { deals: 0, marketing: 0, updatedAt: null }
-      existing.deals += row.sales
-      existing.marketing += row.marketing
-      if (!existing.updatedAt || new Date(row.frozenAt).getTime() > new Date(existing.updatedAt).getTime()) {
-        existing.updatedAt = row.frozenAt
+    for (const dateKey of dates) {
+      let deals = 0
+      let marketing = 0
+      let updatedAt: string | null = null
+      const setLatest = (ts: string) => {
+        if (!updatedAt || new Date(ts).getTime() > new Date(updatedAt).getTime()) updatedAt = ts
       }
-      totalsByDate.set(row.dateKey, existing)
-    }
-    for (const snap of liveByAgent.values()) {
-      if (!activeIds.has(snap.agentId)) continue
-      const existing = totalsByDate.get(todayKey) ?? { deals: 0, marketing: 0, updatedAt: null }
-      existing.deals += snap.sales
-      existing.marketing += snap.billableCalls * 15
-      if (!existing.updatedAt || new Date(snap.updatedAt).getTime() > new Date(existing.updatedAt).getTime()) {
-        existing.updatedAt = snap.updatedAt
+      for (const agent of activeAgents) {
+        if (dateKey === todayKey) {
+          const snap = liveByAgent.get(agent.id)
+          if (snap) {
+            deals += snap.sales
+            marketing += snap.billableCalls * 15
+            setLatest(snap.updatedAt)
+          }
+          continue
+        }
+        const snap17 = snapshots.find(
+          (s) => s.dateKey === dateKey && s.slot === '17:00' && s.agentId === agent.id,
+        )
+        if (snap17) {
+          deals += snap17.sales
+          marketing += snap17.billableCalls * 15
+          setLatest(snap17.updatedAt)
+          continue
+        }
+        const perf = perfHistory.find((p) => p.dateKey === dateKey && p.agentId === agent.id)
+        if (perf) {
+          deals += perf.sales
+          marketing += perf.marketing
+          setLatest(perf.frozenAt)
+        }
       }
-      totalsByDate.set(todayKey, existing)
+      totalsByDate.set(dateKey, { deals, marketing, updatedAt })
     }
     return totalsByDate
-  }, [activeAgents, liveByAgent, perfHistory, todayKey])
+  }, [activeAgents, effectiveEodWeekKey, liveByAgent, perfHistory, snapshots, todayKey])
 
   const eodWeeklyRows = useMemo(() => {
     const dates = monFriDatesForWeek(effectiveEodWeekKey)
