@@ -220,12 +220,14 @@ export function useAppData(store: DataStore) {
     [agents, effectiveMetricsAgentId, metricsScope],
   )
   const metricsScopeData = useMemo(() => {
+    const activeIds = new Set(activeAgents.map((agent) => agent.id))
     const inScope = (agentId: string): boolean =>
-      metricsScope === 'house' || (metricsScope === 'agent' && agentId === effectiveMetricsAgentId)
+      activeIds.has(agentId) && (metricsScope === 'house' || (metricsScope === 'agent' && agentId === effectiveMetricsAgentId))
     const hasLiveScopeRow =
       metricsScope === 'house'
-        ? (agentId: string) => liveByAgent.has(agentId)
-        : (agentId: string) => agentId === effectiveMetricsAgentId && liveByAgent.has(effectiveMetricsAgentId)
+        ? (agentId: string) => activeIds.has(agentId) && liveByAgent.has(agentId)
+        : (agentId: string) =>
+            agentId === effectiveMetricsAgentId && activeIds.has(effectiveMetricsAgentId) && liveByAgent.has(effectiveMetricsAgentId)
     const dailyRows = perfHistory.filter(
       (p) => p.dateKey === todayKey && inScope(p.agentId) && !(p.dateKey === todayKey && hasLiveScopeRow(p.agentId)),
     )
@@ -240,6 +242,7 @@ export function useAppData(store: DataStore) {
     )
     if (metricsScope === 'house') {
       for (const snap of liveByAgent.values()) {
+        if (!activeIds.has(snap.agentId)) continue
         const liveRow: PerfHistory = {
           id: 'live',
           dateKey: todayKey,
@@ -252,7 +255,7 @@ export function useAppData(store: DataStore) {
           frozenAt: '',
         }
         dailyRows.push(liveRow)
-        weeklyRows.push(liveRow)
+        if (weekDates.includes(todayKey)) weeklyRows.push(liveRow)
         monthlyRows.push(liveRow)
       }
     } else if (selectedMetricAgent) {
@@ -270,7 +273,7 @@ export function useAppData(store: DataStore) {
           frozenAt: '',
         }
         dailyRows.push(liveRow)
-        weeklyRows.push(liveRow)
+        if (weekDates.includes(todayKey)) weeklyRows.push(liveRow)
         monthlyRows.push(liveRow)
       }
     }
@@ -281,9 +284,10 @@ export function useAppData(store: DataStore) {
       return { calls, sales, marketing: m.marketing, cpa: m.cpa, cvr: m.cvr }
     }
     return { daily: aggregate(dailyRows), weekly: aggregate(weeklyRows), monthly: aggregate(monthlyRows) }
-  }, [metricsScope, effectiveMetricsAgentId, perfHistory, selectedMetricAgent, todayKey, weekDates, liveByAgent])
+  }, [metricsScope, effectiveMetricsAgentId, perfHistory, selectedMetricAgent, todayKey, weekDates, liveByAgent, activeAgents])
 
   const rankRows = useMemo(() => {
+    const activeIds = new Set(activeAgents.map((agent) => agent.id))
     const byAgent = new Map<string, { calls: number; sales: number; marketing: number }>()
     let periodDates: Set<string> = new Set([todayKey])
     if (rankPeriod === 'week') {
@@ -293,7 +297,7 @@ export function useAppData(store: DataStore) {
       periodDates = new Set(perfHistory.filter((x) => x.dateKey.startsWith(prefix)).map((x) => x.dateKey))
       periodDates.add(todayKey)
     }
-    for (const row of perfHistory.filter((x) => periodDates.has(x.dateKey))) {
+    for (const row of perfHistory.filter((x) => periodDates.has(x.dateKey) && activeIds.has(x.agentId))) {
       if (row.dateKey === todayKey && liveByAgent.has(row.agentId)) continue
       const existing = byAgent.get(row.agentId) ?? { calls: 0, sales: 0, marketing: 0 }
       existing.calls += row.billableCalls
@@ -303,6 +307,7 @@ export function useAppData(store: DataStore) {
     }
     if (periodDates.has(todayKey)) {
       for (const [agentId, snap] of liveByAgent.entries()) {
+        if (!activeIds.has(agentId)) continue
         const existing = byAgent.get(agentId) ?? { calls: 0, sales: 0, marketing: 0 }
         existing.calls += snap.billableCalls
         existing.sales += snap.sales
