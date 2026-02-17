@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { DataStore } from '../data'
 import { Badge, Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Textarea } from '../components'
-import { SLOT_CONFIG } from '../constants'
 import type { AuditRecord, QaRecord, VaultHistoryView, VaultScope, VaultMeeting } from '../types'
 import { estDateKey, formatDateKey, formatNum, formatPctDelta, formatTimestamp } from '../utils'
 
@@ -172,16 +171,13 @@ export function VaultPage({
     }
     return options
   }, [])
-  const intraRowsForDay = useMemo(() => {
-    const slotOrder = new Map<string, number>(SLOT_CONFIG.map((slot, idx) => [slot.key, idx]))
-    return snapshots
-      .filter((row) => row.dateKey === houseIntraDay)
-      .sort((a, b) => {
-        const slotDelta = (slotOrder.get(a.slot) ?? 999) - (slotOrder.get(b.slot) ?? 999)
-        if (slotDelta !== 0) return slotDelta
-        return agentName(a.agentId).localeCompare(agentName(b.agentId))
-      })
-  }, [snapshots, houseIntraDay, agentName])
+  const intraRowsForDay = useMemo(
+    () =>
+      snapshots
+        .filter((row) => row.dateKey === houseIntraDay && row.slot === '17:00')
+        .sort((a, b) => agentName(a.agentId).localeCompare(agentName(b.agentId))),
+    [snapshots, houseIntraDay, agentName],
+  )
 
   const toLocalDateTimeInput = (iso: string | null): string => {
     if (!iso) return ''
@@ -635,7 +631,7 @@ export function VaultPage({
           <tbody>
             {intraRowsForDay.length === 0 && (
               <tr>
-                <td colSpan={6}>N/A</td>
+                <td colSpan={6}>No 5:00 PM entry for this day.</td>
               </tr>
             )}
             {intraRowsForDay.map((row) => (
