@@ -66,6 +66,10 @@ type Props = {
     rowId: string,
     patch: Pick<DataStore['snapshots'][number], 'billableCalls' | 'sales'>,
   ) => void
+  onUpdateMeeting: (
+    meetingId: string,
+    patch: Pick<VaultMeeting, 'dateKey' | 'meetingType' | 'notes' | 'actionItems'>,
+  ) => void
 }
 
 const PAGE_SIZE = 50
@@ -97,6 +101,7 @@ export function VaultPage({
   onUpdateQaRecord,
   onUpdateAuditRecord,
   onUpdateSnapshot,
+  onUpdateMeeting,
 }: Props) {
   const [fullTableMode, setFullTableMode] = useState<'qa' | 'audit' | null>(null)
   const [popupSearch, setPopupSearch] = useState('')
@@ -104,6 +109,7 @@ export function VaultPage({
   const [editingQaId, setEditingQaId] = useState<string | null>(null)
   const [editingAuditId, setEditingAuditId] = useState<string | null>(null)
   const [editingSnapshotId, setEditingSnapshotId] = useState<string | null>(null)
+  const [editingMeetingId, setEditingMeetingId] = useState<string | null>(null)
   const [qaDraft, setQaDraft] = useState<Pick<QaRecord, 'agentId' | 'dateKey' | 'clientName' | 'decision' | 'status' | 'notes'> | null>(
     null,
   )
@@ -111,6 +117,9 @@ export function VaultPage({
     Pick<AuditRecord, 'agentId' | 'discoveryTs' | 'carrier' | 'clientName' | 'currentStatus' | 'resolutionTs'> | null
   >(null)
   const [snapshotDraft, setSnapshotDraft] = useState<Pick<DataStore['snapshots'][number], 'billableCalls' | 'sales'> | null>(null)
+  const [meetingDraft, setMeetingDraft] = useState<
+    Pick<VaultMeeting, 'dateKey' | 'meetingType' | 'notes' | 'actionItems'> | null
+  >(null)
   const [editError, setEditError] = useState<string | null>(null)
   const [houseIntraDay, setHouseIntraDay] = useState<string>(() => estDateKey(new Date()))
   const scopeValue = vaultScope === 'house' ? '__house__' : effectiveVaultAgentId
@@ -282,6 +291,33 @@ export function VaultPage({
     const sales = Math.max(0, Math.round(snapshotDraft.sales))
     onUpdateSnapshot(editingSnapshotId, { billableCalls, sales })
     cancelSnapshotEdit()
+  }
+
+  const startMeetingEdit = (m: VaultMeeting): void => {
+    setEditingMeetingId(m.id)
+    setMeetingDraft({
+      dateKey: m.dateKey,
+      meetingType: m.meetingType,
+      notes: m.notes,
+      actionItems: m.actionItems,
+    })
+    setEditError(null)
+  }
+
+  const cancelMeetingEdit = (): void => {
+    setEditingMeetingId(null)
+    setMeetingDraft(null)
+    setEditError(null)
+  }
+
+  const saveMeetingEdit = (): void => {
+    if (!editingMeetingId || !meetingDraft) return
+    onUpdateMeeting(editingMeetingId, {
+      ...meetingDraft,
+      notes: meetingDraft.notes.trim(),
+      actionItems: meetingDraft.actionItems.trim(),
+    })
+    cancelMeetingEdit()
   }
 
   const renderQaHistoryCard = (rows: Props['vaultQaHistory'], showFullAction = false, allowEdit = false) => {
@@ -927,16 +963,124 @@ export function VaultPage({
             </Card>
             <Card className="space-y-3 bg-slate-50">
               <h3>Meeting Log</h3>
-              <ul className="grid gap-2">
-                {vaultMeetings.filter((m) => m.agentId === selectedVaultAgent.id).map((m) => (
-                  <li key={m.id} className="rounded-lg bg-white px-3 py-2 text-sm text-slate-600">
-                    {formatDateKey(m.dateKey)} - {m.meetingType} - {m.notes || 'N/A'}
-                  </li>
-                ))}
-                {vaultMeetings.filter((m) => m.agentId === selectedVaultAgent.id).length === 0 && (
-                  <li className="rounded-lg bg-white px-3 py-2 text-sm text-slate-500">N/A</li>
-                )}
-              </ul>
+              <TableWrap>
+                <DataTable>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Type</th>
+                      <th>Notes</th>
+                      <th>Action Items</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const meetingsForAgent = vaultMeetings
+                        .filter((m) => m.agentId === selectedVaultAgent.id)
+                        .sort((a, b) => b.dateKey.localeCompare(a.dateKey))
+                      if (meetingsForAgent.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={5}>No meetings logged.</td>
+                          </tr>
+                        )
+                      }
+                      return meetingsForAgent.map((m) => (
+                        <tr key={m.id}>
+                          <td>
+                            {editingMeetingId === m.id && meetingDraft ? (
+                              <Input
+                                type="date"
+                                value={meetingDraft.dateKey}
+                                onChange={(e) =>
+                                  setMeetingDraft((prev) => (prev ? { ...prev, dateKey: e.target.value } : prev))
+                                }
+                              />
+                            ) : (
+                              formatDateKey(m.dateKey)
+                            )}
+                          </td>
+                          <td>
+                            {editingMeetingId === m.id && meetingDraft ? (
+                              <Select
+                                value={meetingDraft.meetingType}
+                                onChange={(e) =>
+                                  setMeetingDraft((prev) =>
+                                    prev
+                                      ? { ...prev, meetingType: e.target.value as VaultMeeting['meetingType'] }
+                                      : prev,
+                                  )
+                                }
+                              >
+                                <option value="Coaching">Coaching</option>
+                                <option value="Warning">Warning</option>
+                                <option value="Review">Review</option>
+                                <option value="Transfer">Transfer</option>
+                              </Select>
+                            ) : (
+                              m.meetingType
+                            )}
+                          </td>
+                          <td>
+                            {editingMeetingId === m.id && meetingDraft ? (
+                              <Textarea
+                                value={meetingDraft.notes}
+                                onChange={(e) =>
+                                  setMeetingDraft((prev) => (prev ? { ...prev, notes: e.target.value } : prev))
+                                }
+                                rows={2}
+                                className="min-w-[160px]"
+                              />
+                            ) : (
+                              m.notes || 'N/A'
+                            )}
+                          </td>
+                          <td>
+                            {editingMeetingId === m.id && meetingDraft ? (
+                              <Textarea
+                                value={meetingDraft.actionItems}
+                                onChange={(e) =>
+                                  setMeetingDraft((prev) => (prev ? { ...prev, actionItems: e.target.value } : prev))
+                                }
+                                rows={2}
+                                className="min-w-[160px]"
+                              />
+                            ) : (
+                              m.actionItems || 'N/A'
+                            )}
+                          </td>
+                          <td>
+                            {editingMeetingId === m.id ? (
+                              <div className="flex gap-2">
+                                <Button variant="default" onClick={saveMeetingEdit}>
+                                  Save
+                                </Button>
+                                <Button variant="secondary" onClick={cancelMeetingEdit}>
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                variant="secondary"
+                                onClick={() => startMeetingEdit(m)}
+                                disabled={
+                                  !!editingQaId ||
+                                  !!editingAuditId ||
+                                  editingSnapshotId !== null ||
+                                  (editingMeetingId !== null && editingMeetingId !== m.id)
+                                }
+                              >
+                                Edit
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    })()}
+                  </tbody>
+                </DataTable>
+              </TableWrap>
             </Card>
           </div>
         </>

@@ -376,6 +376,15 @@ function App() {
     )
   }
 
+  const handleMeetingUpdate = (
+    meetingId: string,
+    patch: Pick<VaultMeeting, 'dateKey' | 'meetingType' | 'notes' | 'actionItems'>,
+  ): void => {
+    setVaultMeetings((prev) =>
+      prev.map((m) => (m.id === meetingId ? { ...m, ...patch } : m)),
+    )
+  }
+
   const setAttendancePercent = (agentId: string, dateKey: string, percent: AttendancePercent): void => {
     setAttendance((prev) => {
       const existing = prev.find((a) => a.agentId === agentId && a.dateKey === dateKey)
@@ -839,6 +848,7 @@ function App() {
             onUpdateQaRecord={handleQaUpdate}
             onUpdateAuditRecord={handleAuditUpdate}
             onUpdateSnapshot={handleSnapshotUpdate}
+            onUpdateMeeting={handleMeetingUpdate}
           />
         )}
 
