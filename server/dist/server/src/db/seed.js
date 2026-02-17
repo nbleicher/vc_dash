@@ -11,6 +11,7 @@ const seedState = {
     qaRecords: [],
     auditRecords: [],
     attendance: [],
+    spiffRecords: [],
     attendanceSubmissions: [],
     intraSubmissions: [],
     weeklyTargets: [],

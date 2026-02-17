@@ -6,6 +6,7 @@ const keySchema = z.enum([
     'qaRecords',
     'auditRecords',
     'attendance',
+    'spiffRecords',
     'attendanceSubmissions',
     'intraSubmissions',
     'weeklyTargets',

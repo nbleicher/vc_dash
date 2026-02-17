@@ -108,7 +108,7 @@ function App() {
 
   const [topPage, setTopPage] = useState<TopPage>('dashboard')
   const [newAgent, setNewAgent] = useState('')
-  const [qaForm, setQaForm] = useState({ agentId: '', clientName: '', decision: 'Good Sale', notes: '' })
+  const [qaForm, setQaForm] = useState({ agentId: '', clientName: '', decision: 'Good Sale', callId: '', notes: '' })
   const [auditForm, setAuditForm] = useState<{
     agentId: string
     carrier: string
@@ -128,7 +128,6 @@ function App() {
     notes: '',
     actionItems: '',
   })
-  const [attendanceNoteDraft, setAttendanceNoteDraft] = useState('')
   const [exportFlags, setExportFlags] = useState<ExportFlags>({
     agents: true,
     performanceHistory: true,
@@ -204,12 +203,22 @@ function App() {
     e.preventDefault()
     const agentId = ensureAgentDefault(qaForm.agentId)
     if (!agentId || !qaForm.clientName.trim()) return
+    if (qaForm.decision === 'Check Recording' && !qaForm.callId.trim()) {
+      setUiError('Call ID is required when decision is Check Recording.')
+      return
+    }
     const duplicate = qaRecords.some((r) => r.dateKey === todayKey && r.agentId === agentId)
     if (duplicate) {
       const agentName = agents.find((a) => a.id === agentId)?.name ?? 'Agent'
       const proceed = window.confirm(`QA for ${agentName} has already been done.`)
       if (!proceed) return
     }
+    const trimmedNotes = qaForm.notes.trim()
+    const callIdNote = qaForm.callId.trim() ? `Call ID: ${qaForm.callId.trim()}` : ''
+    const qaNotes =
+      qaForm.decision === 'Check Recording' && callIdNote
+        ? `${trimmedNotes ? `${trimmedNotes}\n` : ''}${callIdNote}`
+        : trimmedNotes
     setQaRecords((prev) => [
       ...prev,
       {
@@ -219,12 +228,13 @@ function App() {
         clientName: qaForm.clientName.trim(),
         decision: qaForm.decision as QaRecord['decision'],
         status: qaForm.decision === 'Good Sale' ? 'Good' : 'Check Recording',
-        notes: qaForm.notes.trim(),
+        notes: qaNotes,
         createdAt: new Date().toISOString(),
         resolvedAt: null,
       },
     ])
-    setQaForm({ agentId: '', clientName: '', decision: 'Good Sale', notes: '' })
+    setQaForm({ agentId: '', clientName: '', decision: 'Good Sale', callId: '', notes: '' })
+    setUiError(null)
   }
 
   const handleAuditSubmit = (e: React.FormEvent): void => {
@@ -411,7 +421,9 @@ function App() {
     upsertSnapshot(slot, agentId, calls, sales)
   }
 
-  const saveAttendanceNote = (agentId: string, dateKey: string): void => {
+  const addAttendanceNote = (agentId: string, dateKey: string, note: string): void => {
+    const trimmedNote = note.trim()
+    if (!trimmedNote) return
     setAttendance((prev) => {
       const existing = prev.find((a) => a.agentId === agentId && a.dateKey === dateKey)
       if (!existing)
@@ -423,12 +435,11 @@ function App() {
             dateKey,
             agentId,
             percent: 100,
-            notes: attendanceNoteDraft.trim(),
+            notes: trimmedNote,
           },
         ]
-      return prev.map((a) => (a.id === existing.id ? { ...a, notes: attendanceNoteDraft.trim() } : a))
+      return prev.map((a) => (a.id === existing.id ? { ...a, notes: trimmedNote } : a))
     })
-    setAttendanceNoteDraft('')
   }
 
   const saveWeeklyTarget = (sales: number, cpa: number): void => {
@@ -696,6 +707,7 @@ function App() {
             onSetAttendancePercent={setAttendancePercent}
             onSetSpiffAmount={setSpiffAmount}
             onSubmitAttendanceDay={submitAttendanceDay}
+            onAddAttendanceNote={addAttendanceNote}
             onSaveWeeklyTarget={saveWeeklyTarget}
             onQaSubmit={handleQaSubmit}
             onAuditSubmit={handleAuditSubmit}
@@ -750,13 +762,10 @@ function App() {
             vaultMeetings={vaultMeetings}
             meetingForm={meetingForm}
             setMeetingForm={setMeetingForm}
-            attendanceNoteDraft={attendanceNoteDraft}
-            setAttendanceNoteDraft={setAttendanceNoteDraft}
             vaultAttendanceHistory={vaultAttendanceHistory}
             vaultQaHistory={vaultQaHistory}
             vaultAuditHistory={vaultAuditHistory}
             weeklyTargetHistory={weeklyTargetHistory}
-            onSaveAttendanceNote={saveAttendanceNote}
             onAddMeeting={addMeeting}
             onPdfUpload={handlePdfUpload}
           />

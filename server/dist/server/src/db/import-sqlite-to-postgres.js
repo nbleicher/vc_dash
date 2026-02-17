@@ -10,6 +10,7 @@ const keys = [
     'qaRecords',
     'auditRecords',
     'attendance',
+    'spiffRecords',
     'attendanceSubmissions',
     'intraSubmissions',
     'weeklyTargets',

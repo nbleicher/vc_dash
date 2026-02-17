@@ -20,8 +20,6 @@ type Props = {
   vaultMeetings: DataStore['vaultMeetings']
   meetingForm: { dateKey: string; meetingType: VaultMeeting['meetingType']; notes: string; actionItems: string }
   setMeetingForm: React.Dispatch<React.SetStateAction<{ dateKey: string; meetingType: VaultMeeting['meetingType']; notes: string; actionItems: string }>>
-  attendanceNoteDraft: string
-  setAttendanceNoteDraft: (s: string) => void
   vaultAttendanceHistory: Array<{ id: string; agentId: string; dateKey: string; percent: number; notes: string }>
   vaultQaHistory: Array<{
     id: string
@@ -53,7 +51,6 @@ type Props = {
     cpaDeltaPct: number | null
     setAt: string
   }>
-  onSaveAttendanceNote: (agentId: string, dateKey: string) => void
   onAddMeeting: (e: React.FormEvent) => void
   onPdfUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
 }
@@ -76,13 +73,10 @@ export function VaultPage({
   vaultMeetings,
   meetingForm,
   setMeetingForm,
-  attendanceNoteDraft,
-  setAttendanceNoteDraft,
   vaultAttendanceHistory,
   vaultQaHistory,
   vaultAuditHistory,
   weeklyTargetHistory,
-  onSaveAttendanceNote,
   onAddMeeting,
   onPdfUpload,
 }: Props) {
@@ -297,26 +291,9 @@ export function VaultPage({
         <p className="text-sm text-slate-500">N/A - add/select an active agent.</p>
       ) : (
         <>
-          <div className="split">
-            <Card className="space-y-3 bg-slate-50">
-              <h3>Attendance Context Note</h3>
-              <Input
-                value={meetingForm.dateKey}
-                onChange={(e) => setMeetingForm((prev) => ({ ...prev, dateKey: e.target.value }))}
-                placeholder="MM/DD/YY"
-              />
-              <Textarea
-                value={attendanceNoteDraft}
-                onChange={(e) => setAttendanceNoteDraft(e.target.value)}
-                placeholder="Attendance note"
-              />
-              <Button variant="default" onClick={() => onSaveAttendanceNote(selectedVaultAgent.id, meetingForm.dateKey)}>
-                Save Attendance Note
-              </Button>
-            </Card>
-            <Card className="bg-slate-50">
-              <h3>Performance Meeting</h3>
-              <form onSubmit={onAddMeeting} className="form-grid">
+          <Card className="bg-slate-50">
+            <h3>Performance Meeting</h3>
+            <form onSubmit={onAddMeeting} className="form-grid">
                 <Field>
                   <FieldLabel>Date</FieldLabel>
                   <Input
@@ -338,6 +315,7 @@ export function VaultPage({
                     <option>Coaching</option>
                     <option>Warning</option>
                     <option>Review</option>
+                    <option>Transfer</option>
                   </Select>
                 </Field>
                 <Field className="md:col-span-2">
@@ -357,9 +335,8 @@ export function VaultPage({
                 <Button type="submit" variant="default" className="w-fit">
                   Save Meeting
                 </Button>
-              </form>
-            </Card>
-          </div>
+            </form>
+          </Card>
 
           <div className="split">
             <Card className="space-y-3 bg-slate-50">

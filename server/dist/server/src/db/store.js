@@ -15,6 +15,7 @@ export class SqliteStore {
             qaRecords: this.getQaRecords(),
             auditRecords: this.getAuditRecords(),
             attendance: this.getAttendance(),
+            spiffRecords: this.getSpiffRecords(),
             attendanceSubmissions: this.getAttendanceSubmissions(),
             intraSubmissions: this.getIntraSubmissions(),
             weeklyTargets: this.getWeeklyTargets(),
@@ -74,6 +75,14 @@ export class SqliteStore {
                     for (const row of rows) {
                         this.db
                             .prepare('INSERT INTO attendance (id,weekKey,dateKey,agentId,percent,notes) VALUES (@id,@weekKey,@dateKey,@agentId,@percent,@notes)')
+                            .run(row);
+                    }
+                    break;
+                case 'spiffRecords':
+                    this.db.prepare('DELETE FROM spiff_records').run();
+                    for (const row of rows) {
+                        this.db
+                            .prepare('INSERT INTO spiff_records (id,weekKey,dateKey,agentId,amount) VALUES (@id,@weekKey,@dateKey,@agentId,@amount)')
                             .run(row);
                     }
                     break;
@@ -155,6 +164,11 @@ export class SqliteStore {
     getAttendanceSubmissions() {
         return this.db
             .prepare('SELECT id,dateKey,submittedAt,updatedAt,submittedBy,daySignature FROM attendance_submissions')
+            .all();
+    }
+    getSpiffRecords() {
+        return this.db
+            .prepare('SELECT id,weekKey,dateKey,agentId,amount FROM spiff_records')
             .all();
     }
     getIntraSubmissions() {

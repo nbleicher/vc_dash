@@ -111,7 +111,7 @@ export type VaultMeeting = {
   id: string
   agentId: string
   dateKey: string
-  meetingType: 'Coaching' | 'Warning' | 'Review'
+  meetingType: 'Coaching' | 'Warning' | 'Review' | 'Transfer'
   notes: string
   actionItems: string
 }

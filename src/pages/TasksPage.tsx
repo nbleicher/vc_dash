@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { WeeklyTargetEditor } from '../components'
 import { Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Tabs, Textarea } from '../components'
 import { CARRIERS, POLICY_STATUSES } from '../constants'
@@ -21,9 +22,9 @@ type Props = {
   attendanceWeekDates: string[]
   attendanceWeekOptions: Array<{ weekKey: string; label: string }>
   weekTarget: { weekKey: string; targetSales: number; targetCpa: number; setAt: string } | null
-  qaForm: { agentId: string; clientName: string; decision: string; notes: string }
+  qaForm: { agentId: string; clientName: string; decision: string; callId: string; notes: string }
   setQaForm: React.Dispatch<
-    React.SetStateAction<{ agentId: string; clientName: string; decision: string; notes: string }>
+    React.SetStateAction<{ agentId: string; clientName: string; decision: string; callId: string; notes: string }>
   >
   auditForm: {
     agentId: string
@@ -46,6 +47,7 @@ type Props = {
   onSetAttendancePercent: (agentId: string, dateKey: string, percent: AttendancePercent) => void
   onSetSpiffAmount: (agentId: string, dateKey: string, amount: number) => void
   onSubmitAttendanceDay: (dateKey: string) => void
+  onAddAttendanceNote: (agentId: string, dateKey: string, note: string) => void
   onSaveWeeklyTarget: (sales: number, cpa: number) => void
   onQaSubmit: (e: React.FormEvent) => void
   onAuditSubmit: (e: React.FormEvent) => void
@@ -75,13 +77,17 @@ export function TasksPage({
   onSetAttendancePercent,
   onSetSpiffAmount,
   onSubmitAttendanceDay,
+  onAddAttendanceNote,
   onSaveWeeklyTarget,
   onQaSubmit,
   onAuditSubmit,
   onAuditNoActionSubmit,
 }: Props) {
   const dayBasePay = 120
+  const [editingNoteKey, setEditingNoteKey] = useState<string | null>(null)
+  const [noteDraft, setNoteDraft] = useState('')
   const formatCurrency = (amount: number): string => `$${amount.toFixed(2)}`
+  const noteKeyFor = (agentId: string, dateKey: string): string => `${agentId}::${dateKey}`
   const renderMissingNames = (rows: Array<{ id: string; name: string }>) =>
     rows.map((agent, idx) => (
       <span key={agent.id}>
@@ -227,20 +233,72 @@ export function TasksPage({
                       <td>{agent.name}</td>
                       {attendanceWeekDates.map((d) => {
                         const row = attendance.find((a) => a.agentId === agent.id && a.dateKey === d)
+                        const noteKey = noteKeyFor(agent.id, d)
+                        const isEditing = editingNoteKey === noteKey
                         return (
                           <td key={d}>
-                            <Select
-                              value={row?.percent ?? 100}
-                              onChange={(e) =>
-                                onSetAttendancePercent(agent.id, d, Number(e.target.value) as AttendancePercent)
-                              }
-                            >
-                              <option value={100}>100%</option>
-                              <option value={75}>75%</option>
-                              <option value={50}>50%</option>
-                              <option value={25}>25%</option>
-                              <option value={0}>0%</option>
-                            </Select>
+                            <div className="space-y-1">
+                              <Select
+                                value={row?.percent ?? 100}
+                                onChange={(e) =>
+                                  onSetAttendancePercent(agent.id, d, Number(e.target.value) as AttendancePercent)
+                                }
+                              >
+                                <option value={100}>100%</option>
+                                <option value={75}>75%</option>
+                                <option value={50}>50%</option>
+                                <option value={25}>25%</option>
+                                <option value={0}>0%</option>
+                              </Select>
+                              {isEditing ? (
+                                <div className="space-y-1">
+                                  <Textarea
+                                    value={noteDraft}
+                                    onChange={(e) => setNoteDraft(e.target.value)}
+                                    placeholder="Attendance note"
+                                    className="min-h-[64px] text-xs"
+                                  />
+                                  <div className="flex gap-1">
+                                    <Button
+                                      type="button"
+                                      variant="default"
+                                      className="h-7 px-2 py-0 text-xs"
+                                      disabled={!noteDraft.trim()}
+                                      onClick={() => {
+                                        onAddAttendanceNote(agent.id, d, noteDraft)
+                                        setEditingNoteKey(null)
+                                        setNoteDraft('')
+                                      }}
+                                    >
+                                      Save
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="secondary"
+                                      className="h-7 px-2 py-0 text-xs"
+                                      onClick={() => {
+                                        setEditingNoteKey(null)
+                                        setNoteDraft('')
+                                      }}
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  className="h-7 px-2 py-0 text-xs"
+                                  onClick={() => {
+                                    setEditingNoteKey(noteKey)
+                                    setNoteDraft(row?.notes ?? '')
+                                  }}
+                                >
+                                  {row?.notes.trim() ? 'Edit Note' : 'Add Note'}
+                                </Button>
+                              )}
+                            </div>
                           </td>
                         )
                       })}
@@ -305,12 +363,27 @@ export function TasksPage({
               <FieldLabel>Decision</FieldLabel>
               <Select
                 value={qaForm.decision}
-                onChange={(e) => setQaForm((prev) => ({ ...prev, decision: e.target.value }))}
+                onChange={(e) =>
+                  setQaForm((prev) => ({
+                    ...prev,
+                    decision: e.target.value,
+                    callId: e.target.value === 'Check Recording' ? prev.callId : '',
+                  }))
+                }
               >
                 <option>Good Sale</option>
                 <option>Check Recording</option>
               </Select>
             </Field>
+            {qaForm.decision === 'Check Recording' ? (
+              <Field>
+                <FieldLabel>Call ID</FieldLabel>
+                <Input
+                  value={qaForm.callId}
+                  onChange={(e) => setQaForm((prev) => ({ ...prev, callId: e.target.value }))}
+                />
+              </Field>
+            ) : null}
             <Field className="md:col-span-2">
               <FieldLabel>Notes</FieldLabel>
               <Textarea
