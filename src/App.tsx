@@ -84,6 +84,8 @@ function App() {
     setRankMetric,
     rankPeriod,
     setRankPeriod,
+    kpiPeriod,
+    setKpiPeriod,
     qaPassRate,
     auditRecoveryHours,
     activeAuditCount,
@@ -794,6 +796,8 @@ function App() {
             setRankMetric={setRankMetric}
             rankPeriod={rankPeriod}
             setRankPeriod={setRankPeriod}
+            kpiPeriod={kpiPeriod}
+            setKpiPeriod={setKpiPeriod}
           />
         )}
 

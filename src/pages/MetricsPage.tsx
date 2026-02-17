@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Card, CardTitle, DataTable, Field, FieldLabel, MetricCard, Select, TableWrap } from '../components'
 import type { MetricsScope, RankMetric, RankPeriod } from '../types'
 import { formatNum } from '../utils'
@@ -22,6 +22,8 @@ type Props = {
   setRankMetric: (m: RankMetric) => void
   rankPeriod: RankPeriod
   setRankPeriod: (p: RankPeriod) => void
+  kpiPeriod: RankPeriod
+  setKpiPeriod: (p: RankPeriod) => void
 }
 
 export function MetricsPage({
@@ -39,8 +41,9 @@ export function MetricsPage({
   setRankMetric,
   rankPeriod,
   setRankPeriod,
+  kpiPeriod,
+  setKpiPeriod,
 }: Props) {
-  const [kpiPeriod, setKpiPeriod] = useState<'day' | 'week' | 'month'>('day')
   const scopeValue = metricsScope === 'house' ? '__house__' : effectiveMetricsAgentId
   const selectedPeriodMetrics = useMemo(() => {
     if (kpiPeriod === 'day') return metricsScopeData.daily

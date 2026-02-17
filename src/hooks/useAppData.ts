@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { DataStore } from '../data'
 import { SLOT_CONFIG } from '../constants'
 import type {
@@ -52,6 +52,7 @@ export function useAppData(store: DataStore) {
   const [historySort, setHistorySort] = useState<HistorySort>('newest')
   const [rankMetric, setRankMetric] = useState<RankMetric>('Sales')
   const [rankPeriod, setRankPeriod] = useState<RankPeriod>('day')
+  const [kpiPeriod, setKpiPeriod] = useState<RankPeriod>('day')
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 30_000)
@@ -295,7 +296,7 @@ export function useAppData(store: DataStore) {
     } else if (rankPeriod === 'month') {
       const prefix = `${est.year}-${String(est.month).padStart(2, '0')}-`
       periodDates = new Set(perfHistory.filter((x) => x.dateKey.startsWith(prefix)).map((x) => x.dateKey))
-      periodDates.add(todayKey)
+      if (todayKey.startsWith(prefix)) periodDates.add(todayKey)
     }
     for (const row of perfHistory.filter((x) => periodDates.has(x.dateKey) && activeIds.has(x.agentId))) {
       if (row.dateKey === todayKey && liveByAgent.has(row.agentId)) continue
@@ -327,16 +328,33 @@ export function useAppData(store: DataStore) {
     return rows
   }, [activeAgents, est.month, est.year, liveByAgent, now, perfHistory, rankMetric, rankPeriod, todayKey])
 
+  const activeIds = useMemo(() => new Set(activeAgents.map((agent) => agent.id)), [activeAgents])
+  const currentMonthPrefix = todayKey.slice(0, 7)
+  const isInKpiPeriod = useCallback(
+    (dateKey: string): boolean => {
+      if (kpiPeriod === 'day') return dateKey === todayKey
+      if (kpiPeriod === 'week') return weekDates.includes(dateKey)
+      return dateKey.startsWith(currentMonthPrefix)
+    },
+    [kpiPeriod, todayKey, weekDates, currentMonthPrefix],
+  )
+
   const qaPassRate = useMemo(() => {
-    const rows = metricsScope === 'house' ? qaRecords : qaRecords.filter((r) => r.agentId === effectiveMetricsAgentId)
+    const rows = qaRecords.filter((record) => {
+      if (!activeIds.has(record.agentId)) return false
+      if (metricsScope === 'agent' && record.agentId !== effectiveMetricsAgentId) return false
+      return isInKpiPeriod(record.dateKey)
+    })
     if (rows.length === 0) return null
     return rows.filter((r) => r.decision === 'Good Sale').length / rows.length
-  }, [qaRecords, metricsScope, effectiveMetricsAgentId])
+  }, [qaRecords, activeIds, metricsScope, effectiveMetricsAgentId, isInKpiPeriod])
   const auditRecoveryHours = useMemo(() => {
-    const rows =
-      metricsScope === 'house'
-        ? auditRecords.filter((r) => r.resolutionTs)
-        : auditRecords.filter((r) => r.agentId === effectiveMetricsAgentId && r.resolutionTs)
+    const rows = auditRecords.filter((record) => {
+      if (!record.resolutionTs) return false
+      if (!activeIds.has(record.agentId)) return false
+      if (metricsScope === 'agent' && record.agentId !== effectiveMetricsAgentId) return false
+      return isInKpiPeriod(record.discoveryTs.slice(0, 10))
+    })
     if (rows.length === 0) return null
     const sum = rows.reduce(
       (acc, row) =>
@@ -344,13 +362,16 @@ export function useAppData(store: DataStore) {
       0,
     )
     return sum / rows.length
-  }, [auditRecords, metricsScope, effectiveMetricsAgentId])
+  }, [auditRecords, activeIds, metricsScope, effectiveMetricsAgentId, isInKpiPeriod])
   const activeAuditCount = useMemo(() => {
-    if (metricsScope === 'house') return actionAudit.length
-    return auditRecords.filter(
-      (r) => r.agentId === effectiveMetricsAgentId && r.currentStatus !== 'no_action_needed' && !(r.mgmtNotified && r.outreachMade),
-    ).length
-  }, [auditRecords, metricsScope, effectiveMetricsAgentId, actionAudit])
+    return auditRecords.filter((record) => {
+      if (!activeIds.has(record.agentId)) return false
+      if (metricsScope === 'agent' && record.agentId !== effectiveMetricsAgentId) return false
+      if (record.currentStatus === 'no_action_needed') return false
+      if (record.mgmtNotified && record.outreachMade) return false
+      return isInKpiPeriod(record.discoveryTs.slice(0, 10))
+    }).length
+  }, [auditRecords, activeIds, metricsScope, effectiveMetricsAgentId, isInKpiPeriod])
 
   const eodWeekOptions = useMemo(() => {
     const options: Array<{ weekKey: string; label: string }> = [{ weekKey: currentWeekKey, label: 'Current Week' }]
@@ -597,6 +618,8 @@ export function useAppData(store: DataStore) {
     setRankMetric,
     rankPeriod,
     setRankPeriod,
+    kpiPeriod,
+    setKpiPeriod,
     qaPassRate,
     auditRecoveryHours,
     activeAuditCount,
