@@ -8,6 +8,7 @@ import type {
   PerfHistory,
   QaRecord,
   Snapshot,
+  SpiffRecord,
   VaultDoc,
   VaultMeeting,
   WeeklyTarget,
@@ -40,6 +41,7 @@ export function useDataStore(): DataStore {
   const [qaRecords, setQaRecords] = useStoredState<QaRecord[]>('vc_qa_records', [])
   const [auditRecords, setAuditRecords] = useStoredState<AuditRecord[]>('vc_audit_records', [])
   const [attendance, setAttendance] = useStoredState<AttendanceRecord[]>('vc_attendance', [])
+  const [spiffRecords, setSpiffRecords] = useStoredState<SpiffRecord[]>('vc_spiff_records', [])
   const [attendanceSubmissions, setAttendanceSubmissions] = useStoredState<AttendanceSubmission[]>(
     'vc_attendance_submissions',
     [],
@@ -76,6 +78,8 @@ export function useDataStore(): DataStore {
     setAuditRecords,
     attendance,
     setAttendance,
+    spiffRecords,
+    setSpiffRecords,
     attendanceSubmissions,
     setAttendanceSubmissions,
     intraSubmissions,

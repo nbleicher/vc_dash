@@ -9,6 +9,7 @@ import type {
   PerfHistory,
   QaRecord,
   Snapshot,
+  SpiffRecord,
   VaultDoc,
   VaultMeeting,
   WeeklyTarget,
@@ -35,6 +36,7 @@ export function useDataStore(): DataStore {
   const [qaRecordsState, setQaRecordsState] = useState<QaRecord[]>([])
   const [auditRecordsState, setAuditRecordsState] = useState<AuditRecord[]>([])
   const [attendanceState, setAttendanceState] = useState<AttendanceRecord[]>([])
+  const [spiffRecordsState, setSpiffRecordsState] = useState<SpiffRecord[]>([])
   const [attendanceSubmissionsState, setAttendanceSubmissionsState] = useState<AttendanceSubmission[]>([])
   const [intraSubmissionsState, setIntraSubmissionsState] = useState<IntraSubmission[]>([])
   const [weeklyTargetsState, setWeeklyTargetsState] = useState<WeeklyTarget[]>([])
@@ -56,6 +58,7 @@ export function useDataStore(): DataStore {
       setQaRecordsState(state.qaRecords)
       setAuditRecordsState(state.auditRecords)
       setAttendanceState(state.attendance)
+      setSpiffRecordsState(state.spiffRecords ?? [])
       setAttendanceSubmissionsState(state.attendanceSubmissions ?? [])
       setIntraSubmissionsState(state.intraSubmissions ?? [])
       setWeeklyTargetsState(state.weeklyTargets)
@@ -90,6 +93,7 @@ export function useDataStore(): DataStore {
   const setQaRecords = wrapSetter(setQaRecordsState)
   const setAuditRecords = wrapSetter(setAuditRecordsState)
   const setAttendance = wrapSetter(setAttendanceState)
+  const setSpiffRecords = wrapSetter(setSpiffRecordsState)
   const setAttendanceSubmissions = wrapSetter(setAttendanceSubmissionsState)
   const setIntraSubmissions = wrapSetter(setIntraSubmissionsState)
   const setWeeklyTargets = wrapSetter(setWeeklyTargetsState)
@@ -165,6 +169,9 @@ export function useDataStore(): DataStore {
     void syncCollection('attendance', attendanceState)
   }, [attendanceState, syncCollection])
   useEffect(() => {
+    void syncCollection('spiffRecords', spiffRecordsState)
+  }, [spiffRecordsState, syncCollection])
+  useEffect(() => {
     void syncCollection('attendanceSubmissions', attendanceSubmissionsState)
   }, [attendanceSubmissionsState, syncCollection])
   useEffect(() => {
@@ -210,6 +217,8 @@ export function useDataStore(): DataStore {
     setAuditRecords,
     attendance: attendanceState,
     setAttendance,
+    spiffRecords: spiffRecordsState,
+    setSpiffRecords,
     attendanceSubmissions: attendanceSubmissionsState,
     setAttendanceSubmissions,
     intraSubmissions: intraSubmissionsState,

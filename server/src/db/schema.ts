@@ -63,6 +63,14 @@ CREATE TABLE IF NOT EXISTS attendance (
   notes TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS spiff_records (
+  id TEXT PRIMARY KEY,
+  weekKey TEXT NOT NULL,
+  dateKey TEXT NOT NULL,
+  agentId TEXT NOT NULL,
+  amount REAL NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS attendance_submissions (
   id TEXT PRIMARY KEY,
   dateKey TEXT NOT NULL,

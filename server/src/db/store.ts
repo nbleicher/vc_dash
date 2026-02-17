@@ -8,6 +8,7 @@ import type {
   PerfHistory,
   QaRecord,
   Snapshot,
+  SpiffRecord,
   StoreState,
   VaultDoc,
   VaultMeeting,
@@ -34,6 +35,7 @@ export class SqliteStore implements StoreAdapter {
       qaRecords: this.getQaRecords(),
       auditRecords: this.getAuditRecords(),
       attendance: this.getAttendance(),
+      spiffRecords: this.getSpiffRecords(),
       attendanceSubmissions: this.getAttendanceSubmissions(),
       intraSubmissions: this.getIntraSubmissions(),
       weeklyTargets: this.getWeeklyTargets(),
@@ -104,6 +106,16 @@ export class SqliteStore implements StoreAdapter {
             this.db
               .prepare(
                 'INSERT INTO attendance (id,weekKey,dateKey,agentId,percent,notes) VALUES (@id,@weekKey,@dateKey,@agentId,@percent,@notes)',
+              )
+              .run(row)
+          }
+          break
+        case 'spiffRecords':
+          this.db.prepare('DELETE FROM spiff_records').run()
+          for (const row of rows as SpiffRecord[]) {
+            this.db
+              .prepare(
+                'INSERT INTO spiff_records (id,weekKey,dateKey,agentId,amount) VALUES (@id,@weekKey,@dateKey,@agentId,@amount)',
               )
               .run(row)
           }
@@ -224,6 +236,12 @@ export class SqliteStore implements StoreAdapter {
     return this.db
       .prepare('SELECT id,dateKey,submittedAt,updatedAt,submittedBy,daySignature FROM attendance_submissions')
       .all() as AttendanceSubmission[]
+  }
+
+  private getSpiffRecords(): SpiffRecord[] {
+    return this.db
+      .prepare('SELECT id,weekKey,dateKey,agentId,amount FROM spiff_records')
+      .all() as SpiffRecord[]
   }
 
   private getIntraSubmissions(): IntraSubmission[] {

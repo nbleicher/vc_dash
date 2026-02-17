@@ -7,6 +7,7 @@ import type {
   PerfHistory,
   QaRecord,
   Snapshot,
+  SpiffRecord,
   VaultDoc,
   VaultMeeting,
   WeeklyTarget,
@@ -19,6 +20,7 @@ export type StoreCollections = {
   qaRecords: QaRecord[]
   auditRecords: AuditRecord[]
   attendance: AttendanceRecord[]
+  spiffRecords: SpiffRecord[]
   attendanceSubmissions: AttendanceSubmission[]
   intraSubmissions: IntraSubmission[]
   weeklyTargets: WeeklyTarget[]

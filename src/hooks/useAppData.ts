@@ -24,6 +24,7 @@ export function useAppData(store: DataStore) {
     qaRecords,
     auditRecords,
     attendance,
+    spiffRecords,
     attendanceSubmissions,
     intraSubmissions,
     weeklyTargets,
@@ -51,7 +52,35 @@ export function useAppData(store: DataStore) {
   const todayKey = useMemo(() => estDateKey(now), [now])
   const currentWeekKey = useMemo(() => weekKeyMonFri(now), [now])
   const weekDates = useMemo(() => monFriDatesForWeek(currentWeekKey), [currentWeekKey])
+  const [selectedAttendanceWeekKey, setSelectedAttendanceWeekKey] = useState<string>(currentWeekKey)
   const est = estParts(now)
+
+  const attendanceWeekOptions = useMemo(() => {
+    const weekKeys = new Set(attendance.map((row) => row.weekKey))
+    for (const row of spiffRecords) weekKeys.add(row.weekKey)
+    weekKeys.add(currentWeekKey)
+    const toShortDate = (dateKey: string): string => {
+      const [, month, day] = dateKey.split('-').map(Number)
+      return `${month}/${day}`
+    }
+    return [...weekKeys]
+      .sort((a, b) => b.localeCompare(a))
+      .map((weekKey) => {
+        const dates = monFriDatesForWeek(weekKey)
+        return { weekKey, label: `${toShortDate(dates[0])}-${toShortDate(dates[dates.length - 1])}` }
+      })
+  }, [attendance, spiffRecords, currentWeekKey])
+  const effectiveAttendanceWeekKey = useMemo(
+    () =>
+      attendanceWeekOptions.some((option) => option.weekKey === selectedAttendanceWeekKey)
+        ? selectedAttendanceWeekKey
+        : currentWeekKey,
+    [attendanceWeekOptions, currentWeekKey, selectedAttendanceWeekKey],
+  )
+  const attendanceWeekDates = useMemo(
+    () => monFriDatesForWeek(effectiveAttendanceWeekKey),
+    [effectiveAttendanceWeekKey],
+  )
 
   const todaysSnapshots = useMemo(() => snapshots.filter((s) => s.dateKey === todayKey), [snapshots, todayKey])
   const lastSnapshotLabel = useMemo(() => {
@@ -387,7 +416,7 @@ export function useAppData(store: DataStore) {
             setAt: target.setAt,
           }
         }),
-    [weeklyTargets, perfHistory, currentWeekKey, liveByAgent, sortNewest],
+    [weeklyTargets, perfHistory, currentWeekKey, liveByAgent, sortNewest, todayKey],
   )
 
   const upsertSnapshot = (slot: SlotConfig, agentId: string, calls: number, sales: number): void => {
@@ -420,6 +449,10 @@ export function useAppData(store: DataStore) {
     todayKey,
     currentWeekKey,
     weekDates,
+    selectedAttendanceWeekKey: effectiveAttendanceWeekKey,
+    setSelectedAttendanceWeekKey,
+    attendanceWeekDates,
+    attendanceWeekOptions,
     activeAgents,
     agents,
     todaysSnapshots,

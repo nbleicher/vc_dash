@@ -8,6 +8,7 @@ import type {
   PerfHistory,
   QaRecord,
   Snapshot,
+  SpiffRecord,
   VaultDoc,
   VaultMeeting,
   WeeklyTarget,
@@ -40,6 +41,9 @@ export interface DataStore {
 
   attendance: AttendanceRecord[]
   setAttendance: Dispatch<SetStateAction<AttendanceRecord[]>>
+
+  spiffRecords: SpiffRecord[]
+  setSpiffRecords: Dispatch<SetStateAction<SpiffRecord[]>>
 
   attendanceSubmissions: AttendanceSubmission[]
   setAttendanceSubmissions: Dispatch<SetStateAction<AttendanceSubmission[]>>

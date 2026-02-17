@@ -1,5 +1,5 @@
 export type TopPage = 'dashboard' | 'tasks' | 'metrics' | 'vault' | 'settings'
-export type TaskPage = 'attendance' | 'qa' | 'audit' | 'targets'
+export type TaskPage = 'spiff' | 'attendance' | 'qa' | 'audit' | 'targets'
 export type VaultHistoryView = 'attendance' | 'qa' | 'audit' | 'targets'
 export type VaultScope = 'agent' | 'house'
 export type MetricsScope = 'house' | 'agent'
@@ -71,6 +71,14 @@ export type AttendanceRecord = {
   agentId: string
   percent: AttendancePercent
   notes: string
+}
+
+export type SpiffRecord = {
+  id: string
+  weekKey: string
+  dateKey: string
+  agentId: string
+  amount: number
 }
 
 export type AttendanceSubmission = {

@@ -23,6 +23,8 @@ function App() {
     setAuditRecords,
     attendance,
     setAttendance,
+    spiffRecords,
+    setSpiffRecords,
     setSnapshots,
     setPerfHistory,
     attendanceSubmissions,
@@ -47,7 +49,10 @@ function App() {
     now,
     todayKey,
     currentWeekKey,
-    weekDates,
+    selectedAttendanceWeekKey,
+    setSelectedAttendanceWeekKey,
+    attendanceWeekDates,
+    attendanceWeekOptions,
     activeAgents,
     houseLive,
     actionQa,
@@ -292,13 +297,24 @@ function App() {
     setAttendance((prev) => {
       const existing = prev.find((a) => a.agentId === agentId && a.dateKey === dateKey)
       if (!existing)
-        return [...prev, { id: uid('att'), weekKey: currentWeekKey, dateKey, agentId, percent, notes: '' }]
+        return [...prev, { id: uid('att'), weekKey: selectedAttendanceWeekKey, dateKey, agentId, percent, notes: '' }]
       if (existing.percent !== percent) {
         const agentName = agents.find((a) => a.id === agentId)?.name ?? 'Agent'
         const proceed = window.confirm(`Attendance for ${agentName} on ${dateKey} already exists. Overwrite it?`)
         if (!proceed) return prev
       }
       return prev.map((a) => (a.id === existing.id ? { ...a, percent } : a))
+    })
+  }
+
+  const setSpiffAmount = (agentId: string, dateKey: string, amount: number): void => {
+    const nextAmount = Number.isFinite(amount) ? Math.max(0, Math.round(amount * 100) / 100) : 0
+    setSpiffRecords((prev) => {
+      const existing = prev.find((row) => row.agentId === agentId && row.dateKey === dateKey)
+      if (!existing) {
+        return [...prev, { id: uid('spiff'), weekKey: selectedAttendanceWeekKey, dateKey, agentId, amount: nextAmount }]
+      }
+      return prev.map((row) => (row.id === existing.id ? { ...row, amount: nextAmount } : row))
     })
   }
 
@@ -391,7 +407,7 @@ function App() {
           ...prev,
           {
             id: uid('att'),
-            weekKey: currentWeekKey,
+            weekKey: selectedAttendanceWeekKey,
             dateKey,
             agentId,
             percent: 100,
@@ -535,7 +551,7 @@ function App() {
 
   const clearHistory = (): void => {
     const proceed = window.confirm(
-      'This will permanently clear all dashboard data (agents, attendance, snapshots, QA, audits, targets, vault). Continue?',
+      'This will permanently clear all dashboard data (agents, attendance, spiff, snapshots, QA, audits, targets, vault). Continue?',
     )
     if (!proceed) return
     setAgents([])
@@ -543,6 +559,7 @@ function App() {
     setAuditRecords([])
     setSnapshots([])
     setAttendance([])
+    setSpiffRecords([])
     setAttendanceSubmissions([])
     setIntraSubmissions([])
     setPerfHistory([])
@@ -650,8 +667,13 @@ function App() {
             todayKey={todayKey}
             activeAgents={activeAgents}
             attendance={attendance}
+            spiffRecords={spiffRecords}
             attendanceSubmissions={dataAttendanceSubmissions}
-            weekDates={weekDates}
+            currentWeekKey={currentWeekKey}
+            selectedAttendanceWeekKey={selectedAttendanceWeekKey}
+            setSelectedAttendanceWeekKey={setSelectedAttendanceWeekKey}
+            attendanceWeekDates={attendanceWeekDates}
+            attendanceWeekOptions={attendanceWeekOptions}
             weekTarget={weekTarget}
             qaForm={qaForm}
             setQaForm={setQaForm}
@@ -660,6 +682,7 @@ function App() {
             incompleteQaAgentsToday={incompleteQaAgentsToday}
             incompleteAuditAgentsToday={incompleteAuditAgentsToday}
             onSetAttendancePercent={setAttendancePercent}
+            onSetSpiffAmount={setSpiffAmount}
             onSubmitAttendanceDay={submitAttendanceDay}
             onSaveWeeklyTarget={saveWeeklyTarget}
             onQaSubmit={handleQaSubmit}

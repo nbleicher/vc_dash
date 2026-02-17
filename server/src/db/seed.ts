@@ -14,6 +14,7 @@ const seedState: StoreState = {
   qaRecords: [],
   auditRecords: [],
   attendance: [],
+  spiffRecords: [],
   attendanceSubmissions: [],
   intraSubmissions: [],
   weeklyTargets: [],

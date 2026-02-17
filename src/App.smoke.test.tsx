@@ -9,6 +9,7 @@ const emptyState = {
   qaRecords: [],
   auditRecords: [],
   attendance: [],
+  spiffRecords: [],
   attendanceSubmissions: [],
   intraSubmissions: [],
   weeklyTargets: [],

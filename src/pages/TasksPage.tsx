@@ -3,16 +3,22 @@ import { Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, T
 import { CARRIERS, POLICY_STATUSES } from '../constants'
 import type { AttendanceRecord } from '../types'
 import type { AttendancePercent } from '../types'
+import type { SpiffRecord, TaskPage } from '../types'
 import type { DataStore } from '../data'
 
 type Props = {
-  taskPage: 'attendance' | 'qa' | 'audit' | 'targets'
-  setTaskPage: (p: 'attendance' | 'qa' | 'audit' | 'targets') => void
+  taskPage: TaskPage
+  setTaskPage: (p: TaskPage) => void
   todayKey: string
   activeAgents: DataStore['agents']
   attendance: AttendanceRecord[]
+  spiffRecords: SpiffRecord[]
   attendanceSubmissions: DataStore['attendanceSubmissions']
-  weekDates: string[]
+  currentWeekKey: string
+  selectedAttendanceWeekKey: string
+  setSelectedAttendanceWeekKey: (weekKey: string) => void
+  attendanceWeekDates: string[]
+  attendanceWeekOptions: Array<{ weekKey: string; label: string }>
   weekTarget: { weekKey: string; targetSales: number; targetCpa: number; setAt: string } | null
   qaForm: { agentId: string; clientName: string; decision: string; notes: string }
   setQaForm: React.Dispatch<
@@ -37,6 +43,7 @@ type Props = {
   incompleteQaAgentsToday: Array<{ id: string; name: string }>
   incompleteAuditAgentsToday: Array<{ id: string; name: string }>
   onSetAttendancePercent: (agentId: string, dateKey: string, percent: AttendancePercent) => void
+  onSetSpiffAmount: (agentId: string, dateKey: string, amount: number) => void
   onSubmitAttendanceDay: (dateKey: string) => void
   onSaveWeeklyTarget: (sales: number, cpa: number) => void
   onQaSubmit: (e: React.FormEvent) => void
@@ -50,8 +57,13 @@ export function TasksPage({
   todayKey,
   activeAgents,
   attendance,
+  spiffRecords,
   attendanceSubmissions,
-  weekDates,
+  currentWeekKey,
+  selectedAttendanceWeekKey,
+  setSelectedAttendanceWeekKey,
+  attendanceWeekDates,
+  attendanceWeekOptions,
   weekTarget,
   qaForm,
   setQaForm,
@@ -60,12 +72,15 @@ export function TasksPage({
   incompleteQaAgentsToday,
   incompleteAuditAgentsToday,
   onSetAttendancePercent,
+  onSetSpiffAmount,
   onSubmitAttendanceDay,
   onSaveWeeklyTarget,
   onQaSubmit,
   onAuditSubmit,
   onAuditNoActionSubmit,
 }: Props) {
+  const dayBasePay = 120
+  const formatCurrency = (amount: number): string => `$${amount.toFixed(2)}`
   const renderMissingNames = (rows: Array<{ id: string; name: string }>) =>
     rows.map((agent, idx) => (
       <span key={agent.id}>
@@ -75,6 +90,7 @@ export function TasksPage({
     ))
 
   const taskItems = [
+    { key: 'spiff' as const, label: 'Spiff' },
     { key: 'attendance' as const, label: 'Attendance' },
     { key: 'qa' as const, label: 'Daily QA' },
     { key: 'audit' as const, label: 'Action Needed Audit' },
@@ -87,49 +103,150 @@ export function TasksPage({
         <Tabs value={taskPage} onChange={setTaskPage} items={taskItems} />
       </Card>
 
-      {taskPage === 'attendance' && (
+      {taskPage === 'spiff' && (
         <Card className="space-y-4">
-          <CardTitle>Attendance (Mon-Fri)</CardTitle>
+          <CardTitle>Spiff (Mon-Fri)</CardTitle>
+          <div className="flex flex-wrap items-end gap-2">
+            <Field className="max-w-xs">
+              <FieldLabel>Week</FieldLabel>
+              <Select value={selectedAttendanceWeekKey} onChange={(e) => setSelectedAttendanceWeekKey(e.target.value)}>
+                {attendanceWeekOptions.map((option) => (
+                  <option key={option.weekKey} value={option.weekKey}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={selectedAttendanceWeekKey === currentWeekKey}
+              onClick={() => setSelectedAttendanceWeekKey(currentWeekKey)}
+            >
+              Current Week
+            </Button>
+          </div>
           <TableWrap>
             <DataTable>
               <thead>
                 <tr>
                   <th>Agent</th>
-                  {weekDates.map((d) => (
+                  {attendanceWeekDates.map((d) => (
                     <th key={d}>{d}</th>
                   ))}
+                  <th>Week Spiff Total</th>
                 </tr>
               </thead>
               <tbody>
                 {activeAgents.length === 0 && (
                   <tr>
-                    <td colSpan={6}>N/A - no active agents.</td>
+                    <td colSpan={attendanceWeekDates.length + 2}>N/A - no active agents.</td>
                   </tr>
                 )}
-                {activeAgents.map((agent) => (
-                  <tr key={agent.id}>
-                    <td>{agent.name}</td>
-                    {weekDates.map((d) => {
-                      const row = attendance.find((a) => a.agentId === agent.id && a.dateKey === d)
-                      return (
-                        <td key={d}>
-                          <Select
-                            value={row?.percent ?? 100}
-                            onChange={(e) =>
-                              onSetAttendancePercent(agent.id, d, Number(e.target.value) as AttendancePercent)
-                            }
-                          >
-                            <option value={100}>100%</option>
-                            <option value={75}>75%</option>
-                            <option value={50}>50%</option>
-                            <option value={25}>25%</option>
-                            <option value={0}>0%</option>
-                          </Select>
-                        </td>
-                      )
-                    })}
-                  </tr>
+                {activeAgents.map((agent) => {
+                  const weekSpiffTotal = attendanceWeekDates.reduce((total, dateKey) => {
+                    const row = spiffRecords.find((item) => item.agentId === agent.id && item.dateKey === dateKey)
+                    return total + (row?.amount ?? 0)
+                  }, 0)
+                  return (
+                    <tr key={agent.id}>
+                      <td>{agent.name}</td>
+                      {attendanceWeekDates.map((d) => {
+                        const row = spiffRecords.find((item) => item.agentId === agent.id && item.dateKey === d)
+                        return (
+                          <td key={d}>
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              value={row?.amount ?? 0}
+                              onChange={(e) => onSetSpiffAmount(agent.id, d, Number(e.target.value))}
+                            />
+                          </td>
+                        )
+                      })}
+                      <td>{formatCurrency(weekSpiffTotal)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </DataTable>
+          </TableWrap>
+        </Card>
+      )}
+
+      {taskPage === 'attendance' && (
+        <Card className="space-y-4">
+          <CardTitle>Attendance (Mon-Fri)</CardTitle>
+          <div className="flex flex-wrap items-end gap-2">
+            <Field className="max-w-xs">
+              <FieldLabel>Week</FieldLabel>
+              <Select value={selectedAttendanceWeekKey} onChange={(e) => setSelectedAttendanceWeekKey(e.target.value)}>
+                {attendanceWeekOptions.map((option) => (
+                  <option key={option.weekKey} value={option.weekKey}>
+                    {option.label}
+                  </option>
                 ))}
+              </Select>
+            </Field>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={selectedAttendanceWeekKey === currentWeekKey}
+              onClick={() => setSelectedAttendanceWeekKey(currentWeekKey)}
+            >
+              Current Week
+            </Button>
+          </div>
+          <TableWrap>
+            <DataTable>
+              <thead>
+                <tr>
+                  <th>Agent</th>
+                  {attendanceWeekDates.map((d) => (
+                    <th key={d}>{d}</th>
+                  ))}
+                  <th>Week Base Pay</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activeAgents.length === 0 && (
+                  <tr>
+                    <td colSpan={attendanceWeekDates.length + 2}>N/A - no active agents.</td>
+                  </tr>
+                )}
+                {activeAgents.map((agent) => {
+                  const weekBasePay = attendanceWeekDates.reduce((total, dateKey) => {
+                    const row = attendance.find((a) => a.agentId === agent.id && a.dateKey === dateKey)
+                    const percent = row?.percent ?? 100
+                    return total + (percent / 100) * dayBasePay
+                  }, 0)
+                  return (
+                    <tr key={agent.id}>
+                      <td>{agent.name}</td>
+                      {attendanceWeekDates.map((d) => {
+                        const row = attendance.find((a) => a.agentId === agent.id && a.dateKey === d)
+                        return (
+                          <td key={d}>
+                            <Select
+                              value={row?.percent ?? 100}
+                              onChange={(e) =>
+                                onSetAttendancePercent(agent.id, d, Number(e.target.value) as AttendancePercent)
+                              }
+                            >
+                              <option value={100}>100%</option>
+                              <option value={75}>75%</option>
+                              <option value={50}>50%</option>
+                              <option value={25}>25%</option>
+                              <option value={0}>0%</option>
+                            </Select>
+                          </td>
+                        )
+                      })}
+                      <td>{formatCurrency(weekBasePay)}</td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </DataTable>
           </TableWrap>

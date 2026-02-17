@@ -62,6 +62,14 @@ export type AttendanceRecord = {
   notes: string
 }
 
+export type SpiffRecord = {
+  id: string
+  weekKey: string
+  dateKey: string
+  agentId: string
+  amount: number
+}
+
 export type AttendanceSubmission = {
   id: string
   dateKey: string
@@ -112,6 +120,7 @@ export type StoreState = {
   qaRecords: QaRecord[]
   auditRecords: AuditRecord[]
   attendance: AttendanceRecord[]
+  spiffRecords: SpiffRecord[]
   attendanceSubmissions: AttendanceSubmission[]
   intraSubmissions: IntraSubmission[]
   weeklyTargets: WeeklyTarget[]

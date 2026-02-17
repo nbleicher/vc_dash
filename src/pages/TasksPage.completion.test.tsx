@@ -12,8 +12,13 @@ function baseProps() {
       { id: 'a2', name: 'Jordan', active: true, createdAt: new Date().toISOString() },
     ],
     attendance: [],
+    spiffRecords: [],
     attendanceSubmissions: [],
-    weekDates: ['2026-02-13'],
+    currentWeekKey: '2026-02-09',
+    selectedAttendanceWeekKey: '2026-02-09',
+    setSelectedAttendanceWeekKey: vi.fn(),
+    attendanceWeekDates: ['2026-02-13'],
+    attendanceWeekOptions: [{ weekKey: '2026-02-09', label: '2/9-2/13' }],
     weekTarget: null,
     qaForm: { agentId: '', clientName: '', decision: 'Good Sale', notes: '' },
     setQaForm: vi.fn(),
@@ -22,6 +27,7 @@ function baseProps() {
     incompleteQaAgentsToday: [] as Array<{ id: string; name: string }>,
     incompleteAuditAgentsToday: [] as Array<{ id: string; name: string }>,
     onSetAttendancePercent: vi.fn(),
+    onSetSpiffAmount: vi.fn(),
     onSubmitAttendanceDay: vi.fn(),
     onSaveWeeklyTarget: vi.fn(),
     onQaSubmit: vi.fn((e?: { preventDefault?: () => void }) => e?.preventDefault?.()),
@@ -36,7 +42,7 @@ describe('TasksPage completion boxes', () => {
       <TasksPage
         {...baseProps()}
         taskPage="attendance"
-        weekDates={['2026-02-13', '2026-02-14', '2026-02-15']}
+        attendanceWeekDates={['2026-02-13', '2026-02-14', '2026-02-15']}
       />,
     )
     expect(screen.getAllByRole('button', { name: 'Submit Day' })).toHaveLength(1)
@@ -48,7 +54,7 @@ describe('TasksPage completion boxes', () => {
       <TasksPage
         {...baseProps()}
         taskPage="attendance"
-        weekDates={['2026-02-15']}
+        attendanceWeekDates={['2026-02-15']}
         attendanceSubmissions={[
           {
             id: 'att_sub_1',
