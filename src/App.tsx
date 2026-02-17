@@ -356,6 +356,24 @@ function App() {
     )
   }
 
+  const handleSnapshotUpdate = (
+    id: string,
+    patch: Pick<(typeof snapshots)[number], 'billableCalls' | 'sales'>,
+  ): void => {
+    setSnapshots((prev) =>
+      prev.map((row) =>
+        row.id === id
+          ? {
+              ...row,
+              billableCalls: patch.billableCalls,
+              sales: patch.sales,
+              updatedAt: new Date().toISOString(),
+            }
+          : row,
+      ),
+    )
+  }
+
   const setAttendancePercent = (agentId: string, dateKey: string, percent: AttendancePercent): void => {
     setAttendance((prev) => {
       const existing = prev.find((a) => a.agentId === agentId && a.dateKey === dateKey)
@@ -811,10 +829,12 @@ function App() {
             vaultQaHistory={vaultQaHistory}
             vaultAuditHistory={vaultAuditHistory}
             weeklyTargetHistory={weeklyTargetHistory}
+            snapshots={snapshots}
             onAddMeeting={addMeeting}
             onPdfUpload={handlePdfUpload}
             onUpdateQaRecord={handleQaUpdate}
             onUpdateAuditRecord={handleAuditUpdate}
+            onUpdateSnapshot={handleSnapshotUpdate}
           />
         )}
 

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { DataStore } from '../data'
 import { Badge, Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Textarea } from '../components'
+import { SLOT_CONFIG } from '../constants'
 import type { AuditRecord, QaRecord, VaultHistoryView, VaultScope, VaultMeeting } from '../types'
-import { formatDateKey, formatNum, formatPctDelta, formatTimestamp } from '../utils'
+import { estDateKey, formatDateKey, formatNum, formatPctDelta, formatTimestamp } from '../utils'
 
 type Props = {
   vaultScope: VaultScope
@@ -51,6 +52,7 @@ type Props = {
     cpaDeltaPct: number | null
     setAt: string
   }>
+  snapshots: DataStore['snapshots']
   onAddMeeting: (e: React.FormEvent) => void
   onPdfUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onUpdateQaRecord: (
@@ -60,6 +62,10 @@ type Props = {
   onUpdateAuditRecord: (
     recordId: string,
     patch: Pick<AuditRecord, 'agentId' | 'discoveryTs' | 'carrier' | 'clientName' | 'currentStatus' | 'resolutionTs'>,
+  ) => void
+  onUpdateSnapshot: (
+    rowId: string,
+    patch: Pick<DataStore['snapshots'][number], 'billableCalls' | 'sales'>,
   ) => void
 }
 
@@ -86,23 +92,28 @@ export function VaultPage({
   vaultQaHistory,
   vaultAuditHistory,
   weeklyTargetHistory,
+  snapshots,
   onAddMeeting,
   onPdfUpload,
   onUpdateQaRecord,
   onUpdateAuditRecord,
+  onUpdateSnapshot,
 }: Props) {
   const [fullTableMode, setFullTableMode] = useState<'qa' | 'audit' | null>(null)
   const [popupSearch, setPopupSearch] = useState('')
   const [popupPage, setPopupPage] = useState(1)
   const [editingQaId, setEditingQaId] = useState<string | null>(null)
   const [editingAuditId, setEditingAuditId] = useState<string | null>(null)
+  const [editingSnapshotId, setEditingSnapshotId] = useState<string | null>(null)
   const [qaDraft, setQaDraft] = useState<Pick<QaRecord, 'agentId' | 'dateKey' | 'clientName' | 'decision' | 'status' | 'notes'> | null>(
     null,
   )
   const [auditDraft, setAuditDraft] = useState<
     Pick<AuditRecord, 'agentId' | 'discoveryTs' | 'carrier' | 'clientName' | 'currentStatus' | 'resolutionTs'> | null
   >(null)
+  const [snapshotDraft, setSnapshotDraft] = useState<Pick<DataStore['snapshots'][number], 'billableCalls' | 'sales'> | null>(null)
   const [editError, setEditError] = useState<string | null>(null)
+  const [houseIntraDay, setHouseIntraDay] = useState<string>(() => estDateKey(new Date()))
   const scopeValue = vaultScope === 'house' ? '__house__' : effectiveVaultAgentId
 
   const agentNameById = useMemo(() => new Map(agents.map((agent) => [agent.id, agent.name])), [agents])
@@ -151,6 +162,26 @@ export function VaultPage({
   const auditPagedRows = auditFilteredRows.slice(start, start + PAGE_SIZE)
 
   const canEditHistory = true
+  const recentHouseDayOptions = useMemo(() => {
+    const options: string[] = []
+    const now = new Date()
+    for (let i = 0; i < 14; i += 1) {
+      const d = new Date(now)
+      d.setDate(now.getDate() - i)
+      options.push(estDateKey(d))
+    }
+    return options
+  }, [])
+  const intraRowsForDay = useMemo(() => {
+    const slotOrder = new Map<string, number>(SLOT_CONFIG.map((slot, idx) => [slot.key, idx]))
+    return snapshots
+      .filter((row) => row.dateKey === houseIntraDay)
+      .sort((a, b) => {
+        const slotDelta = (slotOrder.get(a.slot) ?? 999) - (slotOrder.get(b.slot) ?? 999)
+        if (slotDelta !== 0) return slotDelta
+        return agentName(a.agentId).localeCompare(agentName(b.agentId))
+      })
+  }, [snapshots, houseIntraDay, agentName])
 
   const toLocalDateTimeInput = (iso: string | null): string => {
     if (!iso) return ''
@@ -235,6 +266,26 @@ export function VaultPage({
     }
     onUpdateAuditRecord(editingAuditId, { ...auditDraft, clientName, carrier })
     cancelAuditEdit()
+  }
+
+  const startSnapshotEdit = (row: DataStore['snapshots'][number]): void => {
+    setEditingSnapshotId(row.id)
+    setSnapshotDraft({ billableCalls: row.billableCalls, sales: row.sales })
+    setEditError(null)
+  }
+
+  const cancelSnapshotEdit = (): void => {
+    setEditingSnapshotId(null)
+    setSnapshotDraft(null)
+    setEditError(null)
+  }
+
+  const saveSnapshotEdit = (): void => {
+    if (!editingSnapshotId || !snapshotDraft) return
+    const billableCalls = Math.max(0, Math.round(snapshotDraft.billableCalls))
+    const sales = Math.max(0, Math.round(snapshotDraft.sales))
+    onUpdateSnapshot(editingSnapshotId, { billableCalls, sales })
+    cancelSnapshotEdit()
   }
 
   const renderQaHistoryCard = (rows: Props['vaultQaHistory'], showFullAction = false, allowEdit = false) => {
@@ -563,6 +614,99 @@ export function VaultPage({
     )
   }
 
+  const renderHouseIntraDayHistoryCard = () => (
+    <Card>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3>Intra-Day Performance Entry History</h3>
+        <p className="text-sm text-slate-500">{formatDateKey(houseIntraDay)}</p>
+      </div>
+      <TableWrap>
+        <DataTable>
+          <thead>
+            <tr>
+              <th>Agent</th>
+              <th>Slot</th>
+              <th>Billable Calls</th>
+              <th>Sales</th>
+              <th>Updated</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {intraRowsForDay.length === 0 && (
+              <tr>
+                <td colSpan={6}>N/A</td>
+              </tr>
+            )}
+            {intraRowsForDay.map((row) => (
+              <tr key={row.id}>
+                <td>{agentName(row.agentId)}</td>
+                <td>{row.slotLabel || row.slot}</td>
+                <td>
+                  {editingSnapshotId === row.id && snapshotDraft ? (
+                    <Input
+                      type="number"
+                      min={0}
+                      value={snapshotDraft.billableCalls}
+                      onChange={(e) =>
+                        setSnapshotDraft((prev) =>
+                          prev ? { ...prev, billableCalls: Number.isFinite(Number(e.target.value)) ? Number(e.target.value) : 0 } : prev,
+                        )
+                      }
+                    />
+                  ) : (
+                    row.billableCalls
+                  )}
+                </td>
+                <td>
+                  {editingSnapshotId === row.id && snapshotDraft ? (
+                    <Input
+                      type="number"
+                      min={0}
+                      value={snapshotDraft.sales}
+                      onChange={(e) =>
+                        setSnapshotDraft((prev) =>
+                          prev ? { ...prev, sales: Number.isFinite(Number(e.target.value)) ? Number(e.target.value) : 0 } : prev,
+                        )
+                      }
+                    />
+                  ) : (
+                    row.sales
+                  )}
+                </td>
+                <td>{formatTimestamp(row.updatedAt)}</td>
+                <td>
+                  {editingSnapshotId === row.id ? (
+                    <div className="flex gap-2">
+                      <Button variant="default" onClick={saveSnapshotEdit}>
+                        Save
+                      </Button>
+                      <Button variant="secondary" onClick={cancelSnapshotEdit}>
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      onClick={() => startSnapshotEdit(row)}
+                      disabled={
+                        !!editingQaId ||
+                        !!editingAuditId ||
+                        (editingSnapshotId !== null && editingSnapshotId !== row.id)
+                      }
+                    >
+                      Edit
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </DataTable>
+      </TableWrap>
+    </Card>
+  )
+
   const renderAgentHistorySection = () => (
     <>
       {vaultHistoryView === 'attendance' && (
@@ -689,6 +833,18 @@ export function VaultPage({
             </Select>
           </Field>
         ) : null}
+        {vaultScope === 'house' ? (
+          <Field className="min-w-[220px]">
+            <FieldLabel>Day</FieldLabel>
+            <Select value={houseIntraDay} onChange={(e) => setHouseIntraDay(e.target.value)}>
+              {recentHouseDayOptions.map((dateKey) => (
+                <option key={dateKey} value={dateKey}>
+                  {formatDateKey(dateKey)}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        ) : null}
         <Field className="min-w-[180px]">
           <FieldLabel>Sort</FieldLabel>
           <Select value={historySort} onChange={(e) => setHistorySort(e.target.value as 'newest' | 'oldest')}>
@@ -699,10 +855,13 @@ export function VaultPage({
       </div>
       {editError ? <p className="text-sm text-red-600">{editError}</p> : null}
       {vaultScope === 'house' ? (
-        <div className="split">
-          {renderQaHistoryCard(vaultQaHistory, true, canEditHistory)}
-          {renderAuditHistoryCard(vaultAuditHistory, true, canEditHistory)}
-        </div>
+        <>
+          <div className="split">
+            {renderQaHistoryCard(vaultQaHistory, true, canEditHistory)}
+            {renderAuditHistoryCard(vaultAuditHistory, true, canEditHistory)}
+          </div>
+          {renderHouseIntraDayHistoryCard()}
+        </>
       ) : !selectedVaultAgent ? (
         <p className="text-sm text-slate-500">N/A - add/select an active agent.</p>
       ) : (
