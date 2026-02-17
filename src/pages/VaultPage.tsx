@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { DataStore } from '../data'
 import { Badge, Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Textarea } from '../components'
-import type { VaultHistoryView, VaultScope, VaultMeeting } from '../types'
+import type { AuditRecord, QaRecord, VaultHistoryView, VaultScope, VaultMeeting } from '../types'
 import { formatDateKey, formatNum, formatPctDelta, formatTimestamp } from '../utils'
 
 type Props = {
@@ -53,6 +53,14 @@ type Props = {
   }>
   onAddMeeting: (e: React.FormEvent) => void
   onPdfUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onUpdateQaRecord: (
+    recordId: string,
+    patch: Pick<QaRecord, 'agentId' | 'dateKey' | 'clientName' | 'decision' | 'status' | 'notes'>,
+  ) => void
+  onUpdateAuditRecord: (
+    recordId: string,
+    patch: Pick<AuditRecord, 'agentId' | 'discoveryTs' | 'carrier' | 'clientName' | 'currentStatus' | 'resolutionTs'>,
+  ) => void
 }
 
 const PAGE_SIZE = 50
@@ -79,10 +87,21 @@ export function VaultPage({
   weeklyTargetHistory,
   onAddMeeting,
   onPdfUpload,
+  onUpdateQaRecord,
+  onUpdateAuditRecord,
 }: Props) {
   const [fullTableMode, setFullTableMode] = useState<'qa' | 'audit' | null>(null)
   const [popupSearch, setPopupSearch] = useState('')
   const [popupPage, setPopupPage] = useState(1)
+  const [editingQaId, setEditingQaId] = useState<string | null>(null)
+  const [editingAuditId, setEditingAuditId] = useState<string | null>(null)
+  const [qaDraft, setQaDraft] = useState<Pick<QaRecord, 'agentId' | 'dateKey' | 'clientName' | 'decision' | 'status' | 'notes'> | null>(
+    null,
+  )
+  const [auditDraft, setAuditDraft] = useState<
+    Pick<AuditRecord, 'agentId' | 'discoveryTs' | 'carrier' | 'clientName' | 'currentStatus' | 'resolutionTs'> | null
+  >(null)
+  const [editError, setEditError] = useState<string | null>(null)
   const scopeValue = vaultScope === 'house' ? '__house__' : effectiveVaultAgentId
 
   const agentNameById = useMemo(() => new Map(agents.map((agent) => [agent.id, agent.name])), [agents])
@@ -130,7 +149,94 @@ export function VaultPage({
   const qaPagedRows = qaFilteredRows.slice(start, start + PAGE_SIZE)
   const auditPagedRows = auditFilteredRows.slice(start, start + PAGE_SIZE)
 
-  const renderQaHistoryCard = (rows: Props['vaultQaHistory'], showFullAction = false) => (
+  const canEditHistory = vaultScope === 'agent' && !!selectedVaultAgent
+
+  const toLocalDateTimeInput = (iso: string | null): string => {
+    if (!iso) return ''
+    const date = new Date(iso)
+    if (Number.isNaN(date.getTime())) return ''
+    const pad = (value: number) => String(value).padStart(2, '0')
+    const y = date.getFullYear()
+    const m = pad(date.getMonth() + 1)
+    const d = pad(date.getDate())
+    const hh = pad(date.getHours())
+    const mm = pad(date.getMinutes())
+    return `${y}-${m}-${d}T${hh}:${mm}`
+  }
+
+  const fromLocalDateTimeInput = (value: string): string | null => {
+    if (!value) return null
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return null
+    return date.toISOString()
+  }
+
+  const startQaEdit = (row: Props['vaultQaHistory'][number]): void => {
+    setEditingQaId(row.id)
+    setQaDraft({
+      agentId: row.agentId,
+      dateKey: row.dateKey,
+      clientName: row.clientName,
+      decision: row.decision as QaRecord['decision'],
+      status: row.status as QaRecord['status'],
+      notes: row.notes,
+    })
+    setEditError(null)
+  }
+
+  const cancelQaEdit = (): void => {
+    setEditingQaId(null)
+    setQaDraft(null)
+    setEditError(null)
+  }
+
+  const saveQaEdit = (): void => {
+    if (!editingQaId || !qaDraft) return
+    const clientName = qaDraft.clientName.trim()
+    if (!clientName) {
+      setEditError('QA client name is required.')
+      return
+    }
+    onUpdateQaRecord(editingQaId, { ...qaDraft, clientName, notes: qaDraft.notes.trim() })
+    cancelQaEdit()
+  }
+
+  const startAuditEdit = (row: Props['vaultAuditHistory'][number]): void => {
+    setEditingAuditId(row.id)
+    setAuditDraft({
+      agentId: row.agentId,
+      discoveryTs: row.discoveryTs,
+      carrier: row.carrier,
+      clientName: row.clientName,
+      currentStatus: row.currentStatus,
+      resolutionTs: row.resolutionTs,
+    })
+    setEditError(null)
+  }
+
+  const cancelAuditEdit = (): void => {
+    setEditingAuditId(null)
+    setAuditDraft(null)
+    setEditError(null)
+  }
+
+  const saveAuditEdit = (): void => {
+    if (!editingAuditId || !auditDraft) return
+    const clientName = auditDraft.clientName.trim()
+    const carrier = auditDraft.carrier.trim()
+    if (!clientName) {
+      setEditError('Audit client name is required.')
+      return
+    }
+    if (!carrier) {
+      setEditError('Audit carrier is required.')
+      return
+    }
+    onUpdateAuditRecord(editingAuditId, { ...auditDraft, clientName, carrier })
+    cancelAuditEdit()
+  }
+
+  const renderQaHistoryCard = (rows: Props['vaultQaHistory'], showFullAction = false, allowEdit = false) => (
     <Card>
       <div className="mb-2 flex items-center justify-between gap-2">
         <h3>Daily QA History</h3>
@@ -156,22 +262,117 @@ export function VaultPage({
               <th>Decision</th>
               <th>Status</th>
               <th>Notes</th>
+              {allowEdit ? <th>Actions</th> : null}
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6}>N/A</td>
+                <td colSpan={allowEdit ? 7 : 6}>N/A</td>
               </tr>
             )}
             {rows.map((row) => (
               <tr key={row.id}>
-                <td>{agentName(row.agentId)}</td>
-                <td>{formatDateKey(row.dateKey)}</td>
-                <td>{row.clientName}</td>
-                <td>{row.decision}</td>
-                <td>{row.status}</td>
-                <td>{row.notes || 'N/A'}</td>
+                <td>
+                  {allowEdit && editingQaId === row.id && qaDraft ? (
+                    <Select
+                      value={qaDraft.agentId}
+                      onChange={(e) => setQaDraft((prev) => (prev ? { ...prev, agentId: e.target.value } : prev))}
+                    >
+                      {agents.map((agent) => (
+                        <option key={agent.id} value={agent.id}>
+                          {agent.name}
+                        </option>
+                      ))}
+                    </Select>
+                  ) : (
+                    agentName(row.agentId)
+                  )}
+                </td>
+                <td>
+                  {allowEdit && editingQaId === row.id && qaDraft ? (
+                    <Input
+                      type="date"
+                      value={qaDraft.dateKey}
+                      onChange={(e) => setQaDraft((prev) => (prev ? { ...prev, dateKey: e.target.value } : prev))}
+                    />
+                  ) : (
+                    formatDateKey(row.dateKey)
+                  )}
+                </td>
+                <td>
+                  {allowEdit && editingQaId === row.id && qaDraft ? (
+                    <Input
+                      value={qaDraft.clientName}
+                      onChange={(e) => setQaDraft((prev) => (prev ? { ...prev, clientName: e.target.value } : prev))}
+                    />
+                  ) : (
+                    row.clientName
+                  )}
+                </td>
+                <td>
+                  {allowEdit && editingQaId === row.id && qaDraft ? (
+                    <Select
+                      value={qaDraft.decision}
+                      onChange={(e) =>
+                        setQaDraft((prev) => (prev ? { ...prev, decision: e.target.value as QaRecord['decision'] } : prev))
+                      }
+                    >
+                      <option value="Good Sale">Good Sale</option>
+                      <option value="Check Recording">Check Recording</option>
+                    </Select>
+                  ) : (
+                    row.decision
+                  )}
+                </td>
+                <td>
+                  {allowEdit && editingQaId === row.id && qaDraft ? (
+                    <Select
+                      value={qaDraft.status}
+                      onChange={(e) =>
+                        setQaDraft((prev) => (prev ? { ...prev, status: e.target.value as QaRecord['status'] } : prev))
+                      }
+                    >
+                      <option value="Good">Good</option>
+                      <option value="Check Recording">Check Recording</option>
+                      <option value="Resolved">Resolved</option>
+                    </Select>
+                  ) : (
+                    row.status
+                  )}
+                </td>
+                <td>
+                  {allowEdit && editingQaId === row.id && qaDraft ? (
+                    <Input
+                      value={qaDraft.notes}
+                      onChange={(e) => setQaDraft((prev) => (prev ? { ...prev, notes: e.target.value } : prev))}
+                    />
+                  ) : (
+                    row.notes || 'N/A'
+                  )}
+                </td>
+                {allowEdit ? (
+                  <td>
+                    {editingQaId === row.id ? (
+                      <div className="flex gap-2">
+                        <Button variant="default" onClick={saveQaEdit}>
+                          Save
+                        </Button>
+                        <Button variant="secondary" onClick={cancelQaEdit}>
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        onClick={() => startQaEdit(row)}
+                        disabled={!!editingAuditId || (editingQaId !== null && editingQaId !== row.id)}
+                      >
+                        Edit
+                      </Button>
+                    )}
+                  </td>
+                ) : null}
               </tr>
             ))}
           </tbody>
@@ -180,7 +381,7 @@ export function VaultPage({
     </Card>
   )
 
-  const renderAuditHistoryCard = (rows: Props['vaultAuditHistory'], showFullAction = false) => (
+  const renderAuditHistoryCard = (rows: Props['vaultAuditHistory'], showFullAction = false, allowEdit = false) => (
     <Card>
       <div className="mb-2 flex items-center justify-between gap-2">
         <h3>Action Needed History</h3>
@@ -207,35 +408,228 @@ export function VaultPage({
               <th>Status</th>
               <th>Timestamp 1</th>
               <th>Timestamp 2</th>
+              {allowEdit ? <th>Actions</th> : null}
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7}>N/A</td>
+                <td colSpan={allowEdit ? 8 : 7}>N/A</td>
               </tr>
             )}
             {rows.map((row) => (
               <tr key={row.id}>
-                <td>{agentName(row.agentId)}</td>
-                <td>{formatTimestamp(row.discoveryTs)}</td>
-                <td>{row.carrier}</td>
-                <td>{row.clientName}</td>
                 <td>
-                  {row.currentStatus === 'no_action_needed' ? (
-                    <Badge variant="success">No Action Needed</Badge>
+                  {allowEdit && editingAuditId === row.id && auditDraft ? (
+                    <Select
+                      value={auditDraft.agentId}
+                      onChange={(e) => setAuditDraft((prev) => (prev ? { ...prev, agentId: e.target.value } : prev))}
+                    >
+                      {agents.map((agent) => (
+                        <option key={agent.id} value={agent.id}>
+                          {agent.name}
+                        </option>
+                      ))}
+                    </Select>
                   ) : (
-                    <Badge variant="warning">Needs Review</Badge>
+                    agentName(row.agentId)
                   )}
                 </td>
-                <td>{formatTimestamp(row.discoveryTs)}</td>
-                <td>{formatTimestamp(row.resolutionTs)}</td>
+                <td>
+                  {allowEdit && editingAuditId === row.id && auditDraft ? (
+                    <Input
+                      type="datetime-local"
+                      value={toLocalDateTimeInput(auditDraft.discoveryTs)}
+                      onChange={(e) => {
+                        const nextIso = fromLocalDateTimeInput(e.target.value)
+                        if (!nextIso) return
+                        setAuditDraft((prev) => (prev ? { ...prev, discoveryTs: nextIso } : prev))
+                      }}
+                    />
+                  ) : (
+                    formatTimestamp(row.discoveryTs)
+                  )}
+                </td>
+                <td>
+                  {allowEdit && editingAuditId === row.id && auditDraft ? (
+                    <Input
+                      value={auditDraft.carrier}
+                      onChange={(e) => setAuditDraft((prev) => (prev ? { ...prev, carrier: e.target.value } : prev))}
+                    />
+                  ) : (
+                    row.carrier
+                  )}
+                </td>
+                <td>
+                  {allowEdit && editingAuditId === row.id && auditDraft ? (
+                    <Input
+                      value={auditDraft.clientName}
+                      onChange={(e) => setAuditDraft((prev) => (prev ? { ...prev, clientName: e.target.value } : prev))}
+                    />
+                  ) : (
+                    row.clientName
+                  )}
+                </td>
+                <td>
+                  {allowEdit && editingAuditId === row.id && auditDraft ? (
+                    <Input
+                      value={auditDraft.currentStatus}
+                      onChange={(e) => setAuditDraft((prev) => (prev ? { ...prev, currentStatus: e.target.value } : prev))}
+                    />
+                  ) : (
+                    <>
+                      {row.currentStatus === 'no_action_needed' ? (
+                        <Badge variant="success">No Action Needed</Badge>
+                      ) : (
+                        <Badge variant="warning">Needs Review</Badge>
+                      )}
+                    </>
+                  )}
+                </td>
+                <td>
+                  {allowEdit && editingAuditId === row.id && auditDraft ? (
+                    <Input
+                      type="datetime-local"
+                      value={toLocalDateTimeInput(auditDraft.discoveryTs)}
+                      onChange={(e) => {
+                        const nextIso = fromLocalDateTimeInput(e.target.value)
+                        if (!nextIso) return
+                        setAuditDraft((prev) => (prev ? { ...prev, discoveryTs: nextIso } : prev))
+                      }}
+                    />
+                  ) : (
+                    formatTimestamp(row.discoveryTs)
+                  )}
+                </td>
+                <td>
+                  {allowEdit && editingAuditId === row.id && auditDraft ? (
+                    <Input
+                      type="datetime-local"
+                      value={toLocalDateTimeInput(auditDraft.resolutionTs)}
+                      onChange={(e) =>
+                        setAuditDraft((prev) =>
+                          prev ? { ...prev, resolutionTs: fromLocalDateTimeInput(e.target.value) } : prev,
+                        )
+                      }
+                    />
+                  ) : (
+                    formatTimestamp(row.resolutionTs)
+                  )}
+                </td>
+                {allowEdit ? (
+                  <td>
+                    {editingAuditId === row.id ? (
+                      <div className="flex gap-2">
+                        <Button variant="default" onClick={saveAuditEdit}>
+                          Save
+                        </Button>
+                        <Button variant="secondary" onClick={cancelAuditEdit}>
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        onClick={() => startAuditEdit(row)}
+                        disabled={!!editingQaId || (editingAuditId !== null && editingAuditId !== row.id)}
+                      >
+                        Edit
+                      </Button>
+                    )}
+                  </td>
+                ) : null}
               </tr>
             ))}
           </tbody>
         </DataTable>
       </TableWrap>
     </Card>
+  )
+
+  const renderAgentHistorySection = () => (
+    <>
+      {vaultHistoryView === 'attendance' && (
+        <Card>
+          <h3>Attendance History</h3>
+          <TableWrap>
+            <DataTable>
+              <thead>
+                <tr>
+                  <th>Agent</th>
+                  <th>Date</th>
+                  <th>Percent</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {vaultAttendanceHistory.length === 0 && (
+                  <tr>
+                    <td colSpan={4}>N/A</td>
+                  </tr>
+                )}
+                {vaultAttendanceHistory.map((row) => (
+                  <tr key={row.id}>
+                    <td>{agents.find((a) => a.id === row.agentId)?.name ?? 'Unknown'}</td>
+                    <td>{formatDateKey(row.dateKey)}</td>
+                    <td className="text-right tabular-nums">{row.percent}%</td>
+                    <td>{row.notes || 'N/A'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTable>
+          </TableWrap>
+        </Card>
+      )}
+
+      {vaultHistoryView === 'qa' && renderQaHistoryCard(vaultQaHistory, false, canEditHistory)}
+
+      {vaultHistoryView === 'audit' && renderAuditHistoryCard(vaultAuditHistory, false, canEditHistory)}
+
+      {vaultHistoryView === 'targets' && (
+        <Card>
+          <h3>Weekly Target History (House)</h3>
+          <TableWrap>
+            <DataTable>
+              <thead>
+                <tr>
+                  <th>Week (Mon)</th>
+                  <th>Sales Goal</th>
+                  <th>Actual Sales</th>
+                  <th>Sales Hit?</th>
+                  <th>Sales % Over/Under</th>
+                  <th>CPA Goal</th>
+                  <th>Actual CPA</th>
+                  <th>CPA Hit?</th>
+                  <th>CPA % Over/Under</th>
+                  <th>Set At</th>
+                </tr>
+              </thead>
+              <tbody>
+                {weeklyTargetHistory.length === 0 && (
+                  <tr>
+                    <td colSpan={10}>N/A</td>
+                  </tr>
+                )}
+                {weeklyTargetHistory.map((row) => (
+                  <tr key={row.weekKey}>
+                    <td>{formatDateKey(row.weekKey)}</td>
+                    <td className="text-right tabular-nums">{row.targetSales}</td>
+                    <td className="text-right tabular-nums">{row.actualSales}</td>
+                    <td>{row.salesHit ? <Badge variant="success">On Track</Badge> : <Badge variant="warning">Needs Review</Badge>}</td>
+                    <td className="text-right tabular-nums">{formatPctDelta(row.salesDeltaPct)}</td>
+                    <td className="text-right tabular-nums">${formatNum(row.targetCpa)}</td>
+                    <td className="text-right tabular-nums">{row.actualCpa === null ? 'N/A' : `$${formatNum(row.actualCpa)}`}</td>
+                    <td>{row.cpaHit ? <Badge variant="success">On Track</Badge> : <Badge variant="danger">Critical</Badge>}</td>
+                    <td className="text-right tabular-nums">{formatPctDelta(row.cpaDeltaPct)}</td>
+                    <td>{formatTimestamp(row.setAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTable>
+          </TableWrap>
+        </Card>
+      )}
+    </>
   )
 
   return (
@@ -295,6 +689,8 @@ export function VaultPage({
         <p className="text-sm text-slate-500">N/A - add/select an active agent.</p>
       ) : (
         <>
+          {editError ? <p className="text-sm text-red-600">{editError}</p> : null}
+          {renderAgentHistorySection()}
           <Card className="bg-slate-50">
             <h3>Performance Meeting</h3>
             <form onSubmit={onAddMeeting} className="form-grid">
@@ -371,88 +767,6 @@ export function VaultPage({
               </ul>
             </Card>
           </div>
-
-          {vaultHistoryView === 'attendance' && (
-            <Card>
-              <h3>Attendance History</h3>
-              <TableWrap>
-                <DataTable>
-                  <thead>
-                    <tr>
-                      <th>Agent</th>
-                      <th>Date</th>
-                      <th>Percent</th>
-                      <th>Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {vaultAttendanceHistory.length === 0 && (
-                      <tr>
-                        <td colSpan={4}>N/A</td>
-                      </tr>
-                    )}
-                    {vaultAttendanceHistory.map((row) => (
-                      <tr key={row.id}>
-                        <td>{agents.find((a) => a.id === row.agentId)?.name ?? 'Unknown'}</td>
-                        <td>{formatDateKey(row.dateKey)}</td>
-                        <td className="text-right tabular-nums">{row.percent}%</td>
-                        <td>{row.notes || 'N/A'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </DataTable>
-              </TableWrap>
-            </Card>
-          )}
-
-          {vaultHistoryView === 'qa' && renderQaHistoryCard(vaultQaHistory)}
-
-          {vaultHistoryView === 'audit' && renderAuditHistoryCard(vaultAuditHistory)}
-
-          {vaultHistoryView === 'targets' && (
-            <Card>
-              <h3>Weekly Target History (House)</h3>
-              <TableWrap>
-                <DataTable>
-                  <thead>
-                    <tr>
-                      <th>Week (Mon)</th>
-                      <th>Sales Goal</th>
-                      <th>Actual Sales</th>
-                      <th>Sales Hit?</th>
-                      <th>Sales % Over/Under</th>
-                      <th>CPA Goal</th>
-                      <th>Actual CPA</th>
-                      <th>CPA Hit?</th>
-                      <th>CPA % Over/Under</th>
-                      <th>Set At</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {weeklyTargetHistory.length === 0 && (
-                      <tr>
-                        <td colSpan={10}>N/A</td>
-                      </tr>
-                    )}
-                    {weeklyTargetHistory.map((row) => (
-                      <tr key={row.weekKey}>
-                        <td>{formatDateKey(row.weekKey)}</td>
-                        <td className="text-right tabular-nums">{row.targetSales}</td>
-                        <td className="text-right tabular-nums">{row.actualSales}</td>
-                        <td>{row.salesHit ? <Badge variant="success">On Track</Badge> : <Badge variant="warning">Needs Review</Badge>}</td>
-                        <td className="text-right tabular-nums">{formatPctDelta(row.salesDeltaPct)}</td>
-                        <td className="text-right tabular-nums">${formatNum(row.targetCpa)}</td>
-                        <td className="text-right tabular-nums">{row.actualCpa === null ? 'N/A' : `$${formatNum(row.actualCpa)}`}</td>
-                        <td>{row.cpaHit ? <Badge variant="success">On Track</Badge> : <Badge variant="danger">Critical</Badge>}</td>
-                        <td className="text-right tabular-nums">{formatPctDelta(row.cpaDeltaPct)}</td>
-                        <td>{formatTimestamp(row.setAt)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </DataTable>
-              </TableWrap>
-            </Card>
-          )}
         </>
       )}
 
@@ -500,22 +814,117 @@ export function VaultPage({
                       <th>Decision</th>
                       <th>Status</th>
                       <th>Notes</th>
+                      {canEditHistory ? <th>Actions</th> : null}
                     </tr>
                   </thead>
                   <tbody>
                     {qaPagedRows.length === 0 && (
                       <tr>
-                        <td colSpan={6}>No QA rows match this search.</td>
+                        <td colSpan={canEditHistory ? 7 : 6}>No QA rows match this search.</td>
                       </tr>
                     )}
                     {qaPagedRows.map((row) => (
                       <tr key={row.id}>
-                        <td>{agentName(row.agentId)}</td>
-                        <td>{formatDateKey(row.dateKey)}</td>
-                        <td>{row.clientName}</td>
-                        <td>{row.decision}</td>
-                        <td>{row.status}</td>
-                        <td>{row.notes || 'N/A'}</td>
+                        <td>
+                          {canEditHistory && editingQaId === row.id && qaDraft ? (
+                            <Select
+                              value={qaDraft.agentId}
+                              onChange={(e) => setQaDraft((prev) => (prev ? { ...prev, agentId: e.target.value } : prev))}
+                            >
+                              {agents.map((agent) => (
+                                <option key={agent.id} value={agent.id}>
+                                  {agent.name}
+                                </option>
+                              ))}
+                            </Select>
+                          ) : (
+                            agentName(row.agentId)
+                          )}
+                        </td>
+                        <td>
+                          {canEditHistory && editingQaId === row.id && qaDraft ? (
+                            <Input
+                              type="date"
+                              value={qaDraft.dateKey}
+                              onChange={(e) => setQaDraft((prev) => (prev ? { ...prev, dateKey: e.target.value } : prev))}
+                            />
+                          ) : (
+                            formatDateKey(row.dateKey)
+                          )}
+                        </td>
+                        <td>
+                          {canEditHistory && editingQaId === row.id && qaDraft ? (
+                            <Input
+                              value={qaDraft.clientName}
+                              onChange={(e) => setQaDraft((prev) => (prev ? { ...prev, clientName: e.target.value } : prev))}
+                            />
+                          ) : (
+                            row.clientName
+                          )}
+                        </td>
+                        <td>
+                          {canEditHistory && editingQaId === row.id && qaDraft ? (
+                            <Select
+                              value={qaDraft.decision}
+                              onChange={(e) =>
+                                setQaDraft((prev) => (prev ? { ...prev, decision: e.target.value as QaRecord['decision'] } : prev))
+                              }
+                            >
+                              <option value="Good Sale">Good Sale</option>
+                              <option value="Check Recording">Check Recording</option>
+                            </Select>
+                          ) : (
+                            row.decision
+                          )}
+                        </td>
+                        <td>
+                          {canEditHistory && editingQaId === row.id && qaDraft ? (
+                            <Select
+                              value={qaDraft.status}
+                              onChange={(e) =>
+                                setQaDraft((prev) => (prev ? { ...prev, status: e.target.value as QaRecord['status'] } : prev))
+                              }
+                            >
+                              <option value="Good">Good</option>
+                              <option value="Check Recording">Check Recording</option>
+                              <option value="Resolved">Resolved</option>
+                            </Select>
+                          ) : (
+                            row.status
+                          )}
+                        </td>
+                        <td>
+                          {canEditHistory && editingQaId === row.id && qaDraft ? (
+                            <Input
+                              value={qaDraft.notes}
+                              onChange={(e) => setQaDraft((prev) => (prev ? { ...prev, notes: e.target.value } : prev))}
+                            />
+                          ) : (
+                            row.notes || 'N/A'
+                          )}
+                        </td>
+                        {canEditHistory ? (
+                          <td>
+                            {editingQaId === row.id ? (
+                              <div className="flex gap-2">
+                                <Button variant="default" onClick={saveQaEdit}>
+                                  Save
+                                </Button>
+                                <Button variant="secondary" onClick={cancelQaEdit}>
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                variant="secondary"
+                                onClick={() => startQaEdit(row)}
+                                disabled={!!editingAuditId || (editingQaId !== null && editingQaId !== row.id)}
+                              >
+                                Edit
+                              </Button>
+                            )}
+                          </td>
+                        ) : null}
                       </tr>
                     ))}
                   </tbody>
@@ -531,29 +940,136 @@ export function VaultPage({
                       <th>Status</th>
                       <th>Timestamp 1</th>
                       <th>Timestamp 2</th>
+                      {canEditHistory ? <th>Actions</th> : null}
                     </tr>
                   </thead>
                   <tbody>
                     {auditPagedRows.length === 0 && (
                       <tr>
-                        <td colSpan={7}>No audit rows match this search.</td>
+                        <td colSpan={canEditHistory ? 8 : 7}>No audit rows match this search.</td>
                       </tr>
                     )}
                     {auditPagedRows.map((row) => (
                       <tr key={row.id}>
-                        <td>{agentName(row.agentId)}</td>
-                        <td>{formatTimestamp(row.discoveryTs)}</td>
-                        <td>{row.carrier}</td>
-                        <td>{row.clientName}</td>
                         <td>
-                          {row.currentStatus === 'no_action_needed' ? (
-                            <Badge variant="success">No Action Needed</Badge>
+                          {canEditHistory && editingAuditId === row.id && auditDraft ? (
+                            <Select
+                              value={auditDraft.agentId}
+                              onChange={(e) => setAuditDraft((prev) => (prev ? { ...prev, agentId: e.target.value } : prev))}
+                            >
+                              {agents.map((agent) => (
+                                <option key={agent.id} value={agent.id}>
+                                  {agent.name}
+                                </option>
+                              ))}
+                            </Select>
                           ) : (
-                            <Badge variant="warning">Needs Review</Badge>
+                            agentName(row.agentId)
                           )}
                         </td>
-                        <td>{formatTimestamp(row.discoveryTs)}</td>
-                        <td>{formatTimestamp(row.resolutionTs)}</td>
+                        <td>
+                          {canEditHistory && editingAuditId === row.id && auditDraft ? (
+                            <Input
+                              type="datetime-local"
+                              value={toLocalDateTimeInput(auditDraft.discoveryTs)}
+                              onChange={(e) => {
+                                const nextIso = fromLocalDateTimeInput(e.target.value)
+                                if (!nextIso) return
+                                setAuditDraft((prev) => (prev ? { ...prev, discoveryTs: nextIso } : prev))
+                              }}
+                            />
+                          ) : (
+                            formatTimestamp(row.discoveryTs)
+                          )}
+                        </td>
+                        <td>
+                          {canEditHistory && editingAuditId === row.id && auditDraft ? (
+                            <Input
+                              value={auditDraft.carrier}
+                              onChange={(e) => setAuditDraft((prev) => (prev ? { ...prev, carrier: e.target.value } : prev))}
+                            />
+                          ) : (
+                            row.carrier
+                          )}
+                        </td>
+                        <td>
+                          {canEditHistory && editingAuditId === row.id && auditDraft ? (
+                            <Input
+                              value={auditDraft.clientName}
+                              onChange={(e) => setAuditDraft((prev) => (prev ? { ...prev, clientName: e.target.value } : prev))}
+                            />
+                          ) : (
+                            row.clientName
+                          )}
+                        </td>
+                        <td>
+                          {canEditHistory && editingAuditId === row.id && auditDraft ? (
+                            <Input
+                              value={auditDraft.currentStatus}
+                              onChange={(e) => setAuditDraft((prev) => (prev ? { ...prev, currentStatus: e.target.value } : prev))}
+                            />
+                          ) : (
+                            <>
+                              {row.currentStatus === 'no_action_needed' ? (
+                                <Badge variant="success">No Action Needed</Badge>
+                              ) : (
+                                <Badge variant="warning">Needs Review</Badge>
+                              )}
+                            </>
+                          )}
+                        </td>
+                        <td>
+                          {canEditHistory && editingAuditId === row.id && auditDraft ? (
+                            <Input
+                              type="datetime-local"
+                              value={toLocalDateTimeInput(auditDraft.discoveryTs)}
+                              onChange={(e) => {
+                                const nextIso = fromLocalDateTimeInput(e.target.value)
+                                if (!nextIso) return
+                                setAuditDraft((prev) => (prev ? { ...prev, discoveryTs: nextIso } : prev))
+                              }}
+                            />
+                          ) : (
+                            formatTimestamp(row.discoveryTs)
+                          )}
+                        </td>
+                        <td>
+                          {canEditHistory && editingAuditId === row.id && auditDraft ? (
+                            <Input
+                              type="datetime-local"
+                              value={toLocalDateTimeInput(auditDraft.resolutionTs)}
+                              onChange={(e) =>
+                                setAuditDraft((prev) =>
+                                  prev ? { ...prev, resolutionTs: fromLocalDateTimeInput(e.target.value) } : prev,
+                                )
+                              }
+                            />
+                          ) : (
+                            formatTimestamp(row.resolutionTs)
+                          )}
+                        </td>
+                        {canEditHistory ? (
+                          <td>
+                            {editingAuditId === row.id ? (
+                              <div className="flex gap-2">
+                                <Button variant="default" onClick={saveAuditEdit}>
+                                  Save
+                                </Button>
+                                <Button variant="secondary" onClick={cancelAuditEdit}>
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                variant="secondary"
+                                onClick={() => startAuditEdit(row)}
+                                disabled={!!editingQaId || (editingAuditId !== null && editingAuditId !== row.id)}
+                              >
+                                Edit
+                              </Button>
+                            )}
+                          </td>
+                        ) : null}
                       </tr>
                     ))}
                   </tbody>

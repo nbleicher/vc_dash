@@ -311,6 +311,51 @@ function App() {
       prev.map((q) => (q.id === id ? { ...q, status: 'Resolved', resolvedAt: new Date().toISOString() } : q)),
     )
 
+  const handleQaUpdate = (
+    id: string,
+    patch: Pick<QaRecord, 'agentId' | 'dateKey' | 'clientName' | 'decision' | 'status' | 'notes'>,
+  ): void => {
+    setQaRecords((prev) =>
+      prev.map((record) =>
+        record.id === id
+          ? {
+              ...record,
+              agentId: patch.agentId,
+              dateKey: patch.dateKey,
+              clientName: patch.clientName,
+              decision: patch.decision,
+              status: patch.status,
+              notes: patch.notes,
+            }
+          : record,
+      ),
+    )
+  }
+
+  const handleAuditUpdate = (
+    id: string,
+    patch: Pick<
+      (typeof auditRecords)[number],
+      'agentId' | 'discoveryTs' | 'carrier' | 'clientName' | 'currentStatus' | 'resolutionTs'
+    >,
+  ): void => {
+    setAuditRecords((prev) =>
+      prev.map((record) =>
+        record.id === id
+          ? {
+              ...record,
+              agentId: patch.agentId,
+              discoveryTs: patch.discoveryTs,
+              carrier: patch.carrier,
+              clientName: patch.clientName,
+              currentStatus: patch.currentStatus,
+              resolutionTs: patch.resolutionTs,
+            }
+          : record,
+      ),
+    )
+  }
+
   const setAttendancePercent = (agentId: string, dateKey: string, percent: AttendancePercent): void => {
     setAttendance((prev) => {
       const existing = prev.find((a) => a.agentId === agentId && a.dateKey === dateKey)
@@ -768,6 +813,8 @@ function App() {
             weeklyTargetHistory={weeklyTargetHistory}
             onAddMeeting={addMeeting}
             onPdfUpload={handlePdfUpload}
+            onUpdateQaRecord={handleQaUpdate}
+            onUpdateAuditRecord={handleAuditUpdate}
           />
         )}
 
