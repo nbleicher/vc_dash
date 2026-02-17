@@ -186,9 +186,22 @@ export function useAppData(store: DataStore) {
   const metricsScopeData = useMemo(() => {
     const inScope = (agentId: string): boolean =>
       metricsScope === 'house' || (metricsScope === 'agent' && agentId === effectiveMetricsAgentId)
-    const dailyRows = perfHistory.filter((p) => p.dateKey === todayKey && inScope(p.agentId))
-    const weeklyRows = perfHistory.filter((p) => weekDates.includes(p.dateKey) && inScope(p.agentId))
-    const monthlyRows = perfHistory.filter((p) => p.dateKey.startsWith(todayKey.slice(0, 7)) && inScope(p.agentId))
+    const hasLiveScopeRow =
+      metricsScope === 'house'
+        ? (agentId: string) => liveByAgent.has(agentId)
+        : (agentId: string) => agentId === effectiveMetricsAgentId && liveByAgent.has(effectiveMetricsAgentId)
+    const dailyRows = perfHistory.filter(
+      (p) => p.dateKey === todayKey && inScope(p.agentId) && !(p.dateKey === todayKey && hasLiveScopeRow(p.agentId)),
+    )
+    const weeklyRows = perfHistory.filter(
+      (p) => weekDates.includes(p.dateKey) && inScope(p.agentId) && !(p.dateKey === todayKey && hasLiveScopeRow(p.agentId)),
+    )
+    const monthlyRows = perfHistory.filter(
+      (p) =>
+        p.dateKey.startsWith(todayKey.slice(0, 7)) &&
+        inScope(p.agentId) &&
+        !(p.dateKey === todayKey && hasLiveScopeRow(p.agentId)),
+    )
     if (metricsScope === 'house') {
       for (const snap of liveByAgent.values()) {
         const liveRow: PerfHistory = {
@@ -245,6 +258,7 @@ export function useAppData(store: DataStore) {
       periodDates.add(todayKey)
     }
     for (const row of perfHistory.filter((x) => periodDates.has(x.dateKey))) {
+      if (row.dateKey === todayKey && liveByAgent.has(row.agentId)) continue
       const existing = byAgent.get(row.agentId) ?? { calls: 0, sales: 0, marketing: 0 }
       existing.calls += row.billableCalls
       existing.sales += row.sales
@@ -338,14 +352,16 @@ export function useAppData(store: DataStore) {
         .sort((a, b) => (sortNewest ? b.weekKey.localeCompare(a.weekKey) : a.weekKey.localeCompare(b.weekKey)))
         .map((target) => {
           const dates = monFriDatesForWeek(target.weekKey)
+          const isCurrentWeek = target.weekKey === currentWeekKey
           let actualSales = 0
           let actualMarketing = 0
           for (const row of perfHistory) {
             if (!dates.includes(row.dateKey)) continue
+            if (isCurrentWeek && row.dateKey === todayKey && liveByAgent.has(row.agentId)) continue
             actualSales += row.sales
             actualMarketing += row.marketing
           }
-          if (target.weekKey === currentWeekKey) {
+          if (isCurrentWeek) {
             for (const snap of liveByAgent.values()) {
               actualSales += snap.sales
               actualMarketing += snap.billableCalls * 15
