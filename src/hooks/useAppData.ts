@@ -103,7 +103,8 @@ export function useAppData(store: DataStore) {
       const items = todaysSnapshots
         .filter((s) => s.agentId === agent.id)
         .sort((a, b) => SLOT_CONFIG.findIndex((x) => x.key === b.slot) - SLOT_CONFIG.findIndex((x) => x.key === a.slot))
-      if (items.length > 0) map.set(agent.id, items[0])
+      const chosen = items.length > 0 ? (items.find((s) => s.slot === '17:00') ?? items[0]) : null
+      if (chosen) map.set(agent.id, chosen)
     }
     return map
   }, [activeAgents, todaysSnapshots])
