@@ -72,6 +72,13 @@ export function DashboardPage({
   onSubmitIntraSlot,
   isIntraSlotEditable,
 }: Props) {
+  const cpaCardToneClass =
+    weekTrend.cpaDelta === null
+      ? 'border-slate-200 bg-slate-50'
+      : weekTrend.cpaDelta <= 0
+        ? 'border-green-200 bg-green-50/70'
+        : 'border-red-200 bg-red-50/70'
+
   const [entryForm, setEntryForm] = useState<{ agentId: string; slot: string; calls: number; sales: number }>({
     agentId: '',
     slot: SLOT_CONFIG[0].key,
@@ -168,7 +175,7 @@ export function DashboardPage({
                   : 'Tracking toward weekly goal'}
               </p>
             </div>
-            <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className={`space-y-2 rounded-xl border p-4 ${cpaCardToneClass}`}>
               <p>CPA Goal</p>
               <strong className="text-lg text-slate-900">
                 Current: {weekTrend.currentCpa === null ? 'N/A' : `$${formatNum(weekTrend.currentCpa)}`} | Target: $

@@ -54,8 +54,8 @@ export function EodPage({
             <thead>
               <tr>
                 <th>Day</th>
-                <th className="text-right">Total Deals (House)</th>
-                <th className="text-right">Total Marketing (House)</th>
+                <th className="text-right">Total Deals</th>
+                <th className="text-right">Total Marketing</th>
                 <th className="text-right">CPA</th>
               </tr>
             </thead>
@@ -70,7 +70,7 @@ export function EodPage({
               ))}
               <tr>
                 <td>
-                  <strong>EOW Summary (Updated Fri @ 6:15 PM)</strong>
+                  <strong>EOW Summary</strong>
                 </td>
                 <td className="text-right tabular-nums">
                   <strong>{eodWeeklySummary.deals}</strong>
