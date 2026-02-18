@@ -256,6 +256,7 @@ function App() {
         mgmtNotified: false,
         outreachMade: false,
         resolutionTs: null,
+        notes: '',
       },
     ])
     setAuditForm({ agentId: '', carrier: CARRIERS[0], clientName: '', reason: '', currentStatus: 'pending_cms' })
@@ -290,6 +291,7 @@ function App() {
         mgmtNotified: true,
         outreachMade: true,
         resolutionTs: nowIso,
+        notes: '',
       },
     ])
     setUiError(null)
@@ -339,7 +341,7 @@ function App() {
     patch: Partial<
       Pick<
         (typeof auditRecords)[number],
-        'agentId' | 'discoveryTs' | 'carrier' | 'clientName' | 'currentStatus' | 'resolutionTs'
+        'agentId' | 'discoveryTs' | 'carrier' | 'clientName' | 'currentStatus' | 'resolutionTs' | 'notes'
       >
     >,
   ): void => {
@@ -607,7 +609,7 @@ function App() {
     if (exportFlags.audit) {
       lines.push(
         'MASTER_AUDIT',
-        'id,agentId,carrier,clientName,reason,currentStatus,discoveryTs,mgmtNotified,outreachMade,resolutionTs',
+        'id,agentId,carrier,clientName,reason,currentStatus,discoveryTs,mgmtNotified,outreachMade,resolutionTs,notes',
       )
       for (const a of auditRecords)
         lines.push(
@@ -622,6 +624,7 @@ function App() {
             a.mgmtNotified,
             a.outreachMade,
             a.resolutionTs,
+            a.notes ?? '',
           ]
             .map(csvEscape)
             .join(','),

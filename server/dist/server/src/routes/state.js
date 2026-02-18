@@ -66,7 +66,7 @@ export async function stateRoutes(app) {
             rows.push('');
         }
         if (flags.audit) {
-            rows.push('MASTER_AUDIT', 'id,agentId,carrier,clientName,reason,currentStatus,discoveryTs,mgmtNotified,outreachMade,resolutionTs');
+            rows.push('MASTER_AUDIT', 'id,agentId,carrier,clientName,reason,currentStatus,discoveryTs,mgmtNotified,outreachMade,resolutionTs,notes');
             for (const x of state.auditRecords)
                 rows.push([
                     x.id,
@@ -79,6 +79,7 @@ export async function stateRoutes(app) {
                     x.mgmtNotified,
                     x.outreachMade,
                     x.resolutionTs,
+                    x.notes ?? '',
                 ].join(','));
             rows.push('');
         }

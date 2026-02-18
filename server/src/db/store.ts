@@ -95,9 +95,14 @@ export class SqliteStore implements StoreAdapter {
           for (const row of rows as AuditRecord[]) {
             this.db
               .prepare(
-                'INSERT INTO audit_records (id,agentId,carrier,clientName,reason,currentStatus,discoveryTs,mgmtNotified,outreachMade,resolutionTs) VALUES (@id,@agentId,@carrier,@clientName,@reason,@currentStatus,@discoveryTs,@mgmtNotified,@outreachMade,@resolutionTs)',
+                'INSERT INTO audit_records (id,agentId,carrier,clientName,reason,currentStatus,discoveryTs,mgmtNotified,outreachMade,resolutionTs,notes) VALUES (@id,@agentId,@carrier,@clientName,@reason,@currentStatus,@discoveryTs,@mgmtNotified,@outreachMade,@resolutionTs,@notes)',
               )
-              .run({ ...row, mgmtNotified: row.mgmtNotified ? 1 : 0, outreachMade: row.outreachMade ? 1 : 0 })
+              .run({
+                ...row,
+                mgmtNotified: row.mgmtNotified ? 1 : 0,
+                outreachMade: row.outreachMade ? 1 : 0,
+                notes: row.notes ?? '',
+              })
           }
           break
         case 'attendance':
@@ -208,7 +213,7 @@ export class SqliteStore implements StoreAdapter {
   private getAuditRecords(): AuditRecord[] {
     const rows = this.db
       .prepare(
-        'SELECT id,agentId,carrier,clientName,reason,currentStatus,discoveryTs,mgmtNotified,outreachMade,resolutionTs FROM audit_records',
+        'SELECT id,agentId,carrier,clientName,reason,currentStatus,discoveryTs,mgmtNotified,outreachMade,resolutionTs,notes FROM audit_records',
       )
       .all() as Array<{
         id: string
@@ -221,9 +226,15 @@ export class SqliteStore implements StoreAdapter {
         mgmtNotified: number
         outreachMade: number
         resolutionTs: string | null
+        notes?: string
       }>
 
-    return rows.map((x) => ({ ...x, mgmtNotified: Boolean(x.mgmtNotified), outreachMade: Boolean(x.outreachMade) }))
+    return rows.map((x) => ({
+      ...x,
+      mgmtNotified: Boolean(x.mgmtNotified),
+      outreachMade: Boolean(x.outreachMade),
+      notes: x.notes ?? '',
+    }))
   }
 
   private getAttendance(): AttendanceRecord[] {

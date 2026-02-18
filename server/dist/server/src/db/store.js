@@ -66,8 +66,13 @@ export class SqliteStore {
                     this.db.prepare('DELETE FROM audit_records').run();
                     for (const row of rows) {
                         this.db
-                            .prepare('INSERT INTO audit_records (id,agentId,carrier,clientName,reason,currentStatus,discoveryTs,mgmtNotified,outreachMade,resolutionTs) VALUES (@id,@agentId,@carrier,@clientName,@reason,@currentStatus,@discoveryTs,@mgmtNotified,@outreachMade,@resolutionTs)')
-                            .run({ ...row, mgmtNotified: row.mgmtNotified ? 1 : 0, outreachMade: row.outreachMade ? 1 : 0 });
+                            .prepare('INSERT INTO audit_records (id,agentId,carrier,clientName,reason,currentStatus,discoveryTs,mgmtNotified,outreachMade,resolutionTs,notes) VALUES (@id,@agentId,@carrier,@clientName,@reason,@currentStatus,@discoveryTs,@mgmtNotified,@outreachMade,@resolutionTs,@notes)')
+                            .run({
+                            ...row,
+                            mgmtNotified: row.mgmtNotified ? 1 : 0,
+                            outreachMade: row.outreachMade ? 1 : 0,
+                            notes: row.notes ?? '',
+                        });
                     }
                     break;
                 case 'attendance':
@@ -152,9 +157,14 @@ export class SqliteStore {
     }
     getAuditRecords() {
         const rows = this.db
-            .prepare('SELECT id,agentId,carrier,clientName,reason,currentStatus,discoveryTs,mgmtNotified,outreachMade,resolutionTs FROM audit_records')
+            .prepare('SELECT id,agentId,carrier,clientName,reason,currentStatus,discoveryTs,mgmtNotified,outreachMade,resolutionTs,notes FROM audit_records')
             .all();
-        return rows.map((x) => ({ ...x, mgmtNotified: Boolean(x.mgmtNotified), outreachMade: Boolean(x.outreachMade) }));
+        return rows.map((x) => ({
+            ...x,
+            mgmtNotified: Boolean(x.mgmtNotified),
+            outreachMade: Boolean(x.outreachMade),
+            notes: x.notes ?? '',
+        }));
     }
     getAttendance() {
         return this.db

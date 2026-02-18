@@ -57,7 +57,7 @@ type Props = {
   onAuditNoActionSubmit: () => void
   onUpdateAuditRecord: (
     id: string,
-    patch: Pick<AuditRecord, 'currentStatus' | 'resolutionTs'>,
+    patch: Pick<AuditRecord, 'currentStatus' | 'resolutionTs' | 'notes'>,
   ) => void
   onDeleteAuditRecord: (id: string) => void
 }
@@ -99,7 +99,11 @@ export function TasksPage({
   const [noteDraft, setNoteDraft] = useState('')
   const [auditHistoryExpanded, setAuditHistoryExpanded] = useState(false)
   const [editingAuditId, setEditingAuditId] = useState<string | null>(null)
-  const [auditDraft, setAuditDraft] = useState<{ currentStatus: string; resolutionTs: string | null } | null>(null)
+  const [auditDraft, setAuditDraft] = useState<{
+    currentStatus: string
+    resolutionTs: string | null
+    notes: string
+  } | null>(null)
   const cancelAuditEdit = (): void => {
     setEditingAuditId(null)
     setAuditDraft(null)
@@ -109,6 +113,7 @@ export function TasksPage({
     onUpdateAuditRecord(editingAuditId, {
       currentStatus: auditDraft.currentStatus,
       resolutionTs: auditDraft.resolutionTs,
+      notes: auditDraft.notes,
     })
     cancelAuditEdit()
   }
@@ -559,20 +564,27 @@ export function TasksPage({
                         <th>Status</th>
                         <th>Timestamp 1</th>
                         <th>Timestamp 2</th>
+                        <th>Notes</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {displayAuditRows.length === 0 && (
                         <tr>
-                          <td colSpan={8}>N/A</td>
+                          <td colSpan={9}>N/A</td>
                         </tr>
                       )}
-                      {displayAuditRows.map((row) => (
-                        <tr
-                          key={row.id}
-                          className={row.currentStatus === 'accepted' ? '!bg-green-400/30' : undefined}
-                        >
+                      {displayAuditRows.map((row) => {
+                        const isRejectedOrWithdrawn =
+                          row.currentStatus === 'rejected' || row.currentStatus === 'withdrawn'
+                        const rowClass =
+                          row.currentStatus === 'accepted'
+                            ? '!bg-green-400/30'
+                            : isRejectedOrWithdrawn
+                              ? '!bg-red-400/30'
+                              : undefined
+                        return (
+                        <tr key={row.id} className={rowClass}>
                           <td>{agentName(row.agentId)}</td>
                           <td>{formatTimestamp(row.discoveryTs)}</td>
                           <td>{row.carrier}</td>
@@ -590,12 +602,17 @@ export function TasksPage({
                                   setAuditDraft({
                                     currentStatus: e.target.value,
                                     resolutionTs: row.resolutionTs,
+                                    notes: row.notes ?? '',
                                   })
                                 } else {
                                   setAuditDraft((prev) =>
                                     prev
                                       ? { ...prev, currentStatus: e.target.value }
-                                      : { currentStatus: e.target.value, resolutionTs: row.resolutionTs },
+                                      : {
+                                          currentStatus: e.target.value,
+                                          resolutionTs: row.resolutionTs,
+                                          notes: row.notes ?? '',
+                                        },
                                   )
                                 }
                               }}
@@ -618,13 +635,54 @@ export function TasksPage({
                                 const nextIso = fromLocalDateTimeInput(e.target.value)
                                 if (editingAuditId !== row.id) {
                                   setEditingAuditId(row.id)
-                                  setAuditDraft({ currentStatus: row.currentStatus, resolutionTs: nextIso })
+                                  setAuditDraft({
+                                    currentStatus: row.currentStatus,
+                                    resolutionTs: nextIso,
+                                    notes: row.notes ?? '',
+                                  })
                                 } else {
                                   setAuditDraft((prev) =>
-                                    prev ? { ...prev, resolutionTs: nextIso } : { currentStatus: row.currentStatus, resolutionTs: nextIso },
+                                    prev
+                                      ? { ...prev, resolutionTs: nextIso }
+                                      : {
+                                          currentStatus: row.currentStatus,
+                                          resolutionTs: nextIso,
+                                          notes: row.notes ?? '',
+                                        },
                                   )
                                 }
                               }}
+                            />
+                          </td>
+                          <td>
+                            <Input
+                              className="min-w-[140px]"
+                              value={
+                                editingAuditId === row.id && auditDraft
+                                  ? auditDraft.notes
+                                  : (row.notes ?? '')
+                              }
+                              onChange={(e) => {
+                                if (editingAuditId !== row.id) {
+                                  setEditingAuditId(row.id)
+                                  setAuditDraft({
+                                    currentStatus: row.currentStatus,
+                                    resolutionTs: row.resolutionTs,
+                                    notes: e.target.value,
+                                  })
+                                } else {
+                                  setAuditDraft((prev) =>
+                                    prev
+                                      ? { ...prev, notes: e.target.value }
+                                      : {
+                                          currentStatus: row.currentStatus,
+                                          resolutionTs: row.resolutionTs,
+                                          notes: e.target.value,
+                                        },
+                                  )
+                                }
+                              }}
+                              placeholder="Notes"
                             />
                           </td>
                           <td>
@@ -648,7 +706,7 @@ export function TasksPage({
                             </div>
                           </td>
                         </tr>
-                      ))}
+                      )})}
                     </tbody>
                   </DataTable>
                 </TableWrap>

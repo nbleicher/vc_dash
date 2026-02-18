@@ -62,6 +62,7 @@ export type AuditRecord = {
   mgmtNotified: boolean
   outreachMade: boolean
   resolutionTs: string | null
+  notes: string
 }
 
 export type AttendanceRecord = {

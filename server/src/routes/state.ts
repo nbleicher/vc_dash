@@ -73,7 +73,7 @@ export async function stateRoutes(app: FastifyInstance): Promise<void> {
       rows.push('')
     }
     if (flags.audit) {
-      rows.push('MASTER_AUDIT', 'id,agentId,carrier,clientName,reason,currentStatus,discoveryTs,mgmtNotified,outreachMade,resolutionTs')
+      rows.push('MASTER_AUDIT', 'id,agentId,carrier,clientName,reason,currentStatus,discoveryTs,mgmtNotified,outreachMade,resolutionTs,notes')
       for (const x of state.auditRecords)
         rows.push(
           [
@@ -87,6 +87,7 @@ export async function stateRoutes(app: FastifyInstance): Promise<void> {
             x.mgmtNotified,
             x.outreachMade,
             x.resolutionTs,
+            x.notes ?? '',
           ].join(','),
         )
       rows.push('')

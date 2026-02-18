@@ -63,7 +63,7 @@ type Props = {
   ) => void
   onUpdateAuditRecord: (
     recordId: string,
-    patch: Pick<AuditRecord, 'agentId' | 'discoveryTs' | 'carrier' | 'clientName' | 'currentStatus' | 'resolutionTs'>,
+    patch: Pick<AuditRecord, 'agentId' | 'discoveryTs' | 'carrier' | 'clientName' | 'currentStatus' | 'resolutionTs' | 'notes'>,
   ) => void
   onDeleteAuditRecord: (recordId: string) => void
   onUpdateSnapshot: (
@@ -119,7 +119,7 @@ export function VaultPage({
     null,
   )
   const [auditDraft, setAuditDraft] = useState<
-    Pick<AuditRecord, 'agentId' | 'discoveryTs' | 'carrier' | 'clientName' | 'currentStatus' | 'resolutionTs'> | null
+    Pick<AuditRecord, 'agentId' | 'discoveryTs' | 'carrier' | 'clientName' | 'currentStatus' | 'resolutionTs' | 'notes'> | null
   >(null)
   const [snapshotDraft, setSnapshotDraft] = useState<Pick<DataStore['snapshots'][number], 'billableCalls' | 'sales'> | null>(null)
   const [meetingDraft, setMeetingDraft] = useState<
@@ -494,20 +494,27 @@ export function VaultPage({
               <th>Status</th>
               <th>Timestamp 1</th>
               <th>Timestamp 2</th>
+              <th>Notes</th>
               {allowEdit ? <th>Actions</th> : null}
             </tr>
           </thead>
           <tbody>
             {tableRows.length === 0 && (
               <tr>
-                <td colSpan={allowEdit ? 8 : 7}>N/A</td>
+                <td colSpan={allowEdit ? 9 : 8}>N/A</td>
               </tr>
             )}
-            {tableRows.map((row) => (
-              <tr
-                key={row.id}
-                className={row.currentStatus === 'accepted' ? '!bg-green-400/30' : undefined}
-              >
+            {tableRows.map((row) => {
+              const isRejectedOrWithdrawn =
+                row.currentStatus === 'rejected' || row.currentStatus === 'withdrawn'
+              const rowClass =
+                row.currentStatus === 'accepted'
+                  ? '!bg-green-400/30'
+                  : isRejectedOrWithdrawn
+                    ? '!bg-red-400/30'
+                    : undefined
+              return (
+              <tr key={row.id} className={rowClass}>
                 <td>{agentName(row.agentId)}</td>
                 <td>{formatTimestamp(row.discoveryTs)}</td>
                 <td>{row.carrier}</td>
@@ -523,10 +530,16 @@ export function VaultPage({
                       onChange={(e) => {
                         if (editingAuditId !== row.id) {
                           setEditingAuditId(row.id)
-                          setAuditDraft({ ...row, currentStatus: e.target.value })
+                          setAuditDraft({
+                            ...row,
+                            currentStatus: e.target.value,
+                            notes: (row as AuditRecord).notes ?? '',
+                          })
                         } else {
                           setAuditDraft((prev) =>
-                            prev ? { ...prev, currentStatus: e.target.value } : { ...row, currentStatus: e.target.value },
+                            prev
+                              ? { ...prev, currentStatus: e.target.value }
+                              : { ...row, currentStatus: e.target.value, notes: (row as AuditRecord).notes ?? '' },
                           )
                         }
                         setEditError(null)
@@ -560,10 +573,16 @@ export function VaultPage({
                         const nextIso = fromLocalDateTimeInput(e.target.value)
                         if (editingAuditId !== row.id) {
                           setEditingAuditId(row.id)
-                          setAuditDraft({ ...row, resolutionTs: nextIso })
+                          setAuditDraft({
+                            ...row,
+                            resolutionTs: nextIso,
+                            notes: (row as AuditRecord).notes ?? '',
+                          })
                         } else {
                           setAuditDraft((prev) =>
-                            prev ? { ...prev, resolutionTs: nextIso } : { ...row, resolutionTs: nextIso },
+                            prev
+                              ? { ...prev, resolutionTs: nextIso }
+                              : { ...row, resolutionTs: nextIso, notes: (row as AuditRecord).notes ?? '' },
                           )
                         }
                         setEditError(null)
@@ -571,6 +590,30 @@ export function VaultPage({
                     />
                   ) : (
                     formatTimestamp(row.resolutionTs)
+                  )}
+                </td>
+                <td>
+                  {allowEdit ? (
+                    <Input
+                      className="min-w-[140px]"
+                      value={
+                        editingAuditId === row.id && auditDraft ? auditDraft.notes ?? '' : (row as AuditRecord).notes ?? ''
+                      }
+                      onChange={(e) => {
+                        if (editingAuditId !== row.id) {
+                          setEditingAuditId(row.id)
+                          setAuditDraft({ ...row, notes: e.target.value })
+                        } else {
+                          setAuditDraft((prev) =>
+                            prev ? { ...prev, notes: e.target.value } : { ...row, notes: e.target.value },
+                          )
+                        }
+                        setEditError(null)
+                      }}
+                      placeholder="Notes"
+                    />
+                  ) : (
+                    ((row as AuditRecord).notes ?? '') || '—'
                   )}
                 </td>
                 {allowEdit ? (
@@ -593,7 +636,7 @@ export function VaultPage({
                   </td>
                 ) : null}
               </tr>
-            ))}
+            )})}
           </tbody>
         </DataTable>
       </TableWrap>
@@ -1216,20 +1259,27 @@ export function VaultPage({
                       <th>Status</th>
                       <th>Timestamp 1</th>
                       <th>Timestamp 2</th>
+                      <th>Notes</th>
                       {canEditHistory ? <th>Actions</th> : null}
                     </tr>
                   </thead>
                   <tbody>
                     {auditPagedRows.length === 0 && (
                       <tr>
-                        <td colSpan={canEditHistory ? 8 : 7}>No audit rows match this search.</td>
+                        <td colSpan={canEditHistory ? 9 : 8}>No audit rows match this search.</td>
                       </tr>
                     )}
-                    {auditPagedRows.map((row) => (
-                      <tr
-                        key={row.id}
-                        className={row.currentStatus === 'accepted' ? '!bg-green-400/30' : undefined}
-                      >
+                    {auditPagedRows.map((row) => {
+                      const isRejectedOrWithdrawn =
+                        row.currentStatus === 'rejected' || row.currentStatus === 'withdrawn'
+                      const rowClass =
+                        row.currentStatus === 'accepted'
+                          ? '!bg-green-400/30'
+                          : isRejectedOrWithdrawn
+                            ? '!bg-red-400/30'
+                            : undefined
+                      return (
+                      <tr key={row.id} className={rowClass}>
                         <td>{agentName(row.agentId)}</td>
                         <td>{formatTimestamp(row.discoveryTs)}</td>
                         <td>{row.carrier}</td>
@@ -1245,10 +1295,16 @@ export function VaultPage({
                               onChange={(e) => {
                                 if (editingAuditId !== row.id) {
                                   setEditingAuditId(row.id)
-                                  setAuditDraft({ ...row, currentStatus: e.target.value })
+                                  setAuditDraft({
+                                    ...row,
+                                    currentStatus: e.target.value,
+                                    notes: (row as AuditRecord).notes ?? '',
+                                  })
                                 } else {
                                   setAuditDraft((prev) =>
-                                    prev ? { ...prev, currentStatus: e.target.value } : { ...row, currentStatus: e.target.value },
+                                    prev
+                                      ? { ...prev, currentStatus: e.target.value }
+                                      : { ...row, currentStatus: e.target.value, notes: (row as AuditRecord).notes ?? '' },
                                   )
                                 }
                                 setEditError(null)
@@ -1282,10 +1338,16 @@ export function VaultPage({
                                 const nextIso = fromLocalDateTimeInput(e.target.value)
                                 if (editingAuditId !== row.id) {
                                   setEditingAuditId(row.id)
-                                  setAuditDraft({ ...row, resolutionTs: nextIso })
+                                  setAuditDraft({
+                                    ...row,
+                                    resolutionTs: nextIso,
+                                    notes: (row as AuditRecord).notes ?? '',
+                                  })
                                 } else {
                                   setAuditDraft((prev) =>
-                                    prev ? { ...prev, resolutionTs: nextIso } : { ...row, resolutionTs: nextIso },
+                                    prev
+                                      ? { ...prev, resolutionTs: nextIso }
+                                      : { ...row, resolutionTs: nextIso, notes: (row as AuditRecord).notes ?? '' },
                                   )
                                 }
                                 setEditError(null)
@@ -1293,6 +1355,30 @@ export function VaultPage({
                             />
                           ) : (
                             formatTimestamp(row.resolutionTs)
+                          )}
+                        </td>
+                        <td>
+                          {canEditHistory ? (
+                            <Input
+                              className="min-w-[140px]"
+                              value={
+                                editingAuditId === row.id && auditDraft ? auditDraft.notes ?? '' : (row as AuditRecord).notes ?? ''
+                              }
+                              onChange={(e) => {
+                                if (editingAuditId !== row.id) {
+                                  setEditingAuditId(row.id)
+                                  setAuditDraft({ ...row, notes: e.target.value })
+                                } else {
+                                  setAuditDraft((prev) =>
+                                    prev ? { ...prev, notes: e.target.value } : { ...row, notes: e.target.value },
+                                  )
+                                }
+                                setEditError(null)
+                              }}
+                              placeholder="Notes"
+                            />
+                          ) : (
+                            ((row as AuditRecord).notes ?? '') || '—'
                           )}
                         </td>
                         {canEditHistory ? (
@@ -1315,7 +1401,7 @@ export function VaultPage({
                           </td>
                         ) : null}
                       </tr>
-                    ))}
+                    )})}
                   </tbody>
                 </DataTable>
               )}

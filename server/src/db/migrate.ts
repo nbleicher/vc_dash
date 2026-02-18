@@ -7,5 +7,10 @@ export function runMigrations(dbPath: string): void {
   mkdirSync(dirname(dbPath), { recursive: true })
   const db = new Database(dbPath)
   db.exec(SCHEMA_SQL)
+  try {
+    db.exec("ALTER TABLE audit_records ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
+  } catch {
+    // Column already exists (e.g. after schema bump)
+  }
   db.close()
 }

@@ -51,7 +51,8 @@ CREATE TABLE IF NOT EXISTS audit_records (
   discoveryTs TEXT NOT NULL,
   mgmtNotified INTEGER NOT NULL CHECK(mgmtNotified IN (0,1)),
   outreachMade INTEGER NOT NULL CHECK(outreachMade IN (0,1)),
-  resolutionTs TEXT
+  resolutionTs TEXT,
+  notes TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS attendance (
