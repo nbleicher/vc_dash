@@ -350,6 +350,11 @@ function App() {
     )
   }
 
+  const handleAuditDelete = (id: string): void => {
+    if (!window.confirm('Delete this audit record?')) return
+    setAuditRecords((prev) => prev.filter((r) => r.id !== id))
+  }
+
   const handleSnapshotUpdate = (
     id: string,
     patch: Pick<(typeof snapshots)[number], 'billableCalls' | 'sales'>,
@@ -780,6 +785,7 @@ function App() {
             onAuditSubmit={handleAuditSubmit}
             onAuditNoActionSubmit={handleAuditNoActionSubmit}
             onUpdateAuditRecord={handleAuditUpdate}
+            onDeleteAuditRecord={handleAuditDelete}
           />
         )}
 
@@ -841,6 +847,7 @@ function App() {
             onPdfUpload={handlePdfUpload}
             onUpdateQaRecord={handleQaUpdate}
             onUpdateAuditRecord={handleAuditUpdate}
+            onDeleteAuditRecord={handleAuditDelete}
             onUpdateSnapshot={handleSnapshotUpdate}
             onUpdateMeeting={handleMeetingUpdate}
           />

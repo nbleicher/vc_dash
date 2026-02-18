@@ -59,6 +59,7 @@ type Props = {
     id: string,
     patch: Pick<AuditRecord, 'currentStatus' | 'resolutionTs'>,
   ) => void
+  onDeleteAuditRecord: (id: string) => void
 }
 
 export function TasksPage({
@@ -91,6 +92,7 @@ export function TasksPage({
   onAuditSubmit,
   onAuditNoActionSubmit,
   onUpdateAuditRecord,
+  onDeleteAuditRecord,
 }: Props) {
   const dayBasePay = 120
   const [editingNoteKey, setEditingNoteKey] = useState<string | null>(null)
@@ -623,16 +625,24 @@ export function TasksPage({
                             />
                           </td>
                           <td>
-                            {editingAuditId === row.id ? (
-                              <div className="flex gap-2">
-                                <Button variant="default" onClick={saveAuditEdit}>
-                                  Save
-                                </Button>
-                                <Button variant="secondary" onClick={cancelAuditEdit}>
-                                  Cancel
-                                </Button>
-                              </div>
-                            ) : null}
+                            <div className="flex flex-wrap gap-2">
+                              {editingAuditId === row.id ? (
+                                <>
+                                  <Button variant="default" onClick={saveAuditEdit}>
+                                    Save
+                                  </Button>
+                                  <Button variant="secondary" onClick={cancelAuditEdit}>
+                                    Cancel
+                                  </Button>
+                                </>
+                              ) : null}
+                              <Button
+                                variant="danger"
+                                onClick={() => onDeleteAuditRecord(row.id)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}

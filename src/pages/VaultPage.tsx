@@ -65,6 +65,7 @@ type Props = {
     recordId: string,
     patch: Pick<AuditRecord, 'agentId' | 'discoveryTs' | 'carrier' | 'clientName' | 'currentStatus' | 'resolutionTs'>,
   ) => void
+  onDeleteAuditRecord: (recordId: string) => void
   onUpdateSnapshot: (
     rowId: string,
     patch: Pick<DataStore['snapshots'][number], 'billableCalls' | 'sales'>,
@@ -103,6 +104,7 @@ export function VaultPage({
   onPdfUpload,
   onUpdateQaRecord,
   onUpdateAuditRecord,
+  onDeleteAuditRecord,
   onUpdateSnapshot,
   onUpdateMeeting,
 }: Props) {
@@ -570,16 +572,21 @@ export function VaultPage({
                 </td>
                 {allowEdit ? (
                   <td>
-                    {editingAuditId === row.id ? (
-                      <div className="flex gap-2">
-                        <Button variant="default" onClick={saveAuditEdit}>
-                          Save
-                        </Button>
-                        <Button variant="secondary" onClick={cancelAuditEdit}>
-                          Cancel
-                        </Button>
-                      </div>
-                    ) : null}
+                    <div className="flex flex-wrap gap-2">
+                      {editingAuditId === row.id ? (
+                        <>
+                          <Button variant="default" onClick={saveAuditEdit}>
+                            Save
+                          </Button>
+                          <Button variant="secondary" onClick={cancelAuditEdit}>
+                            Cancel
+                          </Button>
+                        </>
+                      ) : null}
+                      <Button variant="danger" onClick={() => onDeleteAuditRecord(row.id)}>
+                        Delete
+                      </Button>
+                    </div>
                   </td>
                 ) : null}
               </tr>
@@ -1284,16 +1291,21 @@ export function VaultPage({
                         </td>
                         {canEditHistory ? (
                           <td>
-                            {editingAuditId === row.id ? (
-                              <div className="flex gap-2">
-                                <Button variant="default" onClick={saveAuditEdit}>
-                                  Save
-                                </Button>
-                                <Button variant="secondary" onClick={cancelAuditEdit}>
-                                  Cancel
-                                </Button>
-                              </div>
-                            ) : null}
+                            <div className="flex flex-wrap gap-2">
+                              {editingAuditId === row.id ? (
+                                <>
+                                  <Button variant="default" onClick={saveAuditEdit}>
+                                    Save
+                                  </Button>
+                                  <Button variant="secondary" onClick={cancelAuditEdit}>
+                                    Cancel
+                                  </Button>
+                                </>
+                              ) : null}
+                              <Button variant="danger" onClick={() => onDeleteAuditRecord(row.id)}>
+                                Delete
+                              </Button>
+                            </div>
                           </td>
                         ) : null}
                       </tr>
