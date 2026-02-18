@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { WeeklyTargetEditor } from '../components'
-import { Badge, Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Tabs, Textarea } from '../components'
+import { Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Tabs, Textarea } from '../components'
 import { CARRIERS, POLICY_STATUSES } from '../constants'
 import type { AttendanceRecord, AuditRecord } from '../types'
 import type { AttendancePercent } from '../types'

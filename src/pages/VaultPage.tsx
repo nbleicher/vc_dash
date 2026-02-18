@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { DataStore } from '../data'
 import { Badge, Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Textarea } from '../components'
 import { POLICY_STATUSES } from '../constants'
+
+const AUDIT_STATUS_OPTIONS = [...POLICY_STATUSES, 'no_action_needed']
 import type { AuditRecord, QaRecord, VaultHistoryView, VaultScope, VaultMeeting } from '../types'
 import { estDateKey, formatDateKey, formatNum, formatPctDelta, formatTimestamp } from '../utils'
 
@@ -237,19 +239,6 @@ export function VaultPage({
     }
     onUpdateQaRecord(editingQaId, { ...qaDraft, clientName, notes: qaDraft.notes.trim() })
     cancelQaEdit()
-  }
-
-  const startAuditEdit = (row: Props['vaultAuditHistory'][number]): void => {
-    setEditingAuditId(row.id)
-    setAuditDraft({
-      agentId: row.agentId,
-      discoveryTs: row.discoveryTs,
-      carrier: row.carrier,
-      clientName: row.clientName,
-      currentStatus: row.currentStatus,
-      resolutionTs: row.resolutionTs,
-    })
-    setEditError(null)
   }
 
   const cancelAuditEdit = (): void => {
@@ -538,7 +527,7 @@ export function VaultPage({
                         setEditError(null)
                       }}
                     >
-                      {POLICY_STATUSES.map((s) => (
+                      {AUDIT_STATUS_OPTIONS.map((s) => (
                         <option key={s} value={s}>
                           {s}
                         </option>
@@ -1252,7 +1241,7 @@ export function VaultPage({
                                 setEditError(null)
                               }}
                             >
-                              {POLICY_STATUSES.map((s) => (
+                              {AUDIT_STATUS_OPTIONS.map((s) => (
                                 <option key={s} value={s}>
                                   {s}
                                 </option>
