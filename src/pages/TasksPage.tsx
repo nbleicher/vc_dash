@@ -94,7 +94,7 @@ export function TasksPage({
   const agentAuditRows = useMemo(() => {
     if (!auditForm.agentId) return []
     return [...auditRecords]
-      .filter((r) => r.agentId === auditForm.agentId)
+      .filter((r) => r.agentId === auditForm.agentId && r.currentStatus !== 'no_action_needed')
       .sort((a, b) => (b.discoveryTs > a.discoveryTs ? 1 : -1))
   }, [auditRecords, auditForm.agentId])
   const displayAuditRows = auditHistoryExpanded ? agentAuditRows : agentAuditRows.slice(0, AUDIT_HISTORY_PREVIEW_ROWS)
