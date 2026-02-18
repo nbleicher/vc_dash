@@ -30,6 +30,14 @@ If Railway build fails with `EBUSY ... rmdir '/app/node_modules/.vite'`:
 - Ensure `nixpacks.toml` is present so Railway does not fall back to default `npm ci`.
 - If needed, set build command to `npm install --include=dev --no-audit --no-fund`.
 
+### Railway not auto-deploying / not seeing GitHub updates
+
+1. **Trigger a deploy now:** In the Railway dashboard, open your project → your service → **Deployments**. Click **Deploy** (or the **⋯** menu on the latest deployment → **Redeploy**). That uses the latest commit from the connected branch without waiting for a new push.
+2. **Confirm GitHub connection:** Project **Settings** → **Source**. Ensure the repo is `nbleicher/vc_dash` (or your fork) and the branch is `main`. If it says "Not connected" or the wrong repo, use **Connect Repo** and re-select the repo and branch.
+3. **Enable deploy on push:** In the same **Settings** → **Source** (or **Deploy**), ensure "Deploy on push" / "Auto-deploy" is enabled for the `main` branch.
+4. **Check GitHub App:** Railway uses a GitHub App for webhooks. In GitHub: **Settings** → **Applications** → **Installed GitHub Apps** → **Railway**. Ensure it’s installed for the org/user that owns the repo and has access to `vc_dash`. If you recently moved the repo or changed permissions, disconnect and reconnect the repo in Railway.
+5. **Manual redeploy after fixing:** After reconnecting or changing settings, use step 1 to **Deploy** once; future pushes should then trigger automatically.
+
 ## 3) Deploy frontend to Cloudflare Pages
 
 1. Create a Cloudflare Pages project from this repo.

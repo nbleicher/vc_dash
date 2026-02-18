@@ -2,6 +2,7 @@ import type { Config } from 'tailwindcss'
 
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
+  safelist: ['bg-green-50'],
   theme: {
     extend: {
       colors: {
