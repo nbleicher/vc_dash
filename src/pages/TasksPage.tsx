@@ -96,6 +96,20 @@ export function TasksPage({
   const [editingNoteKey, setEditingNoteKey] = useState<string | null>(null)
   const [noteDraft, setNoteDraft] = useState('')
   const [auditHistoryExpanded, setAuditHistoryExpanded] = useState(false)
+  const [editingAuditId, setEditingAuditId] = useState<string | null>(null)
+  const [auditDraft, setAuditDraft] = useState<{ currentStatus: string; resolutionTs: string | null } | null>(null)
+  const cancelAuditEdit = (): void => {
+    setEditingAuditId(null)
+    setAuditDraft(null)
+  }
+  const saveAuditEdit = (): void => {
+    if (!editingAuditId || !auditDraft) return
+    onUpdateAuditRecord(editingAuditId, {
+      currentStatus: auditDraft.currentStatus,
+      resolutionTs: auditDraft.resolutionTs,
+    })
+    cancelAuditEdit()
+  }
   const toLocalDateTimeInput = (iso: string | null): string => {
     if (!iso) return ''
     const date = new Date(iso)
@@ -543,12 +557,13 @@ export function TasksPage({
                         <th>Status</th>
                         <th>Timestamp 1</th>
                         <th>Timestamp 2</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {displayAuditRows.length === 0 && (
                         <tr>
-                          <td colSpan={7}>N/A</td>
+                          <td colSpan={8}>N/A</td>
                         </tr>
                       )}
                       {displayAuditRows.map((row) => (
@@ -559,10 +574,26 @@ export function TasksPage({
                           <td>{row.clientName}</td>
                           <td>
                             <Select
-                              value={row.currentStatus}
-                              onChange={(e) =>
-                                onUpdateAuditRecord(row.id, { currentStatus: e.target.value })
+                              value={
+                                editingAuditId === row.id && auditDraft
+                                  ? auditDraft.currentStatus
+                                  : row.currentStatus
                               }
+                              onChange={(e) => {
+                                if (editingAuditId !== row.id) {
+                                  setEditingAuditId(row.id)
+                                  setAuditDraft({
+                                    currentStatus: e.target.value,
+                                    resolutionTs: row.resolutionTs,
+                                  })
+                                } else {
+                                  setAuditDraft((prev) =>
+                                    prev
+                                      ? { ...prev, currentStatus: e.target.value }
+                                      : { currentStatus: e.target.value, resolutionTs: row.resolutionTs },
+                                  )
+                                }
+                              }}
                             >
                               {POLICY_STATUSES.map((s) => (
                                 <option key={s} value={s}>
@@ -575,13 +606,33 @@ export function TasksPage({
                           <td>
                             <Input
                               type="datetime-local"
-                              value={toLocalDateTimeInput(row.resolutionTs)}
-                              onChange={(e) =>
-                                onUpdateAuditRecord(row.id, {
-                                  resolutionTs: fromLocalDateTimeInput(e.target.value),
-                                })
-                              }
+                              value={toLocalDateTimeInput(
+                                editingAuditId === row.id && auditDraft ? auditDraft.resolutionTs : row.resolutionTs,
+                              )}
+                              onChange={(e) => {
+                                const nextIso = fromLocalDateTimeInput(e.target.value)
+                                if (editingAuditId !== row.id) {
+                                  setEditingAuditId(row.id)
+                                  setAuditDraft({ currentStatus: row.currentStatus, resolutionTs: nextIso })
+                                } else {
+                                  setAuditDraft((prev) =>
+                                    prev ? { ...prev, resolutionTs: nextIso } : { currentStatus: row.currentStatus, resolutionTs: nextIso },
+                                  )
+                                }
+                              }}
                             />
+                          </td>
+                          <td>
+                            {editingAuditId === row.id ? (
+                              <div className="flex gap-2">
+                                <Button variant="default" onClick={saveAuditEdit}>
+                                  Save
+                                </Button>
+                                <Button variant="secondary" onClick={cancelAuditEdit}>
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : null}
                           </td>
                         </tr>
                       ))}

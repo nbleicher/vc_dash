@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { DataStore } from '../data'
 import { Badge, Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Textarea } from '../components'
+import { POLICY_STATUSES } from '../constants'
 import type { AuditRecord, QaRecord, VaultHistoryView, VaultScope, VaultMeeting } from '../types'
 import { estDateKey, formatDateKey, formatNum, formatPctDelta, formatTimestamp } from '../utils'
 
@@ -513,63 +514,36 @@ export function VaultPage({
             )}
             {tableRows.map((row) => (
               <tr key={row.id}>
+                <td>{agentName(row.agentId)}</td>
+                <td>{formatTimestamp(row.discoveryTs)}</td>
+                <td>{row.carrier}</td>
+                <td>{row.clientName}</td>
                 <td>
-                  {allowEdit && editingAuditId === row.id && auditDraft ? (
+                  {allowEdit ? (
                     <Select
-                      value={auditDraft.agentId}
-                      onChange={(e) => setAuditDraft((prev) => (prev ? { ...prev, agentId: e.target.value } : prev))}
+                      value={
+                        editingAuditId === row.id && auditDraft
+                          ? auditDraft.currentStatus
+                          : row.currentStatus
+                      }
+                      onChange={(e) => {
+                        if (editingAuditId !== row.id) {
+                          setEditingAuditId(row.id)
+                          setAuditDraft({ ...row, currentStatus: e.target.value })
+                        } else {
+                          setAuditDraft((prev) =>
+                            prev ? { ...prev, currentStatus: e.target.value } : { ...row, currentStatus: e.target.value },
+                          )
+                        }
+                        setEditError(null)
+                      }}
                     >
-                      {agents.map((agent) => (
-                        <option key={agent.id} value={agent.id}>
-                          {agent.name}
+                      {POLICY_STATUSES.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
                         </option>
                       ))}
                     </Select>
-                  ) : (
-                    agentName(row.agentId)
-                  )}
-                </td>
-                <td>
-                  {allowEdit && editingAuditId === row.id && auditDraft ? (
-                    <Input
-                      type="datetime-local"
-                      value={toLocalDateTimeInput(auditDraft.discoveryTs)}
-                      onChange={(e) => {
-                        const nextIso = fromLocalDateTimeInput(e.target.value)
-                        if (!nextIso) return
-                        setAuditDraft((prev) => (prev ? { ...prev, discoveryTs: nextIso } : prev))
-                      }}
-                    />
-                  ) : (
-                    formatTimestamp(row.discoveryTs)
-                  )}
-                </td>
-                <td>
-                  {allowEdit && editingAuditId === row.id && auditDraft ? (
-                    <Input
-                      value={auditDraft.carrier}
-                      onChange={(e) => setAuditDraft((prev) => (prev ? { ...prev, carrier: e.target.value } : prev))}
-                    />
-                  ) : (
-                    row.carrier
-                  )}
-                </td>
-                <td>
-                  {allowEdit && editingAuditId === row.id && auditDraft ? (
-                    <Input
-                      value={auditDraft.clientName}
-                      onChange={(e) => setAuditDraft((prev) => (prev ? { ...prev, clientName: e.target.value } : prev))}
-                    />
-                  ) : (
-                    row.clientName
-                  )}
-                </td>
-                <td>
-                  {allowEdit && editingAuditId === row.id && auditDraft ? (
-                    <Input
-                      value={auditDraft.currentStatus}
-                      onChange={(e) => setAuditDraft((prev) => (prev ? { ...prev, currentStatus: e.target.value } : prev))}
-                    />
                   ) : (
                     <>
                       {row.currentStatus === 'no_action_needed' ? (
@@ -580,31 +554,26 @@ export function VaultPage({
                     </>
                   )}
                 </td>
+                <td>{formatTimestamp(row.discoveryTs)}</td>
                 <td>
-                  {allowEdit && editingAuditId === row.id && auditDraft ? (
+                  {allowEdit ? (
                     <Input
                       type="datetime-local"
-                      value={toLocalDateTimeInput(auditDraft.discoveryTs)}
+                      value={toLocalDateTimeInput(
+                        editingAuditId === row.id && auditDraft ? auditDraft.resolutionTs : row.resolutionTs,
+                      )}
                       onChange={(e) => {
                         const nextIso = fromLocalDateTimeInput(e.target.value)
-                        if (!nextIso) return
-                        setAuditDraft((prev) => (prev ? { ...prev, discoveryTs: nextIso } : prev))
+                        if (editingAuditId !== row.id) {
+                          setEditingAuditId(row.id)
+                          setAuditDraft({ ...row, resolutionTs: nextIso })
+                        } else {
+                          setAuditDraft((prev) =>
+                            prev ? { ...prev, resolutionTs: nextIso } : { ...row, resolutionTs: nextIso },
+                          )
+                        }
+                        setEditError(null)
                       }}
-                    />
-                  ) : (
-                    formatTimestamp(row.discoveryTs)
-                  )}
-                </td>
-                <td>
-                  {allowEdit && editingAuditId === row.id && auditDraft ? (
-                    <Input
-                      type="datetime-local"
-                      value={toLocalDateTimeInput(auditDraft.resolutionTs)}
-                      onChange={(e) =>
-                        setAuditDraft((prev) =>
-                          prev ? { ...prev, resolutionTs: fromLocalDateTimeInput(e.target.value) } : prev,
-                        )
-                      }
                     />
                   ) : (
                     formatTimestamp(row.resolutionTs)
@@ -621,15 +590,7 @@ export function VaultPage({
                           Cancel
                         </Button>
                       </div>
-                    ) : (
-                      <Button
-                        variant="secondary"
-                        onClick={() => startAuditEdit(row)}
-                        disabled={!!editingQaId || (editingAuditId !== null && editingAuditId !== row.id)}
-                      >
-                        Edit
-                      </Button>
-                    )}
+                    ) : null}
                   </td>
                 ) : null}
               </tr>
@@ -1267,63 +1228,36 @@ export function VaultPage({
                     )}
                     {auditPagedRows.map((row) => (
                       <tr key={row.id}>
+                        <td>{agentName(row.agentId)}</td>
+                        <td>{formatTimestamp(row.discoveryTs)}</td>
+                        <td>{row.carrier}</td>
+                        <td>{row.clientName}</td>
                         <td>
-                          {canEditHistory && editingAuditId === row.id && auditDraft ? (
+                          {canEditHistory ? (
                             <Select
-                              value={auditDraft.agentId}
-                              onChange={(e) => setAuditDraft((prev) => (prev ? { ...prev, agentId: e.target.value } : prev))}
+                              value={
+                                editingAuditId === row.id && auditDraft
+                                  ? auditDraft.currentStatus
+                                  : row.currentStatus
+                              }
+                              onChange={(e) => {
+                                if (editingAuditId !== row.id) {
+                                  setEditingAuditId(row.id)
+                                  setAuditDraft({ ...row, currentStatus: e.target.value })
+                                } else {
+                                  setAuditDraft((prev) =>
+                                    prev ? { ...prev, currentStatus: e.target.value } : { ...row, currentStatus: e.target.value },
+                                  )
+                                }
+                                setEditError(null)
+                              }}
                             >
-                              {agents.map((agent) => (
-                                <option key={agent.id} value={agent.id}>
-                                  {agent.name}
+                              {POLICY_STATUSES.map((s) => (
+                                <option key={s} value={s}>
+                                  {s}
                                 </option>
                               ))}
                             </Select>
-                          ) : (
-                            agentName(row.agentId)
-                          )}
-                        </td>
-                        <td>
-                          {canEditHistory && editingAuditId === row.id && auditDraft ? (
-                            <Input
-                              type="datetime-local"
-                              value={toLocalDateTimeInput(auditDraft.discoveryTs)}
-                              onChange={(e) => {
-                                const nextIso = fromLocalDateTimeInput(e.target.value)
-                                if (!nextIso) return
-                                setAuditDraft((prev) => (prev ? { ...prev, discoveryTs: nextIso } : prev))
-                              }}
-                            />
-                          ) : (
-                            formatTimestamp(row.discoveryTs)
-                          )}
-                        </td>
-                        <td>
-                          {canEditHistory && editingAuditId === row.id && auditDraft ? (
-                            <Input
-                              value={auditDraft.carrier}
-                              onChange={(e) => setAuditDraft((prev) => (prev ? { ...prev, carrier: e.target.value } : prev))}
-                            />
-                          ) : (
-                            row.carrier
-                          )}
-                        </td>
-                        <td>
-                          {canEditHistory && editingAuditId === row.id && auditDraft ? (
-                            <Input
-                              value={auditDraft.clientName}
-                              onChange={(e) => setAuditDraft((prev) => (prev ? { ...prev, clientName: e.target.value } : prev))}
-                            />
-                          ) : (
-                            row.clientName
-                          )}
-                        </td>
-                        <td>
-                          {canEditHistory && editingAuditId === row.id && auditDraft ? (
-                            <Input
-                              value={auditDraft.currentStatus}
-                              onChange={(e) => setAuditDraft((prev) => (prev ? { ...prev, currentStatus: e.target.value } : prev))}
-                            />
                           ) : (
                             <>
                               {row.currentStatus === 'no_action_needed' ? (
@@ -1334,31 +1268,26 @@ export function VaultPage({
                             </>
                           )}
                         </td>
+                        <td>{formatTimestamp(row.discoveryTs)}</td>
                         <td>
-                          {canEditHistory && editingAuditId === row.id && auditDraft ? (
+                          {canEditHistory ? (
                             <Input
                               type="datetime-local"
-                              value={toLocalDateTimeInput(auditDraft.discoveryTs)}
+                              value={toLocalDateTimeInput(
+                                editingAuditId === row.id && auditDraft ? auditDraft.resolutionTs : row.resolutionTs,
+                              )}
                               onChange={(e) => {
                                 const nextIso = fromLocalDateTimeInput(e.target.value)
-                                if (!nextIso) return
-                                setAuditDraft((prev) => (prev ? { ...prev, discoveryTs: nextIso } : prev))
+                                if (editingAuditId !== row.id) {
+                                  setEditingAuditId(row.id)
+                                  setAuditDraft({ ...row, resolutionTs: nextIso })
+                                } else {
+                                  setAuditDraft((prev) =>
+                                    prev ? { ...prev, resolutionTs: nextIso } : { ...row, resolutionTs: nextIso },
+                                  )
+                                }
+                                setEditError(null)
                               }}
-                            />
-                          ) : (
-                            formatTimestamp(row.discoveryTs)
-                          )}
-                        </td>
-                        <td>
-                          {canEditHistory && editingAuditId === row.id && auditDraft ? (
-                            <Input
-                              type="datetime-local"
-                              value={toLocalDateTimeInput(auditDraft.resolutionTs)}
-                              onChange={(e) =>
-                                setAuditDraft((prev) =>
-                                  prev ? { ...prev, resolutionTs: fromLocalDateTimeInput(e.target.value) } : prev,
-                                )
-                              }
                             />
                           ) : (
                             formatTimestamp(row.resolutionTs)
@@ -1375,15 +1304,7 @@ export function VaultPage({
                                   Cancel
                                 </Button>
                               </div>
-                            ) : (
-                              <Button
-                                variant="secondary"
-                                onClick={() => startAuditEdit(row)}
-                                disabled={!!editingQaId || (editingAuditId !== null && editingAuditId !== row.id)}
-                              >
-                                Edit
-                              </Button>
-                            )}
+                            ) : null}
                           </td>
                         ) : null}
                       </tr>
