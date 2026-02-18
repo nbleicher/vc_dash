@@ -177,25 +177,39 @@ export function useAppData(store: DataStore) {
   }, [attendance, currentWeekKey, activeAgents])
   const weekTarget = useMemo(() => weeklyTargets.find((w) => w.weekKey === currentWeekKey) ?? null, [weeklyTargets, currentWeekKey])
   const weekTrend = useMemo(() => {
-    const activeIds = new Set(activeAgents.map((a) => a.id))
     let totalSales = 0
     let totalMarketing = 0
-    for (const row of perfHistory) {
-      if (!weekDates.includes(row.dateKey) || row.dateKey === todayKey || !activeIds.has(row.agentId)) continue
-      totalSales += row.sales
-      totalMarketing += row.marketing
-    }
-    for (const [agentId, snap] of liveByAgent.entries()) {
-      if (!activeIds.has(agentId)) continue
-      totalSales += snap.sales
-      totalMarketing += snap.billableCalls * 15
+    for (const dateKey of weekDates) {
+      for (const agent of activeAgents) {
+        if (dateKey === todayKey) {
+          const snap = liveByAgent.get(agent.id)
+          if (snap) {
+            totalSales += snap.sales
+            totalMarketing += snap.billableCalls * 15
+          }
+          continue
+        }
+        const snap17 = snapshots.find(
+          (s) => s.dateKey === dateKey && s.slot === '17:00' && s.agentId === agent.id,
+        )
+        if (snap17) {
+          totalSales += snap17.sales
+          totalMarketing += snap17.billableCalls * 15
+          continue
+        }
+        const perf = perfHistory.find((p) => p.dateKey === dateKey && p.agentId === agent.id)
+        if (perf) {
+          totalSales += perf.sales
+          totalMarketing += perf.marketing
+        }
+      }
     }
     const currentCpa = totalSales > 0 ? totalMarketing / totalSales : null
     const salesProgress = weekTarget && weekTarget.targetSales > 0 ? Math.min((totalSales / weekTarget.targetSales) * 100, 100) : null
     const cpaTarget = weekTarget?.targetCpa ?? null
     const cpaDelta = currentCpa === null || cpaTarget === null ? null : currentCpa - cpaTarget
     return { totalSales, currentCpa, salesProgress, cpaTarget, cpaDelta }
-  }, [activeAgents, liveByAgent, perfHistory, todayKey, weekDates, weekTarget])
+  }, [activeAgents, liveByAgent, perfHistory, snapshots, todayKey, weekDates, weekTarget])
 
   const currentMinuteOfDay = est.hour * 60 + est.minute
   const attendanceSubmittedToday = useMemo(
