@@ -336,24 +336,16 @@ function App() {
 
   const handleAuditUpdate = (
     id: string,
-    patch: Pick<
-      (typeof auditRecords)[number],
-      'agentId' | 'discoveryTs' | 'carrier' | 'clientName' | 'currentStatus' | 'resolutionTs'
+    patch: Partial<
+      Pick<
+        (typeof auditRecords)[number],
+        'agentId' | 'discoveryTs' | 'carrier' | 'clientName' | 'currentStatus' | 'resolutionTs'
+      >
     >,
   ): void => {
     setAuditRecords((prev) =>
       prev.map((record) =>
-        record.id === id
-          ? {
-              ...record,
-              agentId: patch.agentId,
-              discoveryTs: patch.discoveryTs,
-              carrier: patch.carrier,
-              clientName: patch.clientName,
-              currentStatus: patch.currentStatus,
-              resolutionTs: patch.resolutionTs,
-            }
-          : record,
+        record.id === id ? { ...record, ...patch } : record,
       ),
     )
   }
@@ -787,6 +779,7 @@ function App() {
             onQaSubmit={handleQaSubmit}
             onAuditSubmit={handleAuditSubmit}
             onAuditNoActionSubmit={handleAuditNoActionSubmit}
+            onUpdateAuditRecord={handleAuditUpdate}
           />
         )}
 

@@ -35,6 +35,7 @@ function baseProps() {
     onQaSubmit: vi.fn((e?: { preventDefault?: () => void }) => e?.preventDefault?.()),
     onAuditSubmit: vi.fn((e?: { preventDefault?: () => void }) => e?.preventDefault?.()),
     onAuditNoActionSubmit: vi.fn(),
+    onUpdateAuditRecord: vi.fn(),
   }
 }
 
