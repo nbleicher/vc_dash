@@ -96,11 +96,6 @@ export function TasksPage({
   const [editingNoteKey, setEditingNoteKey] = useState<string | null>(null)
   const [noteDraft, setNoteDraft] = useState('')
   const [auditHistoryExpanded, setAuditHistoryExpanded] = useState(false)
-  const [editingAuditId, setEditingAuditId] = useState<string | null>(null)
-  const [auditDraft, setAuditDraft] = useState<{
-    currentStatus: string
-    resolutionTs: string | null
-  } | null>(null)
   const toLocalDateTimeInput = (iso: string | null): string => {
     if (!iso) return ''
     const date = new Date(iso)
@@ -113,22 +108,6 @@ export function TasksPage({
     const date = new Date(value)
     if (Number.isNaN(date.getTime())) return null
     return date.toISOString()
-  }
-  const startAuditEdit = (row: AuditRecord): void => {
-    setEditingAuditId(row.id)
-    setAuditDraft({ currentStatus: row.currentStatus, resolutionTs: row.resolutionTs })
-  }
-  const cancelAuditEdit = (): void => {
-    setEditingAuditId(null)
-    setAuditDraft(null)
-  }
-  const saveAuditEdit = (): void => {
-    if (!editingAuditId || !auditDraft) return
-    onUpdateAuditRecord(editingAuditId, {
-      currentStatus: auditDraft.currentStatus,
-      resolutionTs: auditDraft.resolutionTs,
-    })
-    cancelAuditEdit()
   }
   const agentAuditRows = useMemo(() => {
     if (!auditForm.agentId) return []
@@ -564,13 +543,12 @@ export function TasksPage({
                         <th>Status</th>
                         <th>Timestamp 1</th>
                         <th>Timestamp 2</th>
-                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {displayAuditRows.length === 0 && (
                         <tr>
-                          <td colSpan={8}>N/A</td>
+                          <td colSpan={7}>N/A</td>
                         </tr>
                       )}
                       {displayAuditRows.map((row) => (
@@ -580,68 +558,30 @@ export function TasksPage({
                           <td>{row.carrier}</td>
                           <td>{row.clientName}</td>
                           <td>
-                            {editingAuditId === row.id && auditDraft ? (
-                              <Select
-                                value={auditDraft.currentStatus}
-                                onChange={(e) =>
-                                  setAuditDraft((prev) =>
-                                    prev ? { ...prev, currentStatus: e.target.value } : prev,
-                                  )
-                                }
-                              >
-                                {POLICY_STATUSES.map((s) => (
-                                  <option key={s} value={s}>
-                                    {s}
-                                  </option>
-                                ))}
-                              </Select>
-                            ) : (
-                              <>
-                                {row.currentStatus === 'no_action_needed' ? (
-                                  <Badge variant="success">No Action Needed</Badge>
-                                ) : (
-                                  <Badge variant="warning">Needs Review</Badge>
-                                )}
-                              </>
-                            )}
+                            <Select
+                              value={row.currentStatus}
+                              onChange={(e) =>
+                                onUpdateAuditRecord(row.id, { currentStatus: e.target.value })
+                              }
+                            >
+                              {POLICY_STATUSES.map((s) => (
+                                <option key={s} value={s}>
+                                  {s}
+                                </option>
+                              ))}
+                            </Select>
                           </td>
                           <td>{formatTimestamp(row.discoveryTs)}</td>
                           <td>
-                            {editingAuditId === row.id && auditDraft ? (
-                              <Input
-                                type="datetime-local"
-                                value={toLocalDateTimeInput(auditDraft.resolutionTs)}
-                                onChange={(e) =>
-                                  setAuditDraft((prev) =>
-                                    prev
-                                      ? { ...prev, resolutionTs: fromLocalDateTimeInput(e.target.value) }
-                                      : prev,
-                                  )
-                                }
-                              />
-                            ) : (
-                              row.resolutionTs ? formatTimestamp(row.resolutionTs) : '—'
-                            )}
-                          </td>
-                          <td>
-                            {editingAuditId === row.id ? (
-                              <div className="flex gap-2">
-                                <Button variant="default" onClick={saveAuditEdit}>
-                                  Save
-                                </Button>
-                                <Button variant="secondary" onClick={cancelAuditEdit}>
-                                  Cancel
-                                </Button>
-                              </div>
-                            ) : (
-                              <Button
-                                variant="secondary"
-                                onClick={() => startAuditEdit(row)}
-                                disabled={editingAuditId !== null && editingAuditId !== row.id}
-                              >
-                                Edit
-                              </Button>
-                            )}
+                            <Input
+                              type="datetime-local"
+                              value={toLocalDateTimeInput(row.resolutionTs)}
+                              onChange={(e) =>
+                                onUpdateAuditRecord(row.id, {
+                                  resolutionTs: fromLocalDateTimeInput(e.target.value),
+                                })
+                              }
+                            />
                           </td>
                         </tr>
                       ))}
