@@ -11,6 +11,7 @@ function baseProps() {
       { id: 'a1', name: 'Alex', active: true, createdAt: new Date().toISOString() },
       { id: 'a2', name: 'Jordan', active: true, createdAt: new Date().toISOString() },
     ],
+    auditRecords: [],
     attendance: [],
     spiffRecords: [],
     attendanceSubmissions: [],

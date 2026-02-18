@@ -1,18 +1,21 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { WeeklyTargetEditor } from '../components'
-import { Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Tabs, Textarea } from '../components'
+import { Badge, Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Tabs, Textarea } from '../components'
 import { CARRIERS, POLICY_STATUSES } from '../constants'
-import type { AttendanceRecord } from '../types'
+import type { AttendanceRecord, AuditRecord } from '../types'
 import type { AttendancePercent } from '../types'
 import type { SpiffRecord, TaskPage } from '../types'
 import type { DataStore } from '../data'
 import { formatDateKey, formatTimestamp } from '../utils'
+
+const AUDIT_HISTORY_PREVIEW_ROWS = 5
 
 type Props = {
   taskPage: TaskPage
   setTaskPage: (p: TaskPage) => void
   todayKey: string
   activeAgents: DataStore['agents']
+  auditRecords: AuditRecord[]
   attendance: AttendanceRecord[]
   spiffRecords: SpiffRecord[]
   attendanceSubmissions: DataStore['attendanceSubmissions']
@@ -59,6 +62,7 @@ export function TasksPage({
   setTaskPage,
   todayKey,
   activeAgents,
+  auditRecords,
   attendance,
   spiffRecords,
   attendanceSubmissions,
@@ -86,7 +90,16 @@ export function TasksPage({
   const dayBasePay = 120
   const [editingNoteKey, setEditingNoteKey] = useState<string | null>(null)
   const [noteDraft, setNoteDraft] = useState('')
+  const [auditHistoryExpanded, setAuditHistoryExpanded] = useState(false)
+  const agentAuditRows = useMemo(() => {
+    if (!auditForm.agentId) return []
+    return [...auditRecords]
+      .filter((r) => r.agentId === auditForm.agentId)
+      .sort((a, b) => (b.discoveryTs > a.discoveryTs ? 1 : -1))
+  }, [auditRecords, auditForm.agentId])
+  const displayAuditRows = auditHistoryExpanded ? agentAuditRows : agentAuditRows.slice(0, AUDIT_HISTORY_PREVIEW_ROWS)
   const formatCurrency = (amount: number): string => `$${amount.toFixed(2)}`
+  const agentName = (agentId: string): string => activeAgents.find((a) => a.id === agentId)?.name ?? agentId
   const noteKeyFor = (agentId: string, dateKey: string): string => `${agentId}::${dateKey}`
   const renderMissingNames = (rows: Array<{ id: string; name: string }>) =>
     rows.map((agent, idx) => (
@@ -483,6 +496,71 @@ export function TasksPage({
               Submit No Action Needed
             </Button>
           </form>
+
+          <div className="space-y-2">
+            {!auditForm.agentId ? (
+              <p className="text-sm text-slate-500">Select an agent to view their Action Needed history.</p>
+            ) : (
+              <>
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-medium">Action Needed History</h3>
+                  {agentAuditRows.length > AUDIT_HISTORY_PREVIEW_ROWS && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setAuditHistoryExpanded((prev) => !prev)}
+                    >
+                      {auditHistoryExpanded ? 'Show less' : 'Show more'}
+                    </Button>
+                  )}
+                </div>
+                <TableWrap>
+                  <DataTable>
+                    <thead>
+                      <tr>
+                        <th>Agent</th>
+                        <th>Discovered</th>
+                        <th>Carrier</th>
+                        <th>Client</th>
+                        <th>Status</th>
+                        <th>Timestamp 1</th>
+                        <th>Timestamp 2</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayAuditRows.length === 0 && (
+                        <tr>
+                          <td colSpan={7}>N/A</td>
+                        </tr>
+                      )}
+                      {displayAuditRows.map((row) => (
+                        <tr key={row.id}>
+                          <td>{agentName(row.agentId)}</td>
+                          <td>{formatTimestamp(row.discoveryTs)}</td>
+                          <td>{row.carrier}</td>
+                          <td>{row.clientName}</td>
+                          <td>
+                            {row.currentStatus === 'no_action_needed' ? (
+                              <Badge variant="success">No Action Needed</Badge>
+                            ) : (
+                              <Badge variant="warning">Needs Review</Badge>
+                            )}
+                          </td>
+                          <td>{formatTimestamp(row.discoveryTs)}</td>
+                          <td>{row.resolutionTs ? formatTimestamp(row.resolutionTs) : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </DataTable>
+                </TableWrap>
+                {agentAuditRows.length > AUDIT_HISTORY_PREVIEW_ROWS && !auditHistoryExpanded && (
+                  <p className="text-sm text-slate-500">
+                    Showing {AUDIT_HISTORY_PREVIEW_ROWS} of {agentAuditRows.length}. Click &quot;Show more&quot; for all rows.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
         </Card>
       )}
 

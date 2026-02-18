@@ -763,6 +763,7 @@ function App() {
             setTaskPage={setTaskPage}
             todayKey={todayKey}
             activeAgents={activeAgents}
+            auditRecords={auditRecords}
             attendance={attendance}
             spiffRecords={spiffRecords}
             attendanceSubmissions={dataAttendanceSubmissions}
