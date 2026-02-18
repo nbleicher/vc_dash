@@ -343,9 +343,13 @@ function App() {
       >
     >,
   ): void => {
+    const resolvedPatch =
+      patch.currentStatus === 'accepted'
+        ? { ...patch, resolutionTs: new Date().toISOString() }
+        : patch
     setAuditRecords((prev) =>
       prev.map((record) =>
-        record.id === id ? { ...record, ...patch } : record,
+        record.id === id ? { ...record, ...resolvedPatch } : record,
       ),
     )
   }
