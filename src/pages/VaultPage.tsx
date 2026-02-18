@@ -506,7 +506,7 @@ export function VaultPage({
             {tableRows.map((row) => (
               <tr
                 key={row.id}
-                className={row.currentStatus === 'accepted' ? 'bg-green-500/20' : undefined}
+                className={row.currentStatus === 'accepted' ? '!bg-green-400/30' : undefined}
               >
                 <td>{agentName(row.agentId)}</td>
                 <td>{formatTimestamp(row.discoveryTs)}</td>
@@ -1228,7 +1228,7 @@ export function VaultPage({
                     {auditPagedRows.map((row) => (
                       <tr
                         key={row.id}
-                        className={row.currentStatus === 'accepted' ? 'bg-green-500/20' : undefined}
+                        className={row.currentStatus === 'accepted' ? '!bg-green-400/30' : undefined}
                       >
                         <td>{agentName(row.agentId)}</td>
                         <td>{formatTimestamp(row.discoveryTs)}</td>
