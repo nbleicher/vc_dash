@@ -158,7 +158,11 @@ export function useAppData(store: DataStore) {
   const actionAudit = useMemo(
     () =>
       auditRecords.filter(
-        (a) => a.currentStatus !== 'pending_cms' && a.currentStatus !== 'no_action_needed' && !(a.mgmtNotified && a.outreachMade),
+        (a) =>
+          a.currentStatus !== 'pending_cms' &&
+          a.currentStatus !== 'no_action_needed' &&
+          a.currentStatus !== 'accepted' &&
+          !(a.mgmtNotified && a.outreachMade),
       ),
     [auditRecords],
   )
