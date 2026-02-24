@@ -24,8 +24,6 @@ function baseProps() {
     actionQa: [],
     actionAudit: [],
     attendanceAlert: false,
-    intraAlert: false,
-    overdueSlots: [],
     onResolveQa: vi.fn(),
     onToggleAuditFlag: vi.fn(),
     onGoToAttendance: vi.fn(),

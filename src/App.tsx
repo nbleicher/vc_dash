@@ -64,8 +64,6 @@ function App() {
     weekTarget,
     weekTrend,
     attendanceAlert,
-    intraAlert,
-    overdueSlots,
     taskPage,
     setTaskPage,
     selectedEodWeekKey,
@@ -674,8 +672,6 @@ function App() {
             actionQa={actionQa}
             actionAudit={actionAudit}
             attendanceAlert={attendanceAlert}
-            intraAlert={intraAlert}
-            overdueSlots={overdueSlots}
             onResolveQa={resolveQa}
             onToggleAuditFlag={toggleAuditFlag}
             onGoToAttendance={() => {

@@ -41,8 +41,6 @@ type Props = {
     resolutionTs: string | null
   }>
   attendanceAlert: boolean
-  intraAlert: boolean
-  overdueSlots: Array<{ label: string }>
   onResolveQa: (id: string) => void
   onToggleAuditFlag: (id: string, field: 'mgmtNotified' | 'outreachMade') => void
   onGoToAttendance: () => void
@@ -59,8 +57,6 @@ export function DashboardPage({
   actionQa,
   actionAudit,
   attendanceAlert,
-  intraAlert,
-  overdueSlots,
   onResolveQa,
   onToggleAuditFlag,
   onGoToAttendance,
@@ -86,16 +82,6 @@ export function DashboardPage({
           </Button>
         </Card>
       )}
-      {intraAlert && (
-        <Card className="border-red-200 bg-red-50 text-red-900">
-          <div className="flex items-center justify-between gap-3">
-            <strong>Intra-Performance Alert</strong>
-            <Badge variant="danger">Critical</Badge>
-          </div>
-          <p>Intra-day performance is incomplete for: {overdueSlots.map((s) => s.label).join(', ')}.</p>
-        </Card>
-      )}
-
       <Card className="space-y-4">
         <CardTitle>Agent Performance</CardTitle>
         {agentPerformanceRows.length === 0 ? (

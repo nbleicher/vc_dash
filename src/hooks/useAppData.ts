@@ -239,16 +239,6 @@ export function useAppData(store: DataStore) {
     [attendanceSubmissions, todayKey],
   )
   const attendanceAlert = currentMinuteOfDay >= 17 * 60 + 30 && activeAgents.length > 0 && !attendanceSubmittedToday
-  const overdueSlots = useMemo(
-    () =>
-      SLOT_CONFIG.filter((slot) => slot.minuteOfDay <= currentMinuteOfDay).filter(
-        (slot) => !intraSubmissions.some((submission) => submission.dateKey === todayKey && submission.slot === slot.key),
-      ),
-    [currentMinuteOfDay, intraSubmissions, todayKey],
-  )
-  const intraAlertWindowOpen = currentMinuteOfDay >= 10 * 60 && currentMinuteOfDay <= 19 * 60
-  const intraAlert = intraAlertWindowOpen && overdueSlots.length > 0 && activeAgents.length > 0
-
   const effectiveMetricsAgentId = useMemo(
     () => (activeAgents.some((a) => a.id === metricsAgentId) ? metricsAgentId : activeAgents[0]?.id ?? ''),
     [activeAgents, metricsAgentId],
@@ -654,8 +644,6 @@ export function useAppData(store: DataStore) {
     weekTarget,
     weekTrend,
     attendanceAlert,
-    intraAlert,
-    overdueSlots,
     taskPage,
     setTaskPage,
     selectedEodWeekKey: effectiveEodWeekKey,
