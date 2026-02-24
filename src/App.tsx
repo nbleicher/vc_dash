@@ -56,6 +56,7 @@ function App() {
     activeAgents,
     houseLive,
     agentPerformanceRows,
+    lastSnapshotLabel,
     actionQa,
     actionAudit,
     incompleteQaAgentsToday,
@@ -666,6 +667,7 @@ function App() {
             now={now}
             houseLive={houseLive}
             agentPerformanceRows={agentPerformanceRows}
+            lastSnapshotLabel={lastSnapshotLabel}
             floorCapacity={floorCapacity}
             weekTarget={weekTarget}
             weekTrend={weekTrend}

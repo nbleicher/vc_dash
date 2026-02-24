@@ -1,5 +1,7 @@
 # Intra-day bot: session capture and scraper
 
+This bot scrapes PolicyDen (sales) and WeGenerate (calls), merges by agent, and pushes snapshots to the VC Dash API. The dashboard **Agent Performance** card shows data from the latest snapshot per agent (no manual intra-day entry; the intra-performance alert has been removed).
+
 ## 1. capture.py (run locally on your Mac)
 
 Captures your browser session for PolicyDen and WeGenerate so the VPS can reuse it.
@@ -88,3 +90,16 @@ Add (replace `ubuntu` with your username if different):
 ```
 
 **Monitor:** `tail -f ~/bot/bot.log`
+
+---
+
+## Troubleshooting: dashboard not showing correct data
+
+- **Refresh delay**  
+  The dashboard refetches from the API every 10 minutes. After the bot runs, use **Reload** (in the app nav) to fetch the latest snapshots immediately.
+
+- **Agent names must match exactly**  
+  Each key in `agent_map.json` must match the name exactly as it appears in the PolicyDen and WeGenerate tables (same spelling, spaces, punctuation). If a name doesn’t match, that agent’s calls/sales will be 0. Check `bot.log` for `Pushed N snapshots for YYYY-MM-DD HH:MM` to confirm the bot is pushing; then compare dashboard agent names with the names in the scraped tools.
+
+- **Only mapped agents get data**  
+  The bot only pushes rows for agents that are in `agent_map.json` and **active** in the dashboard. Agents missing from the map will show 0 calls/sales for today.

@@ -19,6 +19,7 @@ type Props = {
   now: Date
   houseLive: { totalCalls: number; totalSales: number; marketing: number; cpa: number | null; cvr: number | null }
   agentPerformanceRows: AgentPerformanceRow[]
+  lastSnapshotLabel: string
   floorCapacity: number
   weekTarget: { targetSales: number; targetCpa: number } | null
   weekTrend: {
@@ -51,6 +52,7 @@ export function DashboardPage({
   now,
   houseLive,
   agentPerformanceRows,
+  lastSnapshotLabel,
   floorCapacity,
   weekTarget,
   weekTrend,
@@ -83,7 +85,10 @@ export function DashboardPage({
         </Card>
       )}
       <Card className="space-y-4">
-        <CardTitle>Agent Performance</CardTitle>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle>Agent Performance</CardTitle>
+          <span className="text-xs text-slate-500">Data: {lastSnapshotLabel}</span>
+        </div>
         {agentPerformanceRows.length === 0 ? (
           <p className="text-sm text-slate-500">No active agents.</p>
         ) : (
