@@ -45,6 +45,7 @@ type Props = {
   onResolveQa: (id: string) => void
   onToggleAuditFlag: (id: string, field: 'mgmtNotified' | 'outreachMade') => void
   onGoToAttendance: () => void
+  onRefreshData: () => void
 }
 
 export function DashboardPage({
@@ -62,6 +63,7 @@ export function DashboardPage({
   onResolveQa,
   onToggleAuditFlag,
   onGoToAttendance,
+  onRefreshData,
 }: Props) {
   const cpaCardToneClass =
     weekTrend.cpaDelta === null
@@ -87,7 +89,12 @@ export function DashboardPage({
       <Card className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle>Agent Performance</CardTitle>
-          <span className="text-xs text-slate-500">Data: {lastSnapshotLabel}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">Data: {lastSnapshotLabel}</span>
+            <Button variant="secondary" className="text-xs px-2 py-1.5 h-auto" onClick={onRefreshData}>
+              Refresh
+            </Button>
+          </div>
         </div>
         {agentPerformanceRows.length === 0 ? (
           <p className="text-sm text-slate-500">No active agents.</p>

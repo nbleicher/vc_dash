@@ -682,6 +682,7 @@ function App() {
               setTopPage('tasks')
               setTaskPage('attendance')
             }}
+            onRefreshData={() => void reload()}
           />
         )}
 

@@ -28,6 +28,7 @@ function baseProps() {
     onResolveQa: vi.fn(),
     onToggleAuditFlag: vi.fn(),
     onGoToAttendance: vi.fn(),
+    onRefreshData: vi.fn(),
   }
 }
 
