@@ -331,7 +331,7 @@ export function useAppData(store: DataStore) {
       return { calls, sales, marketing: m.marketing, cpa: m.cpa, cvr: m.cvr }
     }
     return { daily: aggregate(dailyRows), weekly: aggregate(weeklyRows), monthly: aggregate(monthlyRows) }
-  }, [metricsScope, effectiveMetricsAgentId, perfHistory, snapshots, selectedMetricAgent, todayKey, weekDates, liveByAgent, activeAgents])
+  }, [metricsScope, effectiveMetricsAgentId, perfHistory, snapshots, todayKey, weekDates, liveByAgent, activeAgents])
 
   const rankRows = useMemo(() => {
     const activeIds = new Set(activeAgents.map((agent) => agent.id))

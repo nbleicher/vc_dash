@@ -5,8 +5,6 @@ import { DashboardPage } from './DashboardPage'
 function baseProps() {
   return {
     agents: [{ id: 'a1', name: 'Alex', active: true, createdAt: '2026-02-15T12:00:00.000Z' }],
-    activeAgents: [{ id: 'a1', name: 'Alex', active: true, createdAt: '2026-02-15T12:00:00.000Z' }],
-    todayKey: '2026-02-15',
     now: new Date('2026-02-15T16:00:00.000Z'),
     houseLive: { totalCalls: 0, totalSales: 0, marketing: 0, cpa: null, cvr: null },
     agentPerformanceRows: [

@@ -105,7 +105,6 @@ function App() {
     weeklyTargetHistory,
     snapshots,
     attendanceSubmissions: dataAttendanceSubmissions,
-    intraSubmissions: dataIntraSubmissions,
     upsertSnapshot,
   } = data
 
@@ -141,17 +140,6 @@ function App() {
 
   const ensureAgentDefault = (agentId: string): string => (agentId ? agentId : activeAgents[0]?.id ?? '')
 
-  const isIntraSlotEditable = (slot: string): boolean => {
-    const slotIndex = SLOT_CONFIG.findIndex((item) => item.key === slot)
-    if (slotIndex === -1) return false
-    const preEntryMinutes = 15
-    const current = estParts(now)
-    const currentMinute = current.hour * 60 + current.minute + current.second / 60
-    const startMinute = Math.max(0, SLOT_CONFIG[slotIndex].minuteOfDay - preEntryMinutes)
-    const endMinute = SLOT_CONFIG[slotIndex + 1]?.minuteOfDay ?? 24 * 60
-    return currentMinute >= startMinute && currentMinute < endMinute
-  }
-
   const buildAttendanceDaySignature = (dateKey: string): string =>
     [...activeAgents]
       .sort((a, b) => a.id.localeCompare(b.id))
@@ -159,13 +147,6 @@ function App() {
         const row = attendance.find((item) => item.agentId === agent.id && item.dateKey === dateKey)
         return `${agent.id}:${row?.percent ?? 'NA'}`
       })
-      .join('|')
-
-  const buildIntraSlotSignature = (dateKey: string, slot: string): string =>
-    snapshots
-      .filter((item) => item.dateKey === dateKey && item.slot === slot)
-      .sort((a, b) => a.agentId.localeCompare(b.agentId))
-      .map((item) => `${item.agentId}:${item.billableCalls}:${item.sales}`)
       .join('|')
 
   const [uiError, setUiError] = useState<string | null>(null)
@@ -449,56 +430,6 @@ function App() {
     })
   }
 
-  const submitIntraSlot = (slot: string): void => {
-    if (!SLOT_CONFIG.some((item) => item.key === slot)) return
-    if (!isIntraSlotEditable(slot)) {
-      setUiError(`The ${slot} slot is outside its edit window. Entries open 15 minutes before each slot.`)
-      return
-    }
-    const nowIso = new Date().toISOString()
-    const existing = intraSubmissions.find((submission) => submission.dateKey === todayKey && submission.slot === slot)
-    if (existing) {
-      const proceed = window.confirm(`Intra-day entry for ${slot} is already submitted. Re-submit this hour?`)
-      if (!proceed) return
-    }
-    const slotSignature = buildIntraSlotSignature(todayKey, slot)
-    setIntraSubmissions((prev) => {
-      const current = prev.find((submission) => submission.dateKey === todayKey && submission.slot === slot)
-      if (!current) {
-        return [
-          ...prev,
-          {
-            id: uid('intra_submit'),
-            dateKey: todayKey,
-            slot,
-            submittedAt: nowIso,
-            updatedAt: nowIso,
-            submittedBy: 'manual',
-            slotSignature,
-          },
-        ]
-      }
-      return prev.map((submission) =>
-        submission.id === current.id
-          ? { ...submission, updatedAt: nowIso, submittedAt: nowIso, submittedBy: 'manual', slotSignature }
-          : submission,
-      )
-    })
-  }
-
-  const upsertIntraSnapshot = (
-    slot: (typeof SLOT_CONFIG)[number],
-    agentId: string,
-    calls: number,
-    sales: number,
-  ): void => {
-    if (!isIntraSlotEditable(slot.key)) {
-      setUiError(`The ${slot.label} window is not editable yet or has closed. Edits open 15 minutes before slot time.`)
-      return
-    }
-    upsertSnapshot(slot, agentId, calls, sales)
-  }
-
   const addAttendanceNote = (agentId: string, dateKey: string, note: string): void => {
     const trimmedNote = note.trim()
     if (!trimmedNote) return
@@ -736,8 +667,6 @@ function App() {
         {topPage === 'dashboard' && (
           <DashboardPage
             agents={agents}
-            activeAgents={activeAgents}
-            todayKey={todayKey}
             now={now}
             houseLive={houseLive}
             agentPerformanceRows={agentPerformanceRows}

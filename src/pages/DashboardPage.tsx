@@ -16,8 +16,6 @@ type AgentPerformanceRow = {
 
 type Props = {
   agents: DataStore['agents']
-  activeAgents: DataStore['agents']
-  todayKey: string
   now: Date
   houseLive: { totalCalls: number; totalSales: number; marketing: number; cpa: number | null; cvr: number | null }
   agentPerformanceRows: AgentPerformanceRow[]
@@ -52,8 +50,6 @@ type Props = {
 
 export function DashboardPage({
   agents,
-  activeAgents,
-  todayKey,
   now,
   houseLive,
   agentPerformanceRows,
