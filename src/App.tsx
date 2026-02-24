@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { Button, Card, LoginForm, TopNav } from './components'
 import { useDataStore } from './data'
 import { useAppData } from './hooks'
-import { CARRIERS, SLOT_CONFIG } from './constants'
+import { CARRIERS } from './constants'
 import type { AttendancePercent, ExportFlags, QaRecord, TopPage, VaultMeeting } from './types'
-import { csvEscape, estDateKey, estParts, formatDateKey, uid } from './utils'
+import { csvEscape, estDateKey, formatDateKey, uid } from './utils'
 import { DashboardPage } from './pages/DashboardPage'
 import { MetricsPage } from './pages/MetricsPage'
 import { EodPage } from './pages/EodPage'
@@ -30,7 +30,6 @@ function App() {
     setPerfHistory,
     attendanceSubmissions,
     setAttendanceSubmissions,
-    intraSubmissions,
     setIntraSubmissions,
     setWeeklyTargets,
     vaultMeetings,
@@ -105,7 +104,6 @@ function App() {
     weeklyTargetHistory,
     snapshots,
     attendanceSubmissions: dataAttendanceSubmissions,
-    upsertSnapshot,
   } = data
 
   const [topPage, setTopPage] = useState<TopPage>('dashboard')

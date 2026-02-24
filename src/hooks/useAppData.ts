@@ -253,10 +253,6 @@ export function useAppData(store: DataStore) {
     () => (activeAgents.some((a) => a.id === metricsAgentId) ? metricsAgentId : activeAgents[0]?.id ?? ''),
     [activeAgents, metricsAgentId],
   )
-  const selectedMetricAgent = useMemo(
-    () => (metricsScope === 'agent' ? agents.find((a) => a.id === effectiveMetricsAgentId) ?? null : null),
-    [agents, effectiveMetricsAgentId, metricsScope],
-  )
   const metricsScopeData = useMemo(() => {
     const activeIds = new Set(activeAgents.map((agent) => agent.id))
     const inScope = (agentId: string): boolean =>
