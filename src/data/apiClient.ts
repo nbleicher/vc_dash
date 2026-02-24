@@ -80,6 +80,8 @@ export class ApiClient {
       headers,
       body: hasBody ? JSON.stringify(options.body) : undefined,
       credentials: 'include',
+      // Prevent cached GET so dashboard always sees latest snapshots after bot runs
+      cache: options.method === 'GET' ? 'no-store' : 'default',
     })
 
     if (!response.ok) {

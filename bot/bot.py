@@ -369,6 +369,12 @@ def main() -> int:
     log("Scraping WeGenerate (calls)...")
     calls_by_agent = scrape_wegenerate(auth_wegenerate, date_key, bot_dir)
 
+    verbose = os.environ.get("BOT_VERBOSE", "").strip().lower() in ("1", "true", "yes")
+    if verbose:
+        log("  [verbose] PolicyDen scraped (name -> sales): " + str(dict(sorted(sales_by_agent.items()))))
+        log("  [verbose] WeGenerate scraped (name -> calls): " + str(dict(sorted(calls_by_agent.items()))))
+        log("  [verbose] agent_map keys (display names): " + str(list(agent_map.keys())))
+
     import requests
     session = requests.Session()
     session.headers["Content-Type"] = "application/json"
@@ -405,6 +411,8 @@ def main() -> int:
             "sales": sales,
             "updatedAt": now_iso,
         })
+        if verbose:
+            log(f"  [verbose] Row: {display_name!r} -> agentId={agent_id[:8]}... sales={sales} calls={calls}")
 
     if not new_rows:
         log("No snapshot rows to push (check agent_map and active agents).")

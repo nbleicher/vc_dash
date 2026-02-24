@@ -103,3 +103,10 @@ Add (replace `ubuntu` with your username if different):
 
 - **Only mapped agents get data**  
   The bot only pushes rows for agents that are in `agent_map.json` and **active** in the dashboard. Agents missing from the map will show 0 calls/sales for today.
+
+- **See exactly what the bot scraped and pushed**  
+  Run with verbose logging and compare names/numbers to the dashboard and source tools:
+  ```bash
+  BOT_VERBOSE=1 ./venv/bin/python bot.py
+  ```
+  The log will show: PolicyDen name→sales, WeGenerate name→calls, your `agent_map` keys, and each row pushed (display name, sales, calls). If a name in `agent_map` doesn’t appear in the scraped lists or has 0 there, fix the name in `agent_map` (or the selectors) so it matches exactly what appears in the table.

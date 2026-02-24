@@ -163,9 +163,8 @@ export function useDataStore(): DataStore {
   useEffect(() => {
     void syncCollection('agents', agentsState)
   }, [agentsState, syncCollection])
-  useEffect(() => {
-    void syncCollection('snapshots', snapshotsState)
-  }, [snapshotsState, syncCollection])
+  // Snapshots are written only by the bot; dashboard only reads. Do not sync snapshots
+  // back to the API or we can overwrite fresh bot data with stale state after a cached GET.
   useEffect(() => {
     void syncCollection('perfHistory', perfHistoryState)
   }, [perfHistoryState, syncCollection])
