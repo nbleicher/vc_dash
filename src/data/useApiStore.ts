@@ -138,6 +138,18 @@ export function useDataStore(): DataStore {
     [client, loggedIn],
   )
 
+  const pushSnapshotsToApi = useCallback(
+    async (snapshots: Snapshot[]) => {
+      if (!loggedIn || !hasLoadedRemoteRef.current) return
+      try {
+        await client.putCollection('snapshots', snapshots)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to sync data.')
+      }
+    },
+    [client, loggedIn],
+  )
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -218,6 +230,7 @@ export function useDataStore(): DataStore {
     setAgents,
     snapshots: snapshotsState,
     setSnapshots,
+    pushSnapshotsToApi,
     perfHistory: perfHistoryState,
     setPerfHistory,
     qaRecords: qaRecordsState,

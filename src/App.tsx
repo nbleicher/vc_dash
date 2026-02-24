@@ -27,6 +27,7 @@ function App() {
     spiffRecords,
     setSpiffRecords,
     setSnapshots,
+    pushSnapshotsToApi,
     setPerfHistory,
     attendanceSubmissions,
     setAttendanceSubmissions,
@@ -588,6 +589,7 @@ function App() {
     setQaRecords([])
     setAuditRecords([])
     setSnapshots([])
+    void pushSnapshotsToApi([])
     setAttendance([])
     setSpiffRecords([])
     setAttendanceSubmissions([])

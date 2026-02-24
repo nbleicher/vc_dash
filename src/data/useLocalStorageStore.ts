@@ -70,6 +70,7 @@ export function useDataStore(): DataStore {
     setAgents,
     snapshots,
     setSnapshots,
+    pushSnapshotsToApi: async () => undefined,
     perfHistory,
     setPerfHistory,
     qaRecords,
