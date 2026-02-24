@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { DashboardPage } from './DashboardPage'
 
@@ -9,6 +9,17 @@ function baseProps() {
     todayKey: '2026-02-15',
     now: new Date('2026-02-15T16:00:00.000Z'),
     houseLive: { totalCalls: 0, totalSales: 0, marketing: 0, cpa: null, cvr: null },
+    agentPerformanceRows: [
+      {
+        agentId: 'a1',
+        agentName: 'Alex',
+        calls: 10,
+        sales: 2,
+        marketing: 150,
+        cpa: 75,
+        cvr: 0.2,
+      },
+    ],
     floorCapacity: 0,
     weekTarget: null,
     weekTrend: { totalSales: 0, currentCpa: null, salesProgress: null, cpaTarget: null, cpaDelta: null },
@@ -17,51 +28,34 @@ function baseProps() {
     attendanceAlert: false,
     intraAlert: false,
     overdueSlots: [],
-    snapshots: [],
-    intraSubmissions: [],
     onResolveQa: vi.fn(),
     onToggleAuditFlag: vi.fn(),
     onGoToAttendance: vi.fn(),
-    onUpsertSnapshot: vi.fn(),
-    onSubmitIntraSlot: vi.fn(),
-    isIntraSlotEditable: vi.fn(() => true),
   }
 }
 
-describe('DashboardPage intra-day entry', () => {
-  it('renders combined intra-day form with agent/time dropdowns', () => {
+describe('DashboardPage agent performance', () => {
+  it('renders Agent Performance table with all agents', () => {
     render(<DashboardPage {...baseProps()} />)
-    expect(screen.getAllByRole('button', { name: 'Submit Hour' })).toHaveLength(1)
-    expect(screen.getAllByRole('combobox')).toHaveLength(2)
+    expect(screen.getByRole('heading', { name: 'Agent Performance' })).toBeInTheDocument()
+    expect(screen.getByText('Alex')).toBeInTheDocument()
+    expect(screen.getByText('10')).toBeInTheDocument()
+    expect(screen.getByText('2')).toBeInTheDocument()
   })
 
-  it('shows submitted badge for submitted slot', () => {
-    render(
-      <DashboardPage
-        {...baseProps()}
-        intraSubmissions={[
-          {
-            id: 'intra_sub_1',
-            dateKey: '2026-02-15',
-            slot: '11:00',
-            submittedAt: '2026-02-15T15:58:00.000Z',
-            updatedAt: '2026-02-15T15:58:00.000Z',
-            submittedBy: 'manual',
-            slotSignature: '',
-          },
-        ]}
-      />,
-    )
-    expect(screen.getByText('Submitted')).toBeInTheDocument()
+  it('shows no active agents message when agentPerformanceRows is empty', () => {
+    render(<DashboardPage {...baseProps()} agentPerformanceRows={[]} />)
+    expect(screen.getByText('No active agents.')).toBeInTheDocument()
   })
 
-  it('disables actions when selected slot is locked', () => {
-    render(<DashboardPage {...baseProps()} isIntraSlotEditable={() => false} />)
-    const section = screen.getAllByText('Intra-Day Performance Entry').at(-1)?.closest('section')
-    expect(section).not.toBeNull()
-    const scope = within(section!)
-    expect(scope.getByText('Locked (Window Closed)')).toBeInTheDocument()
-    expect(scope.getByRole('button', { name: 'Save Draft' })).toBeDisabled()
-    expect(scope.getByRole('button', { name: 'Submit Hour' })).toBeDisabled()
+  it('highlights row when CPA is over 130', () => {
+    const props = baseProps()
+    props.agentPerformanceRows = [
+      { ...props.agentPerformanceRows[0], cpa: 150, agentName: 'High CPA Agent' },
+    ]
+    const { container } = render(<DashboardPage {...props} />)
+    const row = container.querySelector('tbody tr')
+    expect(row).toHaveClass('bg-red-500/10')
+    expect(screen.getByText('High CPA Agent')).toBeInTheDocument()
   })
 })

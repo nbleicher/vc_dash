@@ -102,8 +102,8 @@ export function useAppData(store: DataStore) {
     for (const agent of activeAgents) {
       const items = todaysSnapshots
         .filter((s) => s.agentId === agent.id)
-        .sort((a, b) => SLOT_CONFIG.findIndex((x) => x.key === b.slot) - SLOT_CONFIG.findIndex((x) => x.key === a.slot))
-      const chosen = items.length > 0 ? (items.find((s) => s.slot === '17:00') ?? items[0]) : null
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      const chosen = items.length > 0 ? items[0] : null
       if (chosen) map.set(agent.id, chosen)
     }
     return map
@@ -119,6 +119,24 @@ export function useAppData(store: DataStore) {
     const metrics = computeMetrics(totalCalls, totalSales)
     return { totalCalls, totalSales, marketing: metrics.marketing, cpa: metrics.cpa, cvr: metrics.cvr }
   }, [liveByAgent])
+
+  const agentPerformanceRows = useMemo(() => {
+    return activeAgents.map((agent) => {
+      const snap = liveByAgent.get(agent.id)
+      const calls = snap?.billableCalls ?? 0
+      const sales = snap?.sales ?? 0
+      const metrics = computeMetrics(calls, sales)
+      return {
+        agentId: agent.id,
+        agentName: agent.name,
+        calls,
+        sales,
+        marketing: metrics.marketing,
+        cpa: metrics.cpa,
+        cvr: metrics.cvr,
+      }
+    })
+  }, [activeAgents, liveByAgent])
 
   useEffect(() => {
     const tryFreeze = (): void => {
@@ -631,6 +649,7 @@ export function useAppData(store: DataStore) {
     lastSnapshotLabel,
     liveByAgent,
     houseLive,
+    agentPerformanceRows,
     actionQa,
     actionAudit,
     incompleteQaAgentsToday,

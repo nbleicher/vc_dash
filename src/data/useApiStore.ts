@@ -150,6 +150,16 @@ export function useDataStore(): DataStore {
     void load()
   }, [loadFromApi])
 
+  // Refetch state every 10 min so dashboard picks up bot snapshot updates
+  useEffect(() => {
+    if (!loggedIn || !hasLoadedRemoteRef.current) return
+    const intervalMs = 10 * 60 * 1000
+    const id = window.setInterval(() => {
+      void loadFromApi()
+    }, intervalMs)
+    return () => window.clearInterval(id)
+  }, [loggedIn, loadFromApi])
+
   useEffect(() => {
     void syncCollection('agents', agentsState)
   }, [agentsState, syncCollection])

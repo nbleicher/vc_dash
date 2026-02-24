@@ -1,8 +1,18 @@
-import { useState } from 'react'
-import { Badge, Button, Card, CardTitle, Input, MetricCard, Select } from '../components'
-import { SLOT_CONFIG } from '../constants'
+import { Badge, Button, Card, CardTitle, MetricCard } from '../components'
 import type { DataStore } from '../data'
 import { formatNum, formatTimestamp } from '../utils'
+
+const CPA_HIGHLIGHT_THRESHOLD = 130
+
+type AgentPerformanceRow = {
+  agentId: string
+  agentName: string
+  calls: number
+  sales: number
+  marketing: number
+  cpa: number | null
+  cvr: number | null
+}
 
 type Props = {
   agents: DataStore['agents']
@@ -10,6 +20,7 @@ type Props = {
   todayKey: string
   now: Date
   houseLive: { totalCalls: number; totalSales: number; marketing: number; cpa: number | null; cvr: number | null }
+  agentPerformanceRows: AgentPerformanceRow[]
   floorCapacity: number
   weekTarget: { targetSales: number; targetCpa: number } | null
   weekTrend: {
@@ -34,19 +45,9 @@ type Props = {
   attendanceAlert: boolean
   intraAlert: boolean
   overdueSlots: Array<{ label: string }>
-  snapshots: DataStore['snapshots']
-  intraSubmissions: DataStore['intraSubmissions']
   onResolveQa: (id: string) => void
   onToggleAuditFlag: (id: string, field: 'mgmtNotified' | 'outreachMade') => void
   onGoToAttendance: () => void
-  onUpsertSnapshot: (
-    slot: (typeof SLOT_CONFIG)[number],
-    agentId: string,
-    calls: number,
-    sales: number
-  ) => void
-  onSubmitIntraSlot: (slot: string) => void
-  isIntraSlotEditable: (slot: string) => boolean
 }
 
 export function DashboardPage({
@@ -55,6 +56,7 @@ export function DashboardPage({
   todayKey,
   now,
   houseLive,
+  agentPerformanceRows,
   floorCapacity,
   weekTarget,
   weekTrend,
@@ -63,14 +65,9 @@ export function DashboardPage({
   attendanceAlert,
   intraAlert,
   overdueSlots,
-  snapshots,
-  intraSubmissions,
   onResolveQa,
   onToggleAuditFlag,
   onGoToAttendance,
-  onUpsertSnapshot,
-  onSubmitIntraSlot,
-  isIntraSlotEditable,
 }: Props) {
   const cpaCardToneClass =
     weekTrend.cpaDelta === null
@@ -78,48 +75,6 @@ export function DashboardPage({
       : weekTrend.cpaDelta <= 0
         ? 'border-green-200 bg-green-50/70'
         : 'border-red-200 bg-red-50/70'
-
-  const [entryForm, setEntryForm] = useState<{ agentId: string; slot: string; calls: number; sales: number }>({
-    agentId: '',
-    slot: SLOT_CONFIG[0].key,
-    calls: 0,
-    sales: 0,
-  })
-  const defaultAgentId = activeAgents[0]?.id ?? ''
-  const safeAgentId = activeAgents.some((agent) => agent.id === entryForm.agentId) ? entryForm.agentId : defaultAgentId
-  const safeSlotKey = SLOT_CONFIG.some((slot) => slot.key === entryForm.slot) ? entryForm.slot : SLOT_CONFIG[0].key
-  const selectedSlot = SLOT_CONFIG.find((slot) => slot.key === safeSlotKey) ?? SLOT_CONFIG[0]
-  const selectionWasAdjusted = entryForm.agentId !== safeAgentId || entryForm.slot !== safeSlotKey
-  const selectedSnapshot =
-    snapshots.find((item) => item.dateKey === todayKey && item.slot === selectedSlot.key && item.agentId === safeAgentId) ?? null
-  const entryCalls = selectionWasAdjusted ? (selectedSnapshot?.billableCalls ?? 0) : entryForm.calls
-  const entrySales = selectionWasAdjusted ? (selectedSnapshot?.sales ?? 0) : entryForm.sales
-  const selectedSubmission =
-    intraSubmissions.find((item) => item.dateKey === todayKey && item.slot === selectedSlot.key) ?? null
-  const selectedSlotEditable = isIntraSlotEditable(selectedSlot.key)
-  const entryCpa = entrySales > 0 ? (entryCalls * 15) / entrySales : null
-
-  const loadDraftForSelection = (agentId: string, slot: string): void => {
-    const snap = snapshots.find((item) => item.dateKey === todayKey && item.slot === slot && item.agentId === agentId) ?? null
-    setEntryForm((prev) => ({
-      ...prev,
-      agentId,
-      slot,
-      calls: snap?.billableCalls ?? 0,
-      sales: snap?.sales ?? 0,
-    }))
-  }
-
-  const handleSaveDraft = (): void => {
-    if (!safeAgentId) return
-    onUpsertSnapshot(selectedSlot, safeAgentId, Math.max(0, entryCalls), Math.max(0, entrySales))
-  }
-
-  const handleSubmitSlot = (): void => {
-    if (!safeAgentId) return
-    onUpsertSnapshot(selectedSlot, safeAgentId, Math.max(0, entryCalls), Math.max(0, entrySales))
-    onSubmitIntraSlot(selectedSlot.key)
-  }
 
   return (
     <div className="page-grid">
@@ -144,6 +99,50 @@ export function DashboardPage({
           <p>Intra-day performance is incomplete for: {overdueSlots.map((s) => s.label).join(', ')}.</p>
         </Card>
       )}
+
+      <Card className="space-y-4">
+        <CardTitle>Agent Performance</CardTitle>
+        {agentPerformanceRows.length === 0 ? (
+          <p className="text-sm text-slate-500">No active agents.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200">
+                  <th className="pb-2 pr-4 font-medium text-slate-700">Agent</th>
+                  <th className="pb-2 pr-4 text-right font-medium text-slate-700">Calls</th>
+                  <th className="pb-2 pr-4 text-right font-medium text-slate-700">Sales</th>
+                  <th className="pb-2 pr-4 text-right font-medium text-slate-700">Marketing</th>
+                  <th className="pb-2 pr-4 text-right font-medium text-slate-700">CPA</th>
+                  <th className="pb-2 text-right font-medium text-slate-700">CVR</th>
+                </tr>
+              </thead>
+              <tbody>
+                {agentPerformanceRows.map((row) => {
+                  const cpaOverThreshold = row.cpa !== null && row.cpa > CPA_HIGHLIGHT_THRESHOLD
+                  return (
+                    <tr
+                      key={row.agentId}
+                      className={`border-b border-slate-100 ${cpaOverThreshold ? 'bg-red-500/10' : ''}`}
+                    >
+                      <td className="py-2 pr-4 font-medium">{row.agentName}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums">{row.calls}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums">{row.sales}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums">${formatNum(row.marketing, 0)}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums">
+                        {row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}
+                      </td>
+                      <td className="py-2 text-right tabular-nums">
+                        {row.cvr === null ? 'N/A' : `${formatNum(row.cvr * 100)}%`}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
 
       <Card className="space-y-4">
         <CardTitle>House Pulse</CardTitle>
@@ -265,106 +264,6 @@ export function DashboardPage({
             })}
           </div>
         </div>
-      </Card>
-
-      <Card className="space-y-4">
-        <CardTitle>Intra-Day Performance Entry</CardTitle>
-        {activeAgents.length === 0 ? (
-          <p className="text-sm text-slate-500">N/A - no active agents.</p>
-        ) : (
-          <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div className="grid gap-3 md:grid-cols-2">
-              <label className="text-sm font-medium text-slate-700">
-                Agent
-                <Select
-                  className="mt-1"
-                  value={safeAgentId}
-                  onChange={(e) => loadDraftForSelection(e.target.value, safeSlotKey)}
-                >
-                  <option value="">Select agent</option>
-                  {activeAgents.map((agent) => (
-                    <option key={agent.id} value={agent.id}>
-                      {agent.name}
-                    </option>
-                  ))}
-                </Select>
-              </label>
-              <label className="text-sm font-medium text-slate-700">
-                Time
-                <Select
-                  className="mt-1"
-                  value={safeSlotKey}
-                  onChange={(e) => loadDraftForSelection(safeAgentId, e.target.value)}
-                >
-                  {SLOT_CONFIG.map((slot) => (
-                    <option key={slot.key} value={slot.key}>
-                      {slot.label}
-                    </option>
-                  ))}
-                </Select>
-              </label>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={selectedSubmission ? 'success' : 'warning'}>
-                {selectedSubmission ? 'Submitted' : 'Pending'}
-              </Badge>
-              <Badge variant={selectedSlotEditable ? 'neutral' : 'danger'}>
-                {selectedSlotEditable ? 'Editable Window Open' : 'Locked (Window Closed)'}
-              </Badge>
-            </div>
-
-            <div className="grid gap-2 sm:grid-cols-2">
-              <label className="text-sm font-medium text-slate-700">
-                Calls
-                <Input
-                  className="mt-1"
-                  type="number"
-                  min={0}
-                  value={entryCalls}
-                  disabled={!selectedSlotEditable}
-                  onChange={(e) =>
-                    setEntryForm((prev) => ({
-                      ...prev,
-                      agentId: safeAgentId,
-                      slot: selectedSlot.key,
-                      calls: Number(e.target.value) || 0,
-                    }))
-                  }
-                />
-              </label>
-              <label className="text-sm font-medium text-slate-700">
-                Sales
-                <Input
-                  className="mt-1"
-                  type="number"
-                  min={0}
-                  value={entrySales}
-                  disabled={!selectedSlotEditable}
-                  onChange={(e) =>
-                    setEntryForm((prev) => ({
-                      ...prev,
-                      agentId: safeAgentId,
-                      slot: selectedSlot.key,
-                      sales: Number(e.target.value) || 0,
-                    }))
-                  }
-                />
-              </label>
-            </div>
-
-            <p className="text-xs text-slate-500">CPA: {entryCpa === null ? 'N/A' : `$${formatNum(entryCpa)}`}</p>
-
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="secondary" disabled={!selectedSlotEditable} onClick={handleSaveDraft}>
-                Save Draft
-              </Button>
-              <Button type="button" variant="default" disabled={!selectedSlotEditable} onClick={handleSubmitSlot}>
-                Submit Hour
-              </Button>
-            </div>
-          </div>
-        )}
       </Card>
     </div>
   )

@@ -1,0 +1,4 @@
+# Session and secrets - do not commit
+auth_*.json
+.env
+agent_map.json

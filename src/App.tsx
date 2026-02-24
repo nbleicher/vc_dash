@@ -56,6 +56,7 @@ function App() {
     attendanceWeekOptions,
     activeAgents,
     houseLive,
+    agentPerformanceRows,
     actionQa,
     actionAudit,
     incompleteQaAgentsToday,
@@ -739,6 +740,7 @@ function App() {
             todayKey={todayKey}
             now={now}
             houseLive={houseLive}
+            agentPerformanceRows={agentPerformanceRows}
             floorCapacity={floorCapacity}
             weekTarget={weekTarget}
             weekTrend={weekTrend}
@@ -747,17 +749,12 @@ function App() {
             attendanceAlert={attendanceAlert}
             intraAlert={intraAlert}
             overdueSlots={overdueSlots}
-            snapshots={snapshots}
-            intraSubmissions={dataIntraSubmissions}
             onResolveQa={resolveQa}
             onToggleAuditFlag={toggleAuditFlag}
             onGoToAttendance={() => {
               setTopPage('tasks')
               setTaskPage('attendance')
             }}
-            onUpsertSnapshot={upsertIntraSnapshot}
-            onSubmitIntraSlot={submitIntraSlot}
-            isIntraSlotEditable={isIntraSlotEditable}
           />
         )}
 
