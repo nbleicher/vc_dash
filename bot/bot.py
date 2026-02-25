@@ -47,6 +47,7 @@ SELECTORS_POLICYDEN = {
     "col_sales": 2,   # SALES column (e.g. 6)
 }
 # WeGenerate /dashboard: table is inside a card "Agent Performance"; must open date picker, click Today, Apply to load data.
+# Campaign Performance: marketing $ in a td with font-bold (e.g. $2,695.00).
 SELECTORS_WEGENERATE = {
     "date_trigger": "button#date",
     "date_apply": "button:has-text('Apply')",
@@ -62,6 +63,8 @@ SELECTORS_WEGENERATE = {
     ],
     "col_agent": 1,   # Agent column
     "col_calls": 2,   # Billable column
+    "campaign_marketing_cell": "td.font-bold",  # Campaign Performance table: cell with $ amount
+    "campaign_marketing_fallbacks": ["td[class*='font-bold']", "[class*='font-bold']"],
 }
 
 
@@ -272,14 +275,16 @@ def scrape_policyden(auth_path: Path, date_key: str, bot_dir: Path) -> dict[str,
     return out
 
 
-def scrape_wegenerate(auth_path: Path, date_key: str, bot_dir: Path) -> dict[str, int]:
-    """Return { agent_name: billable_calls }."""
+def scrape_wegenerate(auth_path: Path, date_key: str, bot_dir: Path) -> tuple[dict[str, int], float | None]:
+    """Return ( { agent_name: billable_calls }, campaign_marketing_amount or None )."""
     from playwright.sync_api import sync_playwright
+    import re
 
     out: dict[str, int] = {}
+    campaign_marketing: float | None = None
     if not auth_path.exists():
         log("  auth_wegenerate.json not found; skipping WeGenerate.")
-        return out
+        return out, campaign_marketing
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -373,11 +378,37 @@ def scrape_wegenerate(auth_path: Path, date_key: str, bot_dir: Path) -> dict[str
                         pass
             else:
                 log(f"  WeGenerate: {n_rows} table rows, {len(out)} agents with calls.")
+
+            # Campaign Performance table: scrape marketing $ (e.g. $2,695.00) for house pulse CPA.
+            selectors_to_try = [SELECTORS_WEGENERATE.get("campaign_marketing_cell")] + list(
+                SELECTORS_WEGENERATE.get("campaign_marketing_fallbacks") or []
+            )
+            for sel in selectors_to_try:
+                if not sel:
+                    continue
+                try:
+                    cells = page.query_selector_all(sel)
+                    for cell in cells:
+                        text = (cell.inner_text() or "").strip()
+                        if text.startswith("$"):
+                            match = re.search(r"\$[\d,]+(?:\.\d{2})?", text)
+                            if match:
+                                raw = match.group(0).replace("$", "").replace(",", "")
+                                try:
+                                    campaign_marketing = float(raw)
+                                    log(f"  WeGenerate: campaign marketing ${campaign_marketing:,.2f}")
+                                    break
+                                except ValueError:
+                                    pass
+                    if campaign_marketing is not None:
+                        break
+                except Exception:
+                    continue
         except Exception as e:
             log(f"  WeGenerate scrape failed: {e}")
         finally:
             browser.close()
-    return out
+    return out, campaign_marketing
 
 
 def api_login(session, base_url: str, username: str, password: str) -> bool:
@@ -413,6 +444,18 @@ def api_put_snapshots(session, base_url: str, snapshots: list) -> bool:
     )
     if r.status_code != 200:
         log(f"  PUT /state/snapshots failed: {r.status_code} {r.text[:200]}")
+        return False
+    return True
+
+
+def api_set_house_marketing(session, base_url: str, date_key: str, amount: float) -> bool:
+    r = session.post(
+        f"{base_url.rstrip('/')}/state/house-marketing",
+        json={"dateKey": date_key, "amount": round(amount, 2)},
+        timeout=10,
+    )
+    if r.status_code != 200:
+        log(f"  POST /state/house-marketing failed: {r.status_code} {r.text[:200]}")
         return False
     return True
 
@@ -489,7 +532,7 @@ def main() -> int:
     log("Scraping PolicyDen (sales)...")
     sales_by_agent = scrape_policyden(auth_policyden, date_key, bot_dir)
     log("Scraping WeGenerate (calls)...")
-    calls_by_agent = scrape_wegenerate(auth_wegenerate, date_key, bot_dir)
+    calls_by_agent, campaign_marketing = scrape_wegenerate(auth_wegenerate, date_key, bot_dir)
 
     if not sales_by_agent and not calls_by_agent:
         log("  Both scrapers empty. Re-run capture.py for both sites, re-upload auth_*.json to the VPS, and try again (sessions expire).")
@@ -564,6 +607,11 @@ def main() -> int:
     merged = merge_snapshots(existing_snapshots, new_rows, date_key, slot_key)
     if api_put_snapshots(session, api_base, merged):
         log(f"Pushed {len(new_rows)} snapshots for {date_key} {slot_key}.")
+        if campaign_marketing is not None:
+            if api_set_house_marketing(session, api_base, date_key, campaign_marketing):
+                log(f"Set house marketing ${campaign_marketing:,.2f} for {date_key}.")
+            else:
+                log("  Failed to set house marketing; house pulse CPA will use calls*15 until next run.")
         return 0
     return 1
 
