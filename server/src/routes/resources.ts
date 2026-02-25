@@ -1,13 +1,14 @@
 import type { FastifyInstance } from 'fastify'
 import type { StoreState } from '../types.js'
+import type { EntityKey } from '../db/store.types.js'
 
-type Config<K extends keyof StoreState> = {
+type Config<K extends EntityKey> = {
   path: string
   key: K
   idField: string
 }
 
-const resourceConfigs: Array<Config<keyof StoreState>> = [
+const resourceConfigs: Array<Config<EntityKey>> = [
   { path: 'agents', key: 'agents', idField: 'id' },
   { path: 'snapshots', key: 'snapshots', idField: 'id' },
   { path: 'perf-history', key: 'perfHistory', idField: 'id' },

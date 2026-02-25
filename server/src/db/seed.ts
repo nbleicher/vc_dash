@@ -20,6 +20,7 @@ const seedState: StoreState = {
   weeklyTargets: [],
   vaultMeetings: [],
   vaultDocs: [],
+  lastPoliciesBotRun: null,
 }
 
 runMigrations(DB_PATH)
