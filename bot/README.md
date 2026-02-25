@@ -47,6 +47,7 @@ mkdir -p ~/bot && cd ~/bot
 - `auth_policyden.json` (from capture.py)
 - `auth_wegenerate.json` (from capture.py)
 - `bot.py` (from this repo)
+- `policies_bot.py` (from this repo; optional — see below)
 - `freeze_eod.py` (from this repo; for 11:50 PM EOD freeze cron)
 - `requirements.txt` (from this repo)
 
@@ -103,6 +104,26 @@ CRON_TZ=America/New_York
 If you already have other cron jobs, add only the `50 23` line and ensure `CRON_TZ=America/New_York` is set once at the top of the crontab if you want EST/EDT. Monitor: `tail -f ~/bot/freeze.log`
 
 **Monitor:** `tail -f ~/bot/bot.log`
+
+---
+
+## 3. Policies bot (Action Needed Audit sync)
+
+`policies_bot.py` scrapes PolicyDen **Policies** for the current month (date range “This Month” only; no status filter), then syncs **audit records** with the dashboard: it **adds** records only for policies with status Pending CMS or Flagged, and **updates** existing records when PolicyDen status changes to accepted, issued, or placed so the website reflects the change. Uses the same `auth_policyden.json` and `agent_map.json` as the main bot.
+
+**Run (same .env and agent_map as main bot):**
+```bash
+cd ~/bot
+./venv/bin/python policies_bot.py
+```
+
+**Optional cron (once per day at 9 AM EST):** Add to `crontab -e` (replace `ubuntu` with your username):
+```
+CRON_TZ=America/New_York
+0 9 * * * cd /home/ubuntu/bot && /home/ubuntu/bot/venv/bin/python policies_bot.py >> /home/ubuntu/bot/policies_bot.log 2>&1
+```
+
+If the PolicyDen Policies table layout changes (column order or selectors), edit the constants at the top of `policies_bot.py` (`COL_CONTACT`, `COL_STATUS`, `COL_CARRIER`, `COL_AGENT`) and the table row selector. Carriers are normalized to Aetna, UHC, Humana (Careplus → Humana).
 
 ---
 
