@@ -129,6 +129,39 @@ def scrape_policies_table(page, agent_map: dict[str, str]) -> list[dict]:
     except Exception:
         pass
     page.wait_for_timeout(1000)
+
+    # Scroll the table so all rows load (virtualized or overflow scroll)
+    def _scroll_until_stable(max_scrolls: int = 80, stable_rounds: int = 4) -> None:
+        last_count = 0
+        stable = 0
+        for step in range(max_scrolls):
+            # Scroll any scrollable ancestor of the table to bottom
+            page.evaluate("""
+                () => {
+                    const table = document.querySelector('table tbody');
+                    if (table) {
+                        const scrollParent = table.closest('div[style*="overflow"], div.overflow-y-auto, div.overflow-auto, [class*="overflow"]');
+                        if (scrollParent && scrollParent.scrollHeight > scrollParent.clientHeight) {
+                            scrollParent.scrollTop = scrollParent.scrollHeight;
+                        }
+                        table.scrollIntoView({ block: 'end' });
+                    }
+                    window.scrollBy(0, 600);
+                }
+            """)
+            page.wait_for_timeout(250)
+            rows_now = len(page.query_selector_all("table tbody tr"))
+            if rows_now == last_count:
+                stable += 1
+                if stable >= stable_rounds:
+                    break
+            else:
+                stable = 0
+            last_count = rows_now
+        page.wait_for_timeout(500)
+
+    _scroll_until_stable()
+
     rows = page.query_selector_all("table tbody tr")
     if len(rows) == 0:
         rows = page.query_selector_all("[role='row']")
@@ -231,6 +264,18 @@ def api_put_audit_records(session, base_url: str, records: list[dict]) -> bool:
     return True
 
 
+def api_set_last_policies_bot_run(session, base_url: str, timestamp_iso: str) -> bool:
+    r = session.post(
+        f"{base_url.rstrip('/')}/state/last-policies-bot-run",
+        json={"timestamp": timestamp_iso},
+        timeout=10,
+    )
+    if r.status_code != 200:
+        log(f"  POST /state/last-policies-bot-run failed: {r.status_code} {r.text[:200]}")
+        return False
+    return True
+
+
 def main() -> int:
     from datetime import datetime, timezone
     from zoneinfo import ZoneInfo
@@ -328,7 +373,8 @@ def main() -> int:
             log(f"Synced audit records: added {added}, updated {updated}.")
         else:
             return 1
-    else:
+    api_set_last_policies_bot_run(session, api_base, now_iso)
+    if not added and not updated:
         log("No audit record changes to push.")
     return 0
 
