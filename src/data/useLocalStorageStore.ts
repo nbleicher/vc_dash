@@ -63,6 +63,7 @@ export function useDataStore(): DataStore {
     },
     logout: async () => setLoggedIn(false),
     reload: async () => undefined,
+    lastFetchedAt: null,
     isLoading: false,
     error: null,
     clearError: () => undefined,

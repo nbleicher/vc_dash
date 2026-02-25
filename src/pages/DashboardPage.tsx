@@ -20,6 +20,7 @@ type Props = {
   houseLive: { totalCalls: number; totalSales: number; marketing: number; cpa: number | null; cvr: number | null }
   agentPerformanceRows: AgentPerformanceRow[]
   lastSnapshotLabel: string
+  lastFetchedAt: string | null
   floorCapacity: number
   weekTarget: { targetSales: number; targetCpa: number } | null
   weekTrend: {
@@ -54,6 +55,7 @@ export function DashboardPage({
   houseLive,
   agentPerformanceRows,
   lastSnapshotLabel,
+  lastFetchedAt,
   floorCapacity,
   weekTarget,
   weekTrend,
@@ -91,6 +93,9 @@ export function DashboardPage({
           <CardTitle>Agent Performance</CardTitle>
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-500">Data: {lastSnapshotLabel}</span>
+            {lastFetchedAt != null && (
+              <span className="text-xs text-slate-400">Fetched: {formatTimestamp(lastFetchedAt)}</span>
+            )}
             <Button variant="secondary" className="text-xs px-2 py-1.5 h-auto" onClick={onRefreshData}>
               Refresh
             </Button>

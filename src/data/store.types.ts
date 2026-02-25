@@ -20,6 +20,8 @@ export interface DataStore {
   login: (username: string, password: string) => Promise<void>
   logout: () => Promise<void>
   reload: () => Promise<void>
+  /** When we last successfully fetched state from the API (ISO string or null). */
+  lastFetchedAt: string | null
   isLoading: boolean
   error: string | null
   clearError: () => void

@@ -19,6 +19,7 @@ function baseProps() {
       },
     ],
     lastSnapshotLabel: '5:00 PM (2/15/26 5:00 PM)',
+    lastFetchedAt: '2026-02-15T17:00:00.000Z',
     floorCapacity: 0,
     weekTarget: null,
     weekTrend: { totalSales: 0, currentCpa: null, salesProgress: null, cpaTarget: null, cpaDelta: null },

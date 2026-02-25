@@ -42,6 +42,7 @@ export function useDataStore(): DataStore {
   const [weeklyTargetsState, setWeeklyTargetsState] = useState<WeeklyTarget[]>([])
   const [vaultMeetingsState, setVaultMeetingsState] = useState<VaultMeeting[]>([])
   const [vaultDocsState, setVaultDocsState] = useState<VaultDoc[]>([])
+  const [lastFetchedAt, setLastFetchedAt] = useState<string | null>(null)
   const loadFromApi = useCallback(async () => {
     try {
       const me = await client.me()
@@ -66,6 +67,7 @@ export function useDataStore(): DataStore {
       setVaultDocsState(state.vaultDocs)
       hasLoadedRemoteRef.current = true
       setError(null)
+      setLastFetchedAt(new Date().toISOString())
     } catch (err) {
       hasLoadedRemoteRef.current = false
       setError(err instanceof Error ? err.message : 'Failed to load data.')
@@ -223,6 +225,7 @@ export function useDataStore(): DataStore {
         setIsLoading(false)
       }
     },
+    lastFetchedAt,
     isLoading,
     error,
     clearError: () => setError(null),

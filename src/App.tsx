@@ -41,6 +41,7 @@ function App() {
     login,
     logout,
     reload,
+    lastFetchedAt,
     isLoading,
     error,
     clearError,
@@ -670,6 +671,7 @@ function App() {
             houseLive={houseLive}
             agentPerformanceRows={agentPerformanceRows}
             lastSnapshotLabel={lastSnapshotLabel}
+            lastFetchedAt={lastFetchedAt}
             floorCapacity={floorCapacity}
             weekTarget={weekTarget}
             weekTrend={weekTrend}
