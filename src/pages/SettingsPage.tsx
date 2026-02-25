@@ -105,6 +105,12 @@ export function SettingsPage({
       <Card className="space-y-4">
         <CardTitle>Testing Utilities</CardTitle>
         <p className="text-sm text-slate-500">
+          API base (set at build time):{' '}
+          <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">
+            {import.meta.env.VITE_API_URL || '(not set – requests use same origin)'}
+          </code>
+        </p>
+        <p className="text-sm text-slate-500">
           Clear all app data to reset testing state across attendance, performance, tasks, and vault.
         </p>
         <Button onClick={onClearHistory} variant="danger">

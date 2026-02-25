@@ -132,3 +132,40 @@ If you have local SQLite data to keep:
 1. Set both `DB_PATH` and `DATABASE_URL` locally.
 2. Run `npm run server:import:postgres`.
 3. Verify imported row counts in script output.
+
+## 8) Troubleshooting: Dashboard still shows stale data
+
+If the dashboard shows an old "Data" time (e.g. 3:06 PM) after the bot has pushed and you clicked Refresh, work through these:
+
+**1. Confirm which API the built app uses**
+
+- Open the deployed site → **Settings**. Under "Testing Utilities" you'll see **API base**. It must be your full Railway URL (e.g. `https://your-app.up.railway.app`). If it says "(not set – requests use same origin)", the build did not get `VITE_API_URL`.
+
+**2. Build didn't get the env var**
+
+- In Cloudflare Pages: **Settings** → **Environment variables**. Ensure `VITE_API_URL` is set for the environment that runs your production build (e.g. **Production**). Value must be the full Railway URL with no trailing slash.
+- Env vars are applied at **build** time. After adding or changing the var, trigger a new build: **Deployments** → **⋯** on latest → **Retry deployment**, or push a new commit.
+
+**3. Old bundle still served**
+
+- Hard refresh: Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac). Or open the site in an incognito/private window. If the API base in Settings then shows Railway, the previous load was cached.
+
+**4. Network tab: where does `/state` go?**
+
+- DevTools → **Network** → click **Refresh** on the dashboard. Find the request whose path is `/state?...`. If the host is **value.jawnix.com**, the app is still using same-origin. If the host is your **Railway** domain, see (6) and (7).
+
+**5. CORS blocking**
+
+- If the request goes to Railway but the console shows a **CORS** error, set `FRONTEND_ORIGIN=https://value.jawnix.com` on Railway (exact, no trailing slash). Redeploy Railway after changing.
+
+**6. 401 Unauthorized**
+
+- Log in again on the deployed site so the cookie is set by Railway. If you had logged in when the app pointed at the wrong host, clear cookies and log in again.
+
+**7. Request to Railway succeeds but data is still old**
+
+- Bot and dashboard must use the **exact same** Railway URL. If the bot pushes to a different service or URL, the dashboard will never see that data. Confirm bot log shows `Pushed N snapshots for ...` and that you're not mixing two Railway services (e.g. staging vs prod) with different databases.
+
+**8. Empty `VITE_API_URL`**
+
+- If the variable is empty string, the app uses same-origin and gets HTML. Set it to the full Railway URL and trigger a new build.
