@@ -16,6 +16,7 @@ import type {
 } from '../types'
 import type { DataStore } from './store.types'
 import { createApiClient } from './apiClient'
+import { estDateKey } from '../utils'
 
 type Setter<T> = React.Dispatch<SetStateAction<T>>
 
@@ -53,6 +54,15 @@ export function useDataStore(): DataStore {
         return
       }
       const state = await client.getState()
+      if (import.meta.env.DEV) {
+        const todayKey = estDateKey(new Date())
+        console.log(
+          '[state] snapshots count',
+          state.snapshots?.length,
+          'today',
+          state.snapshots?.filter((s) => s.dateKey === todayKey).length,
+        )
+      }
       setAgentsState(state.agents)
       setSnapshotsState(state.snapshots)
       setPerfHistoryState(state.perfHistory)

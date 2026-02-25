@@ -19,6 +19,8 @@ const keySchema = z.enum([
 
 export async function stateRoutes(app: FastifyInstance): Promise<void> {
   app.get('/state', { preHandler: [app.authenticate] }, async (_request, reply) => {
+    reply.header('Cache-Control', 'no-store, no-cache, must-revalidate')
+    reply.header('Pragma', 'no-cache')
     return reply.send({ data: await app.store.getState() })
   })
 

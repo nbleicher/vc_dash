@@ -94,7 +94,7 @@ export function useAppData(store: DataStore) {
   const lastSnapshotLabel = useMemo(() => {
     if (todaysSnapshots.length === 0) return 'N/A'
     const sorted = [...todaysSnapshots].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    return `${sorted[0].slotLabel} (${formatTimestamp(sorted[0].updatedAt)})`
+    return formatTimestamp(sorted[0].updatedAt)
   }, [todaysSnapshots])
 
   const liveByAgent = useMemo(() => {

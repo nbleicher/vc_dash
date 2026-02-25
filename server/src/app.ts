@@ -68,7 +68,7 @@ export async function buildApp(config: AppConfig) {
     },
     credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'OPTIONS'],
-    allowedHeaders: ['content-type', 'authorization'],
+    allowedHeaders: ['content-type', 'authorization', 'cache-control', 'pragma'],
     maxAge: 86400,
   })
   await app.register(cookie)

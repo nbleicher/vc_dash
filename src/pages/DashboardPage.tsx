@@ -21,6 +21,7 @@ type Props = {
   agentPerformanceRows: AgentPerformanceRow[]
   lastSnapshotLabel: string
   lastFetchedAt: string | null
+  todaySnapshotCount: number
   floorCapacity: number
   weekTarget: { targetSales: number; targetCpa: number } | null
   weekTrend: {
@@ -56,6 +57,7 @@ export function DashboardPage({
   agentPerformanceRows,
   lastSnapshotLabel,
   lastFetchedAt,
+  todaySnapshotCount,
   floorCapacity,
   weekTarget,
   weekTrend,
@@ -93,6 +95,9 @@ export function DashboardPage({
           <CardTitle>Agent Performance</CardTitle>
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-500">Data: {lastSnapshotLabel}</span>
+            {todaySnapshotCount > 0 && (
+              <span className="text-xs text-slate-400">({todaySnapshotCount} snapshots for today)</span>
+            )}
             {lastFetchedAt != null && (
               <span className="text-xs text-slate-400">Fetched: {formatTimestamp(lastFetchedAt)}</span>
             )}

@@ -46,6 +46,7 @@ If Railway build fails with `EBUSY ... rmdir '/app/node_modules/.vite'`:
    - Build output directory: `dist`
 3. Set environment variable:
    - `VITE_API_URL=https://<your-railway-service-domain>`
+   - This must match the **same** Railway API URL the bot uses (`API_BASE_URL` on the VPS). If they differ, the dashboard will not show data the bot pushes; rebuild and redeploy the frontend after changing.
 
 ## 3.5) Set custom domain to `value.jawnix.com`
 
