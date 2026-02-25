@@ -153,7 +153,7 @@ export function DashboardPage({
                 </select>
               </label>
             </div>
-            <div className="overflow-x-auto overflow-y-auto max-h-[350px] rounded border border-slate-200">
+            <div className="overflow-x-auto overflow-y-auto max-h-[500px] rounded border border-slate-200">
               <table className="w-full text-left text-sm">
                 <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.06)]">
                   <tr className="border-b border-slate-200">
