@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import { Badge, Button, Card, CardTitle, MetricCard } from '../components'
 import type { DataStore } from '../data'
 import { formatNum, formatTimestamp } from '../utils'
@@ -76,6 +77,22 @@ export function DashboardPage({
         ? 'border-green-200 bg-green-50/70'
         : 'border-red-200 bg-red-50/70'
 
+  const [sortBy, setSortBy] = useState<'cpa' | 'sales'>('cpa')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const displayedRows = useMemo(() => {
+    const rows = [...agentPerformanceRows]
+    if (sortBy === 'cpa') {
+      rows.sort((a, b) => {
+        const va = a.cpa ?? -Infinity
+        const vb = b.cpa ?? -Infinity
+        return sortDir === 'desc' ? vb - va : va - vb
+      })
+    } else {
+      rows.sort((a, b) => (sortDir === 'desc' ? b.sales - a.sales : a.sales - b.sales))
+    }
+    return rows
+  }, [agentPerformanceRows, sortBy, sortDir])
+
   return (
     <div className="page-grid">
       {attendanceAlert && (
@@ -109,20 +126,45 @@ export function DashboardPage({
         {agentPerformanceRows.length === 0 ? (
           <p className="text-sm text-slate-500">No active agents.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                Sort by
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as 'cpa' | 'sales')}
+                  className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                >
+                  <option value="cpa">CPA</option>
+                  <option value="sales">Sales</option>
+                </select>
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                Order
+                <select
+                  value={sortDir}
+                  onChange={(e) => setSortDir(e.target.value as 'asc' | 'desc')}
+                  className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                >
+                  <option value="desc">Descending (high first)</option>
+                  <option value="asc">Ascending (low first)</option>
+                </select>
+              </label>
+            </div>
+          <div className="overflow-x-auto overflow-y-auto max-h-[220px] rounded border border-slate-200">
             <table className="w-full text-left text-sm">
-              <thead>
+              <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.06)]">
                 <tr className="border-b border-slate-200">
-                  <th className="pb-2 pr-4 font-medium text-slate-700">Agent</th>
-                  <th className="pb-2 pr-4 text-right font-medium text-slate-700">Calls</th>
-                  <th className="pb-2 pr-4 text-right font-medium text-slate-700">Sales</th>
-                  <th className="pb-2 pr-4 text-right font-medium text-slate-700">Marketing</th>
-                  <th className="pb-2 pr-4 text-right font-medium text-slate-700">CPA</th>
-                  <th className="pb-2 text-right font-medium text-slate-700">CVR</th>
+                  <th className="pb-2 pt-2 pr-4 font-medium text-slate-700">Agent</th>
+                  <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">CPA</th>
+                  <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Sales</th>
+                  <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Calls</th>
+                  <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Marketing</th>
+                  <th className="pb-2 pt-2 text-right font-medium text-slate-700">CVR</th>
                 </tr>
               </thead>
               <tbody>
-                {agentPerformanceRows.map((row) => {
+                {displayedRows.map((row) => {
                   const cpaOverThreshold = row.cpa !== null && row.cpa > CPA_HIGHLIGHT_THRESHOLD
                   return (
                     <tr
@@ -130,12 +172,12 @@ export function DashboardPage({
                       className={`border-b border-slate-100 ${cpaOverThreshold ? 'bg-red-500/10' : ''}`}
                     >
                       <td className="py-2 pr-4 font-medium">{row.agentName}</td>
-                      <td className="py-2 pr-4 text-right tabular-nums">{row.calls}</td>
-                      <td className="py-2 pr-4 text-right tabular-nums">{row.sales}</td>
-                      <td className="py-2 pr-4 text-right tabular-nums">${formatNum(row.marketing, 0)}</td>
                       <td className="py-2 pr-4 text-right tabular-nums">
                         {row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}
                       </td>
+                      <td className="py-2 pr-4 text-right tabular-nums">{row.sales}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums">{row.calls}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums">${formatNum(row.marketing, 0)}</td>
                       <td className="py-2 text-right tabular-nums">
                         {row.cvr === null ? 'N/A' : `${formatNum(row.cvr * 100)}%`}
                       </td>
@@ -145,6 +187,7 @@ export function DashboardPage({
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
 
