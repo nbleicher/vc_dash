@@ -41,7 +41,7 @@ export class SqliteStore implements StoreAdapter {
       weeklyTargets: this.getWeeklyTargets(),
       vaultMeetings: this.getVaultMeetings(),
       vaultDocs: this.getVaultDocs(),
-      lastPoliciesBotRun: this.getLastPoliciesBotRun(),
+      lastPoliciesBotRun: await this.getLastPoliciesBotRun(),
     }
   }
 
@@ -280,9 +280,13 @@ export class SqliteStore implements StoreAdapter {
       .all() as VaultDoc[]
   }
 
-  private getLastPoliciesBotRun(): string | null {
+  private readLastPoliciesBotRun(): string | null {
     const row = this.db.prepare("SELECT value FROM app_meta WHERE key = 'lastPoliciesBotRun'").get() as { value: string } | undefined
     return row?.value ?? null
+  }
+
+  async getLastPoliciesBotRun(): Promise<string | null> {
+    return Promise.resolve(this.readLastPoliciesBotRun())
   }
 
   async setLastPoliciesBotRun(iso: string): Promise<void> {

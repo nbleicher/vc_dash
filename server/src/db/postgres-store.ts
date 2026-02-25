@@ -44,7 +44,7 @@ export class PostgresStore implements StoreAdapter {
     }
   }
 
-  private async getLastPoliciesBotRun(): Promise<string | null> {
+  async getLastPoliciesBotRun(): Promise<string | null> {
     const result = await this.pool.query<{ payload: unknown }>(
       "SELECT payload FROM app_state WHERE key = 'lastPoliciesBotRun'",
     )
@@ -52,7 +52,16 @@ export class PostgresStore implements StoreAdapter {
     const payload = result.rows[0].payload
     if (typeof payload === 'string') {
       const s = payload.trim()
-      return s.length > 0 ? s : null
+      if (s.length === 0) return null
+      if (s.startsWith('"')) {
+        try {
+          const parsed = JSON.parse(s) as unknown
+          if (typeof parsed === 'string') return parsed.trim() || null
+        } catch {
+          // not valid JSON, use as-is
+        }
+      }
+      return s
     }
     if (payload !== null && typeof payload === 'object') {
       const obj = payload as Record<string, unknown>
@@ -69,11 +78,11 @@ export class PostgresStore implements StoreAdapter {
     await this.pool.query(
       `
       INSERT INTO app_state (key, payload, updated_at)
-      VALUES ('lastPoliciesBotRun', to_jsonb($1::text), NOW())
+      VALUES ('lastPoliciesBotRun', $1::jsonb, NOW())
       ON CONFLICT (key)
       DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW();
       `,
-      [iso],
+      [JSON.stringify(iso)],
     )
   }
 

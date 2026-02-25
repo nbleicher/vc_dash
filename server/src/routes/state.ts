@@ -24,6 +24,11 @@ export async function stateRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ data: await app.store.getState() })
   })
 
+  app.get('/state/last-policies-bot-run', { preHandler: [app.authenticate] }, async (_request, reply) => {
+    const lastPoliciesBotRun = await app.store.getLastPoliciesBotRun()
+    return reply.send({ data: { lastPoliciesBotRun } })
+  })
+
   app.get('/state/:key', { preHandler: [app.authenticate] }, async (request, reply) => {
     const parse = keySchema.safeParse((request.params as { key: string }).key)
     if (!parse.success) {

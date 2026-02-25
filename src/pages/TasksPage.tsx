@@ -134,8 +134,12 @@ export function TasksPage({
   }
   const agentAuditRows = useMemo(() => {
     if (!auditForm.agentId) return []
+    const hideOnTasks = new Set(['no_action_needed', 'accepted', 'issued', 'placed'])
     return [...auditRecords]
-      .filter((r) => r.agentId === auditForm.agentId && r.currentStatus !== 'no_action_needed')
+      .filter(
+        (r) =>
+          r.agentId === auditForm.agentId && !hideOnTasks.has(r.currentStatus),
+      )
       .sort((a, b) => (b.discoveryTs > a.discoveryTs ? 1 : -1))
   }, [auditRecords, auditForm.agentId])
   const displayAuditRows = auditHistoryExpanded ? agentAuditRows : agentAuditRows.slice(0, AUDIT_HISTORY_PREVIEW_ROWS)
