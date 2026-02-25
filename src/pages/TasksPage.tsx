@@ -626,7 +626,7 @@ export function TasksPage({
                               ))}
                             </Select>
                           </td>
-                          <td>{lastPoliciesBotRun ? formatTimestamp(lastPoliciesBotRun) : '—'}</td>
+                          <td>{lastPoliciesBotRun ? formatTimestamp(lastPoliciesBotRun) : 'Never'}</td>
                           <td>
                             <Input
                               type="datetime-local"

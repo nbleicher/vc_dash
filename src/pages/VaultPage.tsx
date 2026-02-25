@@ -563,7 +563,7 @@ export function VaultPage({
                     </>
                   )}
                 </td>
-                <td>{lastPoliciesBotRun ? formatTimestamp(lastPoliciesBotRun) : '—'}</td>
+                <td>{lastPoliciesBotRun ? formatTimestamp(lastPoliciesBotRun) : 'Never'}</td>
                 <td>
                   {allowEdit ? (
                     <Input
@@ -1259,6 +1259,7 @@ export function VaultPage({
                       <th>Carrier</th>
                       <th>Client</th>
                       <th>Status</th>
+                      <th>Last parsed</th>
                       <th>Timestamp 1</th>
                       <th>Timestamp 2</th>
                       <th>Notes</th>
@@ -1268,7 +1269,7 @@ export function VaultPage({
                   <tbody>
                     {auditPagedRows.length === 0 && (
                       <tr>
-                        <td colSpan={canEditHistory ? 9 : 8}>No audit rows match this search.</td>
+                        <td colSpan={canEditHistory ? 10 : 9}>No audit rows match this search.</td>
                       </tr>
                     )}
                     {auditPagedRows.map((row) => {
@@ -1328,6 +1329,7 @@ export function VaultPage({
                             </>
                           )}
                         </td>
+                        <td>{lastPoliciesBotRun ? formatTimestamp(lastPoliciesBotRun) : 'Never'}</td>
                         <td>{formatTimestamp(row.discoveryTs)}</td>
                         <td>
                           {canEditHistory ? (

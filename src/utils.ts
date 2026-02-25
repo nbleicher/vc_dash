@@ -64,6 +64,7 @@ export function weekKeyFromDateKey(dateKey: string): string {
 export function formatTimestamp(ts: string | null): string {
   if (!ts) return 'N/A'
   const d = new Date(normalizeIsoTimestamp(ts))
+  if (Number.isNaN(d.getTime())) return 'N/A'
   return new Intl.DateTimeFormat('en-US', {
     month: '2-digit',
     day: '2-digit',

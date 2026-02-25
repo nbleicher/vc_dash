@@ -45,12 +45,24 @@ export class PostgresStore implements StoreAdapter {
   }
 
   private async getLastPoliciesBotRun(): Promise<string | null> {
-    const result = await this.pool.query<{ payload: string }>(
+    const result = await this.pool.query<{ payload: unknown }>(
       "SELECT payload FROM app_state WHERE key = 'lastPoliciesBotRun'",
     )
     if (result.rows.length === 0) return null
     const payload = result.rows[0].payload
-    return typeof payload === 'string' ? payload : null
+    if (typeof payload === 'string') {
+      const s = payload.trim()
+      return s.length > 0 ? s : null
+    }
+    if (payload !== null && typeof payload === 'object') {
+      const obj = payload as Record<string, unknown>
+      const value = obj.value ?? obj.timestamp
+      if (typeof value === 'string') {
+        const s = value.trim()
+        return s.length > 0 ? s : null
+      }
+    }
+    return null
   }
 
   async setLastPoliciesBotRun(iso: string): Promise<void> {
