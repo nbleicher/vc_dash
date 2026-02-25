@@ -2,3 +2,4 @@
 auth_*.json
 .env
 agent_map.json
+*_debug.png

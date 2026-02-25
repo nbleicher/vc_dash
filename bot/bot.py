@@ -46,13 +46,22 @@ SELECTORS_POLICYDEN = {
     "col_agent": 1,   # AGENT column (name + email)
     "col_sales": 2,   # SALES column (e.g. 6)
 }
-# WeGenerate /dashboard Agent Performance: Rank(0), Agent(1), Billable(2), Sales(3), ...
+# WeGenerate /dashboard: table is inside a card "Agent Performance"; must open date picker, click Today, Apply to load data.
 SELECTORS_WEGENERATE = {
-    "date_trigger": 'button#date',
-    "date_apply": 'button:has-text("Apply")',
-    "table_rows": "table tbody tr",
-    "col_agent": 1,   # Agent column (e.g. Alexander Vielot)
-    "col_calls": 2,   # Billable column (e.g. 14)
+    "date_trigger": "button#date",
+    "date_apply": "button:has-text('Apply')",
+    "card_heading": "h3:has-text('Agent Performance')",
+    "table_rows": "div:has(h3:has-text('Agent Performance')) table tbody tr",
+    "table_rows_fallbacks": [
+        "table tbody tr",
+        "table tr",
+        "tr:has(td[class*='align-middle'])",
+        "tr:has(td.font-medium)",
+        "[role='row']",
+        "[role='grid'] [role='row']",
+    ],
+    "col_agent": 1,   # Agent column
+    "col_calls": 2,   # Billable column
 }
 
 
@@ -101,12 +110,24 @@ def load_agent_map(bot_dir: Path) -> dict[str, str]:
 
 def set_date_on_page(page, date_key: str, selectors: dict) -> bool:
     """Optional: open date picker, select date_key, click Apply. Return True if done."""
-    if not selectors.get("date_trigger") or not selectors.get("date_apply"):
-        log("  Date selectors not configured; skipping date filter (using page default).")
+    if not selectors.get("date_apply"):
+        log("  Date apply selector not configured; skipping date filter (using page default).")
+        return False
+    triggers = [selectors.get("date_trigger")]
+    if selectors.get("date_trigger_fallbacks"):
+        triggers = [t for t in triggers if t] + list(selectors["date_trigger_fallbacks"])
+    trigger_clicked = False
+    for trigger_sel in triggers:
+        try:
+            page.click(trigger_sel, timeout=4000)
+            trigger_clicked = True
+            break
+        except Exception:
+            continue
+    if not trigger_clicked:
+        log("  Date picker: could not open (trigger not found). Scraping page default date.")
         return False
     try:
-        from playwright.sync_api import TimeoutError as PlaywrightTimeout
-        page.click(selectors["date_trigger"], timeout=5000)
         # Wait for popover content to appear (reka popover; id can vary)
         page.wait_for_timeout(600)
         popover = page.locator('[id^="reka-popover-content-"], [role="dialog"]').first
@@ -239,6 +260,11 @@ def scrape_policyden(auth_path: Path, date_key: str, bot_dir: Path) -> dict[str,
                     out[agent] = out.get(agent, 0) + sales
             if live_page != page:
                 live_page.close()
+            n_rows = len(rows)
+            if n_rows == 0:
+                log("  PolicyDen: 0 table rows (Open Live View may have failed or session expired).")
+            else:
+                log(f"  PolicyDen: {n_rows} table rows, {len(out)} agents with sales.")
         except Exception as e:
             log(f"  PolicyDen scrape failed: {e}")
         finally:
@@ -263,14 +289,63 @@ def scrape_wegenerate(auth_path: Path, date_key: str, bot_dir: Path) -> dict[str
             stealth_sync(page)
         try:
             page.goto(WEGENERATE_DASHBOARD, wait_until="networkidle", timeout=30000)
-            page.wait_for_timeout(2000)
-            set_date_on_page(page, date_key, SELECTORS_WEGENERATE)
+            page.wait_for_timeout(3500)
+
+            if SELECTORS_WEGENERATE.get("date_trigger") and SELECTORS_WEGENERATE.get("date_apply"):
+                set_date_on_page(page, date_key, SELECTORS_WEGENERATE)
+                page.wait_for_timeout(1500)
 
             rows_sel = SELECTORS_WEGENERATE.get("table_rows") or "table tbody tr"
             col_agent = SELECTORS_WEGENERATE.get("col_agent")
             col_calls = SELECTORS_WEGENERATE.get("col_calls")
 
+            card_heading = SELECTORS_WEGENERATE.get("card_heading")
+            if card_heading:
+                try:
+                    page.locator(card_heading).first.scroll_into_view_if_needed(timeout=10000)
+                    page.wait_for_timeout(1200)
+                except Exception:
+                    pass
+            try:
+                page.wait_for_selector(rows_sel, state="attached", timeout=12000)
+            except Exception:
+                pass
+            try:
+                page.locator(rows_sel).first.scroll_into_view_if_needed(timeout=5000)
+                page.wait_for_timeout(400)
+            except Exception:
+                pass
+            try:
+                scroll_sel = "div:has(h3:has-text('Agent Performance')) div.overflow-y-auto"
+                scroll_container = page.locator(scroll_sel)
+                if scroll_container.count() > 0:
+                    for _ in range(8):
+                        scroll_container.first.evaluate("e => { e.scrollTop = e.scrollHeight; }")
+                        page.wait_for_timeout(200)
+            except Exception:
+                pass
             rows = page.query_selector_all(rows_sel)
+            if len(rows) == 0 and SELECTORS_WEGENERATE.get("table_rows_fallbacks"):
+                for fallback in SELECTORS_WEGENERATE["table_rows_fallbacks"]:
+                    rows = page.query_selector_all(fallback)
+                    if len(rows) > 0:
+                        rows_sel = fallback
+                        break
+            if len(rows) == 0:
+                for frame in page.frames:
+                    if frame == page.main_frame:
+                        continue
+                    try:
+                        rows = frame.query_selector_all(rows_sel)
+                        if len(rows) == 0:
+                            for fallback in SELECTORS_WEGENERATE.get("table_rows_fallbacks") or []:
+                                rows = frame.query_selector_all(fallback)
+                                if len(rows) > 0:
+                                    break
+                        if len(rows) > 0:
+                            break
+                    except Exception:
+                        continue
             for row in rows:
                 cells = row.query_selector_all("td")
                 if not cells:
@@ -286,6 +361,20 @@ def scrape_wegenerate(auth_path: Path, date_key: str, bot_dir: Path) -> dict[str
                         pass
                 if agent:
                     out[agent] = out.get(agent, 0) + calls
+            n_rows = len(rows)
+            if n_rows == 0:
+                log("  WeGenerate: 0 table rows (session may have expired or page structure changed).")
+                if os.environ.get("BOT_DEBUG_SCREENSHOT", "").strip().lower() in ("1", "true", "yes"):
+                    try:
+                        path = bot_dir / "wegenerate_debug.png"
+                        page.screenshot(path=str(path))
+                        log(f"  Debug screenshot saved to {path}")
+                    except Exception:
+                        pass
+            else:
+                log(f"  WeGenerate: {n_rows} table rows, {len(out)} agents with calls.")
+        except Exception as e:
+            log(f"  WeGenerate scrape failed: {e}")
         finally:
             browser.close()
     return out
@@ -368,6 +457,9 @@ def main() -> int:
     sales_by_agent = scrape_policyden(auth_policyden, date_key, bot_dir)
     log("Scraping WeGenerate (calls)...")
     calls_by_agent = scrape_wegenerate(auth_wegenerate, date_key, bot_dir)
+
+    if not sales_by_agent and not calls_by_agent:
+        log("  Both scrapers empty. Re-run capture.py for both sites, re-upload auth_*.json to the VPS, and try again (sessions expire).")
 
     verbose = os.environ.get("BOT_VERBOSE", "").strip().lower() in ("1", "true", "yes")
     if verbose:

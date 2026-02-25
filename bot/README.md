@@ -67,10 +67,10 @@ Copy `agent_map.example.json` to `agent_map.json` and fill in the mapping from a
 ```
 
 **Configure selectors (required for scraping):**  
-Edit `bot.py` and set the selector constants near the top:
+Edit `bot.py` and set the selector constants near the top. If a site is redesigned, selectors can break (e.g. "Date picker failed" or empty scraped data). Then:
 
-- **SELECTORS_POLICYDEN**: `date_trigger`, `date_apply`, `table_rows`, `col_agent` (column index for agent name), `col_contact` (column index for contact name = policy_id).
-- **SELECTORS_WEGENERATE**: `date_trigger`, `date_apply`, `table_rows`, `col_agent`, `col_calls` (column index for billable calls).
+- **WeGenerate:** The date control may no longer be `button#date`. In Chrome DevTools on the WeGenerate dashboard, inspect the date picker button and note its selector (id, data-testid, aria-label, or class). Set `SELECTORS_WEGENERATE["date_trigger"]` to that selector. The bot also tries fallback selectors; add more in `date_trigger_fallbacks` if needed.
+- **PolicyDen:** Ensure `open_live_view`, `table_rows`, `col_agent`, `col_sales` match the live view table.
 
 Use browser DevTools on PolicyDen and WeGenerate to find the right selectors and column indices (0-based).
 
@@ -110,3 +110,9 @@ Add (replace `ubuntu` with your username if different):
   BOT_VERBOSE=1 ./venv/bin/python bot.py
   ```
   The log will show: PolicyDen name→sales, WeGenerate name→calls, your `agent_map` keys, and each row pushed (display name, sales, calls). If a name in `agent_map` doesn’t appear in the scraped lists or has 0 there, fix the name in `agent_map` (or the selectors) so it matches exactly what appears in the table.
+
+- **"Date picker failed" or both scrapers return 0**  
+  The site’s UI likely changed. Open the dashboard in a browser, use DevTools to find the date control and table selectors, and update `SELECTORS_WEGENERATE` (and `SELECTORS_POLICYDEN` if needed) in `bot.py` (see **Configure selectors** above).
+
+- **Both PolicyDen and WeGenerate return {}**  
+  Saved sessions often expire. Re-run `capture.py` for both sites (on your Mac), then re-upload the new `auth_policyden.json` and `auth_wegenerate.json` to the VPS with `scp`. Without valid auth, the dashboards show a login page and the bot sees no table rows.
