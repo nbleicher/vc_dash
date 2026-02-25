@@ -19,6 +19,7 @@ import {
   formatDateKey,
   formatTimestamp,
   monFriDatesForWeek,
+  normalizeIsoTimestamp,
   uid,
   weekKeyFromDateKey,
   weekKeyMonFri,
@@ -93,7 +94,11 @@ export function useAppData(store: DataStore) {
   const todaysSnapshots = useMemo(() => snapshots.filter((s) => s.dateKey === todayKey), [snapshots, todayKey])
   const lastSnapshotLabel = useMemo(() => {
     if (todaysSnapshots.length === 0) return 'N/A'
-    const sorted = [...todaysSnapshots].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    const sorted = [...todaysSnapshots].sort(
+      (a, b) =>
+        new Date(normalizeIsoTimestamp(b.updatedAt)).getTime() -
+        new Date(normalizeIsoTimestamp(a.updatedAt)).getTime()
+    )
     return formatTimestamp(sorted[0].updatedAt)
   }, [todaysSnapshots])
 
@@ -102,7 +107,11 @@ export function useAppData(store: DataStore) {
     for (const agent of activeAgents) {
       const items = todaysSnapshots
         .filter((s) => s.agentId === agent.id)
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .sort(
+          (a, b) =>
+            new Date(normalizeIsoTimestamp(b.updatedAt)).getTime() -
+            new Date(normalizeIsoTimestamp(a.updatedAt)).getTime()
+        )
       const chosen = items.length > 0 ? items[0] : null
       if (chosen) map.set(agent.id, chosen)
     }
@@ -441,7 +450,7 @@ export function useAppData(store: DataStore) {
       let marketing = 0
       let updatedAt: string | null = null
       const setLatest = (ts: string) => {
-        if (!updatedAt || new Date(ts).getTime() > new Date(updatedAt).getTime()) updatedAt = ts
+        if (!updatedAt || new Date(normalizeIsoTimestamp(ts)).getTime() > new Date(normalizeIsoTimestamp(updatedAt)).getTime()) updatedAt = ts
       }
       for (const agent of activeAgents) {
         if (dateKey === todayKey) {
@@ -495,7 +504,7 @@ export function useAppData(store: DataStore) {
       (acc, row) => {
         acc.deals += row.deals
         acc.marketing += row.marketing
-        if (row.updatedAt && (!acc.updatedAt || new Date(row.updatedAt).getTime() > new Date(acc.updatedAt).getTime())) {
+        if (row.updatedAt && (!acc.updatedAt || new Date(normalizeIsoTimestamp(row.updatedAt)).getTime() > new Date(normalizeIsoTimestamp(acc.updatedAt)).getTime())) {
           acc.updatedAt = row.updatedAt
         }
         return acc

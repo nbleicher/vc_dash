@@ -488,7 +488,10 @@ def main() -> int:
     existing_snapshots = state.get("snapshots") or []
     existing_by_key = {(s["dateKey"], s["slot"], s["agentId"]): s for s in existing_snapshots}
 
-    now_iso = __import__("datetime").datetime.now(__import__("zoneinfo").ZoneInfo(ZONE)).isoformat(timespec="seconds") + "Z"
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfo
+    now_utc = datetime.now(ZoneInfo(ZONE)).astimezone(timezone.utc)
+    now_iso = now_utc.strftime("%Y-%m-%dT%H:%M:%S.000Z")
     new_rows = []
     for display_name, agent_id in agent_map.items():
         if agent_id not in active_ids:

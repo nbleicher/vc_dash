@@ -63,7 +63,7 @@ export function weekKeyFromDateKey(dateKey: string): string {
 
 export function formatTimestamp(ts: string | null): string {
   if (!ts) return 'N/A'
-  const d = new Date(ts)
+  const d = new Date(normalizeIsoTimestamp(ts))
   return new Intl.DateTimeFormat('en-US', {
     month: '2-digit',
     day: '2-digit',
@@ -73,6 +73,12 @@ export function formatTimestamp(ts: string | null): string {
     hour12: true,
     timeZone: ZONE,
   }).format(d)
+}
+
+/** Normalize ISO strings so Date() parses correctly (e.g. strip redundant Z when offset present). */
+export function normalizeIsoTimestamp(ts: string): string {
+  if (!ts) return ts
+  return ts.replace(/([+-]\d{2}:\d{2})Z$/i, '$1')
 }
 
 export function mondayFor(date: Date): Date {
