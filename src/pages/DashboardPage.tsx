@@ -107,6 +107,8 @@ export function DashboardPage({
           </Button>
         </Card>
       )}
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+        <div className="xl:col-span-1">
       <Card className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle>Agent Performance</CardTitle>
@@ -190,7 +192,8 @@ export function DashboardPage({
           </>
         )}
       </Card>
-
+        </div>
+        <div className="flex flex-col gap-5 xl:col-span-2">
       <Card className="space-y-4">
         <CardTitle>House Pulse</CardTitle>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
@@ -255,63 +258,69 @@ export function DashboardPage({
       <Card className="space-y-4">
         <CardTitle>Action Center</CardTitle>
         <div className="grid gap-4 xl:grid-cols-2">
-          <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-col rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-center justify-between gap-2 shrink-0">
               <h3>Check Recordings</h3>
               <Badge variant="warning">Needs Review</Badge>
             </div>
-            {actionQa.length === 0 && <p className="text-sm text-slate-500">N/A - no flagged QA items.</p>}
-            {actionQa.map((q) => (
-              <div key={q.id} className="alert-card">
-                <p>
-                  <strong>{agents.find((a) => a.id === q.agentId)?.name ?? 'Unknown Agent'}</strong> - {q.clientName}
-                </p>
-                <p className="text-sm text-slate-500">Notes: {q.notes || 'N/A'}</p>
-                <Button onClick={() => onResolveQa(q.id)} className="mt-2" variant="default">
-                  Mark Resolved & Archive
-                </Button>
-              </div>
-            ))}
+            <div className="mt-3 min-h-0 flex-1 overflow-y-auto max-h-[55rem] space-y-3">
+              {actionQa.length === 0 && <p className="text-sm text-slate-500">N/A - no flagged QA items.</p>}
+              {actionQa.map((q) => (
+                <div key={q.id} className="alert-card">
+                  <p>
+                    <strong>{agents.find((a) => a.id === q.agentId)?.name ?? 'Unknown Agent'}</strong> - {q.clientName}
+                  </p>
+                  <p className="text-sm text-slate-500">Notes: {q.notes || 'N/A'}</p>
+                  <Button onClick={() => onResolveQa(q.id)} className="mt-2" variant="default">
+                    Mark Resolved & Archive
+                  </Button>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-col rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-center justify-between gap-2 shrink-0">
               <h3>Action Needed (Audit)</h3>
               <Badge variant="danger">Critical</Badge>
             </div>
-            {actionAudit.length === 0 && <p className="text-sm text-slate-500">N/A - no active Action Needed items.</p>}
-            {actionAudit.map((a) => {
-              const ageHrs = (now.getTime() - new Date(a.discoveryTs).getTime()) / 3_600_000
-              return (
-                <div key={a.id} className={`alert-card ${ageHrs > 4 ? 'stale-alert' : ''}`}>
-                  <p>
-                    <strong>{agents.find((x) => x.id === a.agentId)?.name ?? 'Unknown Agent'}</strong> - {a.clientName}
-                  </p>
-                  <p className="status-text">
-                    {a.carrier} | {a.currentStatus} | discovered {formatTimestamp(a.discoveryTs)}
-                  </p>
-                  <label className="flex items-center gap-2 text-sm text-slate-700">
-                    <input
-                      type="checkbox"
-                      checked={a.mgmtNotified}
-                      onChange={() => onToggleAuditFlag(a.id, 'mgmtNotified')}
-                    />
-                    Management Notified Agent
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-slate-700">
-                    <input
-                      type="checkbox"
-                      checked={a.outreachMade}
-                      onChange={() => onToggleAuditFlag(a.id, 'outreachMade')}
-                    />
-                    Agent Attempted Outreach
-                  </label>
-                  <p className="text-sm text-slate-500">Timestamp 2: {formatTimestamp(a.resolutionTs)}</p>
-                </div>
-              )
-            })}
+            <div className="mt-3 min-h-0 flex-1 overflow-y-auto max-h-[55rem] space-y-3">
+              {actionAudit.length === 0 && <p className="text-sm text-slate-500">N/A - no active Action Needed items.</p>}
+              {actionAudit.map((a) => {
+                const ageHrs = (now.getTime() - new Date(a.discoveryTs).getTime()) / 3_600_000
+                return (
+                  <div key={a.id} className={`alert-card ${ageHrs > 4 ? 'stale-alert' : ''}`}>
+                    <p>
+                      <strong>{agents.find((x) => x.id === a.agentId)?.name ?? 'Unknown Agent'}</strong> - {a.clientName}
+                    </p>
+                    <p className="status-text">
+                      {a.carrier} | {a.currentStatus} | discovered {formatTimestamp(a.discoveryTs)}
+                    </p>
+                    <label className="flex items-center gap-2 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={a.mgmtNotified}
+                        onChange={() => onToggleAuditFlag(a.id, 'mgmtNotified')}
+                      />
+                      Management Notified Agent
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={a.outreachMade}
+                        onChange={() => onToggleAuditFlag(a.id, 'outreachMade')}
+                      />
+                      Agent Attempted Outreach
+                    </label>
+                    <p className="text-sm text-slate-500">Timestamp 2: {formatTimestamp(a.resolutionTs)}</p>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
       </Card>
+        </div>
+      </div>
     </div>
   )
 }
