@@ -117,6 +117,8 @@ cd ~/bot
 ./venv/bin/python policies_bot.py
 ```
 
+The dashboard **Last parsed** column (Tasks → Action Needed Audit, Vault → Action Needed History) shows the last date the policies bot ran. It shows **Never** until the bot has run at least once and successfully called the API; ensure `API_BASE_URL`, `ADMIN_USERNAME`, and `ADMIN_PASSWORD` match the dashboard. If the bot exits with "Failed to set last policies bot run timestamp", fix credentials or API URL and re-run.
+
 **Optional cron (once per day at 9 AM EST):** Add to `crontab -e` (replace `ubuntu` with your username):
 ```
 CRON_TZ=America/New_York

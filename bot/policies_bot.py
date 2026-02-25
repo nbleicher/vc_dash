@@ -373,7 +373,9 @@ def main() -> int:
             log(f"Synced audit records: added {added}, updated {updated}.")
         else:
             return 1
-    api_set_last_policies_bot_run(session, api_base, now_iso)
+    if not api_set_last_policies_bot_run(session, api_base, now_iso):
+        log("ERROR: Failed to set last policies bot run timestamp. Check API_BASE_URL, ADMIN_USERNAME, ADMIN_PASSWORD.")
+        return 1
     if not added and not updated:
         log("No audit record changes to push.")
     return 0
