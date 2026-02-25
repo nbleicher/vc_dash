@@ -76,6 +76,19 @@ export function formatTimestamp(ts: string | null): string {
   }).format(d)
 }
 
+/** Date-only format for "Last parsed" column (e.g. 2/25/25). Returns 'N/A' for null or invalid. */
+export function formatLastParsedDate(ts: string | null): string {
+  if (!ts) return 'N/A'
+  const d = new Date(normalizeIsoTimestamp(ts))
+  if (Number.isNaN(d.getTime())) return 'N/A'
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'numeric',
+    day: 'numeric',
+    year: '2-digit',
+    timeZone: ZONE,
+  }).format(d)
+}
+
 /** Normalize ISO strings so Date() parses correctly (e.g. strip redundant Z when offset present). */
 export function normalizeIsoTimestamp(ts: string): string {
   if (!ts) return ts

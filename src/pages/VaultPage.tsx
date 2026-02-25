@@ -5,7 +5,7 @@ import { POLICY_STATUSES } from '../constants'
 
 const AUDIT_STATUS_OPTIONS = [...POLICY_STATUSES, 'no_action_needed']
 import type { AuditRecord, QaRecord, VaultHistoryView, VaultScope, VaultMeeting } from '../types'
-import { estDateKey, formatDateKey, formatNum, formatPctDelta, formatTimestamp } from '../utils'
+import { estDateKey, formatDateKey, formatLastParsedDate, formatNum, formatPctDelta, formatTimestamp } from '../utils'
 
 type Props = {
   vaultScope: VaultScope
@@ -563,7 +563,7 @@ export function VaultPage({
                     </>
                   )}
                 </td>
-                <td>{lastPoliciesBotRun ? formatTimestamp(lastPoliciesBotRun) : 'Never'}</td>
+                <td>{lastPoliciesBotRun ? formatLastParsedDate(lastPoliciesBotRun) : 'Never'}</td>
                 <td>
                   {allowEdit ? (
                     <Input
@@ -1329,7 +1329,7 @@ export function VaultPage({
                             </>
                           )}
                         </td>
-                        <td>{lastPoliciesBotRun ? formatTimestamp(lastPoliciesBotRun) : 'Never'}</td>
+                        <td>{lastPoliciesBotRun ? formatLastParsedDate(lastPoliciesBotRun) : 'Never'}</td>
                         <td>{formatTimestamp(row.discoveryTs)}</td>
                         <td>
                           {canEditHistory ? (

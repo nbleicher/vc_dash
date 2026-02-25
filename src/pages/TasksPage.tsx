@@ -6,7 +6,7 @@ import type { AttendanceRecord, AuditRecord } from '../types'
 import type { AttendancePercent } from '../types'
 import type { SpiffRecord, TaskPage } from '../types'
 import type { DataStore } from '../data'
-import { formatDateKey, formatTimestamp } from '../utils'
+import { formatDateKey, formatLastParsedDate, formatTimestamp } from '../utils'
 
 const AUDIT_HISTORY_PREVIEW_ROWS = 5
 
@@ -626,7 +626,7 @@ export function TasksPage({
                               ))}
                             </Select>
                           </td>
-                          <td>{lastPoliciesBotRun ? formatTimestamp(lastPoliciesBotRun) : 'Never'}</td>
+                          <td>{lastPoliciesBotRun ? formatLastParsedDate(lastPoliciesBotRun) : 'Never'}</td>
                           <td>
                             <Input
                               type="datetime-local"
