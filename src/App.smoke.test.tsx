@@ -28,7 +28,7 @@ describe('App smoke', () => {
           text: async () => JSON.stringify({ data: { loggedIn: true, role: 'admin' } }),
         }
       }
-      if (url.endsWith('/state')) {
+      if (url.endsWith('/state') || url.includes('/state?')) {
         return {
           ok: true,
           status: 200,
@@ -84,7 +84,7 @@ describe('App smoke', () => {
           text: async () => JSON.stringify({ data: { loggedIn: true, role: 'admin' } }),
         }
       }
-      if (url.endsWith('/state')) {
+      if (url.endsWith('/state') || url.includes('/state?')) {
         return {
           ok: true,
           status: 200,
@@ -145,7 +145,7 @@ describe('App smoke', () => {
           text: async () => JSON.stringify({ data: { loggedIn: true, role: 'admin' } }),
         }
       }
-      if (url.endsWith('/state')) {
+      if (url.endsWith('/state') || url.includes('/state?')) {
         return {
           ok: true,
           status: 200,

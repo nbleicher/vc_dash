@@ -56,7 +56,9 @@ export class ApiClient {
   }
 
   async getState(): Promise<StoreCollections> {
-    return this.request<StoreCollections>('/state', { method: 'GET' })
+    // Cache-bust so dashboard always gets latest snapshots (avoids CDN/browser/proxy cache)
+    const path = `/state?_=${Date.now()}`
+    return this.request<StoreCollections>(path, { method: 'GET' })
   }
 
   async putCollection<K extends keyof StoreCollections>(key: K, value: StoreCollections[K]): Promise<void> {
@@ -75,12 +77,15 @@ export class ApiClient {
       headers['content-type'] = 'application/json'
     }
 
+    if (options.method === 'GET') {
+      headers['Cache-Control'] = 'no-cache'
+      headers['Pragma'] = 'no-cache'
+    }
     const response = await fetch(`${this.baseUrl}${path}`, {
       method: options.method,
       headers,
       body: hasBody ? JSON.stringify(options.body) : undefined,
       credentials: 'include',
-      // Prevent cached GET so dashboard always sees latest snapshots after bot runs
       cache: options.method === 'GET' ? 'no-store' : 'default',
     })
 
