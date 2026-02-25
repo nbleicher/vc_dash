@@ -95,6 +95,9 @@ Add (replace `ubuntu` with your username if different):
 
 ## Troubleshooting: dashboard not showing correct data
 
+- **Same API URL for bot and dashboard**  
+  The dashboard uses `VITE_API_URL` set at **build time** (e.g. in Cloudflare Pages). The bot uses `API_BASE_URL` in `.env` on the VPS. These must be the **exact same** Railway API URL. If the frontend was built with a different or old URL, it will never see the data the bot pushes. In Cloudflare Pages (or your frontend host), set `VITE_API_URL=https://your-railway-app.up.railway.app` (same as bot `API_BASE_URL`), then **rebuild and redeploy** the frontend.
+
 - **Refresh delay**  
   The dashboard refetches from the API every 10 minutes. After the bot runs, use **Reload** (in the app nav) to fetch the latest snapshots immediately.
 

@@ -393,7 +393,11 @@ def api_login(session, base_url: str, username: str, password: str) -> bool:
 
 
 def api_get_state(session, base_url: str) -> dict | None:
-    r = session.get(f"{base_url.rstrip('/')}/state", timeout=15)
+    r = session.get(
+        f"{base_url.rstrip('/')}/state",
+        timeout=15,
+        headers={"Cache-Control": "no-cache", "Pragma": "no-cache"},
+    )
     if r.status_code != 200:
         log(f"  GET /state failed: {r.status_code}")
         return None
