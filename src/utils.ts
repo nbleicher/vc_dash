@@ -118,7 +118,7 @@ export function computeMetrics(
   sales: number
 ): { marketing: number; cpa: number | null; cvr: number | null } {
   const marketing = calls * 15
-  const cpa = sales > 0 ? marketing / sales : null
+  const cpa = sales > 0 ? marketing / sales : marketing
   const cvr = calls > 0 ? sales / calls : null
   return { marketing, cpa, cvr }
 }

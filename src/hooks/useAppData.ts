@@ -151,7 +151,7 @@ export function useAppData(store: DataStore) {
   useEffect(() => {
     const tryFreeze = (): void => {
       const p = estParts(new Date())
-      if (p.hour < 18 || (p.hour === 18 && p.minute < 30)) return
+      if (p.hour < 23 || (p.hour === 23 && p.minute < 50)) return
       const dateKey = estDateKey(new Date())
       if (perfHistory.some((r) => r.dateKey === dateKey)) return
       const frozenRows: PerfHistory[] = []
@@ -360,7 +360,7 @@ export function useAppData(store: DataStore) {
     }
     const rows = activeAgents.map((agent) => {
       const t = byAgent.get(agent.id) ?? { calls: 0, sales: 0, marketing: 0 }
-      return { agentName: agent.name, sales: t.sales, cpa: t.sales > 0 ? t.marketing / t.sales : null, cvr: t.calls > 0 ? t.sales / t.calls : null }
+      return { agentName: agent.name, sales: t.sales, cpa: t.sales > 0 ? t.marketing / t.sales : t.marketing, cvr: t.calls > 0 ? t.sales / t.calls : null }
     })
     rows.sort((a, b) => {
       if (rankMetric === 'Sales') return b.sales - a.sales

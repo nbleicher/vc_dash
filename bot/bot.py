@@ -417,6 +417,28 @@ def api_put_snapshots(session, base_url: str, snapshots: list) -> bool:
     return True
 
 
+def send_telegram(text: str) -> bool:
+    """Send a message via Telegram Bot API. Returns True if sent, False if skipped or failed."""
+    token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+    if not token or not chat_id:
+        return False
+    try:
+        import requests
+        r = requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": text, "disable_web_page_preview": True},
+            timeout=10,
+        )
+        if r.status_code != 200:
+            log(f"  Telegram send failed: {r.status_code} {r.text[:200]}")
+            return False
+        return True
+    except Exception as e:
+        log(f"  Telegram send error: {e}")
+        return False
+
+
 def merge_snapshots(
     existing: list,
     new_rows: list,
@@ -449,6 +471,13 @@ def main() -> int:
     slot_key, slot_label = get_current_slot()
     log(f"Date: {date_key}  Slot: {slot_key} ({slot_label})")
 
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    now_est = datetime.now(ZoneInfo(ZONE))
+    if now_est.hour < 9:
+        log("Outside scraping window (9 AM–midnight EST); skipping.")
+        return 0
+
     agent_map = load_agent_map(bot_dir)
     if not agent_map:
         log("No agent_map.json; exiting.")
@@ -464,6 +493,21 @@ def main() -> int:
 
     if not sales_by_agent and not calls_by_agent:
         log("  Both scrapers empty. Re-run capture.py for both sites, re-upload auth_*.json to the VPS, and try again (sessions expire).")
+        msg = (
+            "VC Dash bot: PolicyDen and WeGenerate sessions may have expired. "
+            "Both scrapers returned no data. Re-run capture.py for both sites and re-upload auth_*.json to the VPS."
+        )
+        if send_telegram(msg):
+            log("  Telegram notification sent.")
+    else:
+        if not sales_by_agent:
+            log("  PolicyDen returned no data (session may have expired).")
+            if send_telegram("VC Dash bot: PolicyDen session may have expired. Re-run capture.py policyden and re-upload auth_policyden.json."):
+                log("  Telegram notification sent.")
+        if not calls_by_agent:
+            log("  WeGenerate returned no data (session may have expired).")
+            if send_telegram("VC Dash bot: WeGenerate session may have expired. Re-run capture.py wegenerate and re-upload auth_wegenerate.json."):
+                log("  Telegram notification sent.")
 
     verbose = os.environ.get("BOT_VERBOSE", "").strip().lower() in ("1", "true", "yes")
     if verbose:

@@ -47,6 +47,7 @@ mkdir -p ~/bot && cd ~/bot
 - `auth_policyden.json` (from capture.py)
 - `auth_wegenerate.json` (from capture.py)
 - `bot.py` (from this repo)
+- `freeze_eod.py` (from this repo; for 11:50 PM EOD freeze cron)
 - `requirements.txt` (from this repo)
 
 **Create `.env`:**
@@ -54,7 +55,11 @@ mkdir -p ~/bot && cd ~/bot
 API_BASE_URL=https://your-railway-app.up.railway.app
 ADMIN_USERNAME=your-dashboard-username
 ADMIN_PASSWORD=your-dashboard-password
+# Optional: get notified when PolicyDen/WeGenerate sessions expire
+TELEGRAM_BOT_TOKEN=your-bot-token-from-BotFather
+TELEGRAM_CHAT_ID=your-chat-id
 ```
+To get these: create a bot with [@BotFather](https://t.me/BotFather), then send any message to your bot and open `https://api.telegram.org/bot<TOKEN>/getUpdates` to find your `chat_id` (under `message.chat.id`). If `TELEGRAM_BOT_TOKEN` or `TELEGRAM_CHAT_ID` is missing, the bot will still run but won’t send session-expiry alerts.
 
 **Create `agent_map.json`:**  
 Copy `agent_map.example.json` to `agent_map.json` and fill in the mapping from agent names (as shown in PolicyDen/WeGenerate) to dashboard agent IDs (from your app’s Agents / GET /state → agents).
@@ -80,7 +85,7 @@ cd ~/bot
 ./venv/bin/python bot.py
 ```
 
-**Cron (every 10 minutes):** Use the venv Python so all dependencies are available.
+**Cron (every 10 minutes):** Use the venv Python so all dependencies are available. The bot skips scraping between 12:01 AM and 8:59 AM EST (exits immediately to save memory); it only runs the browser during 9 AM–midnight EST.
 ```bash
 crontab -e
 ```
@@ -88,6 +93,14 @@ Add (replace `ubuntu` with your username if different):
 ```
 */10 * * * * cd /home/ubuntu/bot && /home/ubuntu/bot/venv/bin/python bot.py >> /home/ubuntu/bot/bot.log 2>&1
 ```
+To avoid launching the bot at all between 1–8 AM EST (saves cron + Python startup), you can use `*/10 9-23 * * *` instead of `*/10 * * * *` (and set `CRON_TZ=America/New_York`). The bot also exits without scraping if run between 12:01–8:59 AM EST.
+
+**Cron (EOD freeze at 11:50 PM EST):** So the day’s snapshots are saved to perfHistory even when the dashboard is closed. Uses the same `.env` as the bot. Add this line in `crontab -e` (use your timezone; example is 11:50 PM America/New_York):
+```
+CRON_TZ=America/New_York
+50 23 * * * cd /home/ubuntu/bot && /home/ubuntu/bot/venv/bin/python freeze_eod.py >> /home/ubuntu/bot/freeze.log 2>&1
+```
+If you already have other cron jobs, add only the `50 23` line and ensure `CRON_TZ=America/New_York` is set once at the top of the crontab if you want EST/EDT. Monitor: `tail -f ~/bot/freeze.log`
 
 **Monitor:** `tail -f ~/bot/bot.log`
 
@@ -118,4 +131,4 @@ Add (replace `ubuntu` with your username if different):
   The site’s UI likely changed. Open the dashboard in a browser, use DevTools to find the date control and table selectors, and update `SELECTORS_WEGENERATE` (and `SELECTORS_POLICYDEN` if needed) in `bot.py` (see **Configure selectors** above).
 
 - **Both PolicyDen and WeGenerate return {}**  
-  Saved sessions often expire. Re-run `capture.py` for both sites (on your Mac), then re-upload the new `auth_policyden.json` and `auth_wegenerate.json` to the VPS with `scp`. Without valid auth, the dashboards show a login page and the bot sees no table rows.
+  Saved sessions often expire. Re-run `capture.py` for both sites (on your Mac), then re-upload the new `auth_policyden.json` and `auth_wegenerate.json` to the VPS with `scp`. Without valid auth, the dashboards show a login page and the bot sees no table rows. If you set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env`, the bot will send you a Telegram message when it detects expired sessions (either or both sites).
