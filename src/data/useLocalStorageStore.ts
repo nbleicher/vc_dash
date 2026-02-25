@@ -78,6 +78,7 @@ export function useDataStore(): DataStore {
     setQaRecords,
     auditRecords,
     setAuditRecords,
+    lastPoliciesBotRun: null,
     attendance,
     setAttendance,
     spiffRecords,

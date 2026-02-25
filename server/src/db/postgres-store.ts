@@ -40,7 +40,29 @@ export class PostgresStore implements StoreAdapter {
       weeklyTargets: await this.getCollection('weeklyTargets'),
       vaultMeetings: await this.getCollection('vaultMeetings'),
       vaultDocs: await this.getCollection('vaultDocs'),
+      lastPoliciesBotRun: await this.getLastPoliciesBotRun(),
     }
+  }
+
+  private async getLastPoliciesBotRun(): Promise<string | null> {
+    const result = await this.pool.query<{ payload: string }>(
+      "SELECT payload FROM app_state WHERE key = 'lastPoliciesBotRun'",
+    )
+    if (result.rows.length === 0) return null
+    const payload = result.rows[0].payload
+    return typeof payload === 'string' ? payload : null
+  }
+
+  async setLastPoliciesBotRun(iso: string): Promise<void> {
+    await this.pool.query(
+      `
+      INSERT INTO app_state (key, payload, updated_at)
+      VALUES ('lastPoliciesBotRun', to_jsonb($1::text), NOW())
+      ON CONFLICT (key)
+      DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW();
+      `,
+      [iso],
+    )
   }
 
   async getCollection<T extends EntityKey>(key: T): Promise<StoreState[T]> {

@@ -711,6 +711,7 @@ function App() {
             setAuditForm={setAuditForm}
             incompleteQaAgentsToday={incompleteQaAgentsToday}
             incompleteAuditAgentsToday={incompleteAuditAgentsToday}
+            lastPoliciesBotRun={store.lastPoliciesBotRun ?? null}
             onSetAttendancePercent={setAttendancePercent}
             onSetSpiffAmount={setSpiffAmount}
             onSubmitAttendanceDay={submitAttendanceDay}
@@ -778,6 +779,7 @@ function App() {
             vaultAuditHistory={vaultAuditHistory}
             weeklyTargetHistory={weeklyTargetHistory}
             snapshots={snapshots}
+            lastPoliciesBotRun={store.lastPoliciesBotRun ?? null}
             onAddMeeting={addMeeting}
             onPdfUpload={handlePdfUpload}
             onUpdateQaRecord={handleQaUpdate}

@@ -52,6 +52,18 @@ export async function stateRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ data: next })
   })
 
+  app.post('/state/last-policies-bot-run', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const body = request.body as { timestamp?: string }
+    const timestamp = typeof body?.timestamp === 'string' ? body.timestamp.trim() : null
+    if (!timestamp) {
+      return reply.code(400).send({
+        error: { code: 'VALIDATION_ERROR', message: 'Body must include timestamp (ISO string).' },
+      })
+    }
+    await app.store.setLastPoliciesBotRun(timestamp)
+    return reply.send({ data: { ok: true } })
+  })
+
   app.post('/export/csv', { preHandler: [app.authenticate] }, async (request, reply) => {
     const flags = (request.body ?? {}) as ExportFlags
     const state = await app.store.getState()

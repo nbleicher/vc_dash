@@ -127,6 +127,8 @@ export type StoreState = {
   weeklyTargets: WeeklyTarget[]
   vaultMeetings: VaultMeeting[]
   vaultDocs: VaultDoc[]
+  /** Last time the policies bot successfully ran (ISO string). */
+  lastPoliciesBotRun: string | null
 }
 
 export type ExportFlags = {

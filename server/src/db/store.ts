@@ -41,6 +41,7 @@ export class SqliteStore implements StoreAdapter {
       weeklyTargets: this.getWeeklyTargets(),
       vaultMeetings: this.getVaultMeetings(),
       vaultDocs: this.getVaultDocs(),
+      lastPoliciesBotRun: this.getLastPoliciesBotRun(),
     }
   }
 
@@ -277,5 +278,14 @@ export class SqliteStore implements StoreAdapter {
     return this.db
       .prepare('SELECT id,agentId,fileName,fileSize,uploadedAt FROM vault_docs')
       .all() as VaultDoc[]
+  }
+
+  private getLastPoliciesBotRun(): string | null {
+    const row = this.db.prepare("SELECT value FROM app_meta WHERE key = 'lastPoliciesBotRun'").get() as { value: string } | undefined
+    return row?.value ?? null
+  }
+
+  async setLastPoliciesBotRun(iso: string): Promise<void> {
+    this.db.prepare("INSERT OR REPLACE INTO app_meta (key, value) VALUES ('lastPoliciesBotRun', ?)").run(iso)
   }
 }

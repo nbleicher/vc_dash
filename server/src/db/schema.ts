@@ -114,4 +114,9 @@ CREATE TABLE IF NOT EXISTS vault_docs (
   fileSize INTEGER NOT NULL,
   uploadedAt TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS app_meta (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
 `

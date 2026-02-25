@@ -47,6 +47,7 @@ type Props = {
   >
   incompleteQaAgentsToday: Array<{ id: string; name: string }>
   incompleteAuditAgentsToday: Array<{ id: string; name: string }>
+  lastPoliciesBotRun: string | null
   onSetAttendancePercent: (agentId: string, dateKey: string, percent: AttendancePercent) => void
   onSetSpiffAmount: (agentId: string, dateKey: string, amount: number) => void
   onSubmitAttendanceDay: (dateKey: string) => void
@@ -81,9 +82,10 @@ export function TasksPage({
   setQaForm,
   auditForm,
   setAuditForm,
-  incompleteQaAgentsToday,
-  incompleteAuditAgentsToday,
-  onSetAttendancePercent,
+            incompleteQaAgentsToday,
+            incompleteAuditAgentsToday,
+            lastPoliciesBotRun,
+            onSetAttendancePercent,
   onSetSpiffAmount,
   onSubmitAttendanceDay,
   onAddAttendanceNote,
@@ -562,7 +564,7 @@ export function TasksPage({
                         <th>Carrier</th>
                         <th>Client</th>
                         <th>Status</th>
-                        <th>Timestamp 1</th>
+                        <th>Last parsed</th>
                         <th>Timestamp 2</th>
                         <th>Notes</th>
                         <th>Actions</th>
@@ -624,7 +626,7 @@ export function TasksPage({
                               ))}
                             </Select>
                           </td>
-                          <td>{formatTimestamp(row.discoveryTs)}</td>
+                          <td>{lastPoliciesBotRun ? formatTimestamp(lastPoliciesBotRun) : '—'}</td>
                           <td>
                             <Input
                               type="datetime-local"

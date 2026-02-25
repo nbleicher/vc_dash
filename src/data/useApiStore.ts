@@ -44,6 +44,7 @@ export function useDataStore(): DataStore {
   const [vaultMeetingsState, setVaultMeetingsState] = useState<VaultMeeting[]>([])
   const [vaultDocsState, setVaultDocsState] = useState<VaultDoc[]>([])
   const [lastFetchedAt, setLastFetchedAt] = useState<string | null>(null)
+  const [lastPoliciesBotRun, setLastPoliciesBotRun] = useState<string | null>(null)
   const loadFromApi = useCallback(async () => {
     try {
       const me = await client.me()
@@ -75,6 +76,7 @@ export function useDataStore(): DataStore {
       setWeeklyTargetsState(state.weeklyTargets)
       setVaultMeetingsState(state.vaultMeetings)
       setVaultDocsState(state.vaultDocs)
+      setLastPoliciesBotRun(state.lastPoliciesBotRun ?? null)
       hasLoadedRemoteRef.current = true
       setError(null)
       setLastFetchedAt(new Date().toISOString())
@@ -264,5 +266,6 @@ export function useDataStore(): DataStore {
     setVaultMeetings,
     vaultDocs: vaultDocsState,
     setVaultDocs,
+    lastPoliciesBotRun,
   }
 }

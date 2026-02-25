@@ -27,6 +27,7 @@ function baseProps() {
     setAuditForm: vi.fn(),
     incompleteQaAgentsToday: [] as Array<{ id: string; name: string }>,
     incompleteAuditAgentsToday: [] as Array<{ id: string; name: string }>,
+    lastPoliciesBotRun: null as string | null,
     onSetAttendancePercent: vi.fn(),
     onSetSpiffAmount: vi.fn(),
     onSubmitAttendanceDay: vi.fn(),

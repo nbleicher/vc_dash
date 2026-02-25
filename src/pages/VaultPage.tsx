@@ -55,6 +55,7 @@ type Props = {
     setAt: string
   }>
   snapshots: DataStore['snapshots']
+  lastPoliciesBotRun: string | null
   onAddMeeting: (e: React.FormEvent) => void
   onPdfUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onUpdateQaRecord: (
@@ -100,6 +101,7 @@ export function VaultPage({
   vaultAuditHistory,
   weeklyTargetHistory,
   snapshots,
+  lastPoliciesBotRun,
   onAddMeeting,
   onPdfUpload,
   onUpdateQaRecord,
@@ -492,7 +494,7 @@ export function VaultPage({
               <th>Carrier</th>
               <th>Client</th>
               <th>Status</th>
-              <th>Timestamp 1</th>
+              <th>Last parsed</th>
               <th>Timestamp 2</th>
               <th>Notes</th>
               {allowEdit ? <th>Actions</th> : null}
@@ -561,7 +563,7 @@ export function VaultPage({
                     </>
                   )}
                 </td>
-                <td>{formatTimestamp(row.discoveryTs)}</td>
+                <td>{lastPoliciesBotRun ? formatTimestamp(lastPoliciesBotRun) : '—'}</td>
                 <td>
                   {allowEdit ? (
                     <Input

@@ -26,6 +26,7 @@ export type StoreCollections = {
   weeklyTargets: WeeklyTarget[]
   vaultMeetings: VaultMeeting[]
   vaultDocs: VaultDoc[]
+  lastPoliciesBotRun: string | null
 }
 
 type ApiSuccess<T> = { data: T }

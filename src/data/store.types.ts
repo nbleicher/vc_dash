@@ -43,6 +43,9 @@ export interface DataStore {
   auditRecords: AuditRecord[]
   setAuditRecords: Dispatch<SetStateAction<AuditRecord[]>>
 
+  /** Last time the policies bot ran (ISO string), for "Last parsed" column. */
+  lastPoliciesBotRun: string | null
+
   attendance: AttendanceRecord[]
   setAttendance: Dispatch<SetStateAction<AttendanceRecord[]>>
 

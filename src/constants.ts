@@ -8,6 +8,7 @@ export const SLOT_CONFIG = [
 export const CARRIERS = ['Aetna', 'UHC', 'Humana'] as const
 export const POLICY_STATUSES = [
   'pending_cms',
+  'flagged',
   'pending_aor',
   'pending_app_request',
   'unknown',
