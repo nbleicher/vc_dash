@@ -77,10 +77,6 @@ export class ApiClient {
       headers['content-type'] = 'application/json'
     }
 
-    if (options.method === 'GET') {
-      headers['Cache-Control'] = 'no-cache'
-      headers['Pragma'] = 'no-cache'
-    }
     const response = await fetch(`${this.baseUrl}${path}`, {
       method: options.method,
       headers,
