@@ -130,7 +130,7 @@ export function useAppData(store: DataStore) {
   }, [liveByAgent])
 
   const agentPerformanceRows = useMemo(() => {
-    return activeAgents.map((agent) => {
+    const rows = activeAgents.map((agent) => {
       const snap = liveByAgent.get(agent.id)
       const calls = snap?.billableCalls ?? 0
       const sales = snap?.sales ?? 0
@@ -145,6 +145,7 @@ export function useAppData(store: DataStore) {
         cvr: metrics.cvr,
       }
     })
+    return rows.sort((a, b) => (b.cpa ?? -Infinity) - (a.cpa ?? -Infinity))
   }, [activeAgents, liveByAgent])
 
   useEffect(() => {
