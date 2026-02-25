@@ -79,6 +79,7 @@ export function useDataStore(): DataStore {
     auditRecords,
     setAuditRecords,
     lastPoliciesBotRun: null,
+    houseMarketing: null,
     attendance,
     setAttendance,
     spiffRecords,

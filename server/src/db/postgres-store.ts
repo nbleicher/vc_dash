@@ -41,6 +41,7 @@ export class PostgresStore implements StoreAdapter {
       vaultMeetings: await this.getCollection('vaultMeetings'),
       vaultDocs: await this.getCollection('vaultDocs'),
       lastPoliciesBotRun: await this.getLastPoliciesBotRun(),
+      houseMarketing: await this.getHouseMarketing(),
     }
   }
 
@@ -83,6 +84,33 @@ export class PostgresStore implements StoreAdapter {
       DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW();
       `,
       [JSON.stringify(iso)],
+    )
+  }
+
+  async getHouseMarketing(): Promise<{ dateKey: string; amount: number } | null> {
+    const result = await this.pool.query<{ payload: unknown }>(
+      "SELECT payload FROM app_state WHERE key = 'houseMarketing'",
+    )
+    if (result.rows.length === 0) return null
+    const payload = result.rows[0].payload
+    if (payload !== null && typeof payload === 'object') {
+      const obj = payload as Record<string, unknown>
+      const dateKey = typeof obj.dateKey === 'string' ? obj.dateKey : null
+      const amount = typeof obj.amount === 'number' ? obj.amount : Number(obj.amount)
+      if (dateKey && Number.isFinite(amount)) return { dateKey, amount }
+    }
+    return null
+  }
+
+  async setHouseMarketing(dateKey: string, amount: number): Promise<void> {
+    await this.pool.query(
+      `
+      INSERT INTO app_state (key, payload, updated_at)
+      VALUES ('houseMarketing', $1::jsonb, NOW())
+      ON CONFLICT (key)
+      DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW();
+      `,
+      [JSON.stringify({ dateKey, amount })],
     )
   }
 

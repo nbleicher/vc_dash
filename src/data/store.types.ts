@@ -46,6 +46,9 @@ export interface DataStore {
   /** Last time the policies bot ran (ISO string), for "Last parsed" column. */
   lastPoliciesBotRun: string | null
 
+  /** Scraped campaign marketing for house pulse (set by bot). */
+  houseMarketing: { dateKey: string; amount: number } | null
+
   attendance: AttendanceRecord[]
   setAttendance: Dispatch<SetStateAction<AttendanceRecord[]>>
 

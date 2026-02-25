@@ -21,6 +21,7 @@ const seedState: StoreState = {
   vaultMeetings: [],
   vaultDocs: [],
   lastPoliciesBotRun: null,
+  houseMarketing: null,
 }
 
 runMigrations(DB_PATH)

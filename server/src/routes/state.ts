@@ -69,6 +69,19 @@ export async function stateRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ data: { ok: true } })
   })
 
+  app.post('/state/house-marketing', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const body = request.body as { dateKey?: string; amount?: number }
+    const dateKey = typeof body?.dateKey === 'string' ? body.dateKey.trim() : null
+    const amount = typeof body?.amount === 'number' && Number.isFinite(body.amount) ? body.amount : Number(body?.amount)
+    if (!dateKey || !Number.isFinite(amount)) {
+      return reply.code(400).send({
+        error: { code: 'VALIDATION_ERROR', message: 'Body must include dateKey (string) and amount (number).' },
+      })
+    }
+    await app.store.setHouseMarketing(dateKey, amount)
+    return reply.send({ data: { ok: true } })
+  })
+
   app.post('/export/csv', { preHandler: [app.authenticate] }, async (request, reply) => {
     const flags = (request.body ?? {}) as ExportFlags
     const state = await app.store.getState()

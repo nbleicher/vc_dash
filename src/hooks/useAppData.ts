@@ -41,6 +41,7 @@ export function useAppData(store: DataStore) {
     weeklyTargets,
     setPerfHistory,
     setSnapshots,
+    houseMarketing,
   } = store
 
   const [now, setNow] = useState<Date>(new Date())
@@ -125,9 +126,14 @@ export function useAppData(store: DataStore) {
       totalCalls += snap.billableCalls
       totalSales += snap.sales
     }
-    const metrics = computeMetrics(totalCalls, totalSales)
-    return { totalCalls, totalSales, marketing: metrics.marketing, cpa: metrics.cpa, cvr: metrics.cvr }
-  }, [liveByAgent])
+    const marketing =
+      houseMarketing?.dateKey === todayKey
+        ? houseMarketing.amount
+        : computeMetrics(totalCalls, totalSales).marketing
+    const cpa = totalSales > 0 ? marketing / totalSales : null
+    const cvr = totalCalls > 0 ? totalSales / totalCalls : null
+    return { totalCalls, totalSales, marketing, cpa, cvr }
+  }, [liveByAgent, todayKey, houseMarketing])
 
   const agentPerformanceRows = useMemo(() => {
     const rows = activeAgents.map((agent) => {

@@ -27,6 +27,7 @@ export type StoreCollections = {
   vaultMeetings: VaultMeeting[]
   vaultDocs: VaultDoc[]
   lastPoliciesBotRun: string | null
+  houseMarketing: { dateKey: string; amount: number } | null
 }
 
 type ApiSuccess<T> = { data: T }

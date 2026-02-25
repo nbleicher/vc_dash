@@ -42,6 +42,7 @@ export class SqliteStore implements StoreAdapter {
       vaultMeetings: this.getVaultMeetings(),
       vaultDocs: this.getVaultDocs(),
       lastPoliciesBotRun: await this.getLastPoliciesBotRun(),
+      houseMarketing: await this.getHouseMarketing(),
     }
   }
 
@@ -291,5 +292,25 @@ export class SqliteStore implements StoreAdapter {
 
   async setLastPoliciesBotRun(iso: string): Promise<void> {
     this.db.prepare("INSERT OR REPLACE INTO app_meta (key, value) VALUES ('lastPoliciesBotRun', ?)").run(iso)
+  }
+
+  private readHouseMarketing(): { dateKey: string; amount: number } | null {
+    const row = this.db.prepare("SELECT value FROM app_meta WHERE key = 'houseMarketing'").get() as { value: string } | undefined
+    if (!row?.value) return null
+    try {
+      const parsed = JSON.parse(row.value) as { dateKey?: string; amount?: number }
+      if (typeof parsed?.dateKey === 'string' && Number.isFinite(parsed?.amount)) return { dateKey: parsed.dateKey, amount: Number(parsed.amount) }
+    } catch {
+      // ignore
+    }
+    return null
+  }
+
+  async getHouseMarketing(): Promise<{ dateKey: string; amount: number } | null> {
+    return Promise.resolve(this.readHouseMarketing())
+  }
+
+  async setHouseMarketing(dateKey: string, amount: number): Promise<void> {
+    this.db.prepare("INSERT OR REPLACE INTO app_meta (key, value) VALUES ('houseMarketing', ?)").run(JSON.stringify({ dateKey, amount }))
   }
 }
