@@ -746,6 +746,8 @@ function App() {
             house6pmSnapshotForToday={house6pmSnapshotForToday}
             eodReports={eodReports}
             onSaveEodReport={handleSaveEodReport}
+            agentPerformanceRows={agentPerformanceRows}
+            lastSnapshotLabel={lastSnapshotLabel}
           />
         )}
 

@@ -9,6 +9,7 @@ import type { DataStore } from '../data'
 import { formatDateKey, formatLastParsedDate, formatNum, formatTimestamp } from '../utils'
 
 const AUDIT_HISTORY_PREVIEW_ROWS = 5
+const CPA_HIGHLIGHT_THRESHOLD = 130
 
 type Props = {
   taskPage: TaskPage
@@ -73,6 +74,16 @@ type Props = {
     submittedAt: string
   }>
   onSaveEodReport: (weekKey: string, reportText: string, houseSales: number, houseCpa: number | null) => void
+  agentPerformanceRows: Array<{
+    agentId: string
+    agentName: string
+    calls: number
+    sales: number
+    marketing: number
+    cpa: number | null
+    cvr: number | null
+  }>
+  lastSnapshotLabel: string
 }
 
 export function TasksPage({
@@ -111,10 +122,14 @@ export function TasksPage({
   house6pmSnapshotForToday,
   eodReports,
   onSaveEodReport,
+  agentPerformanceRows,
+  lastSnapshotLabel,
 }: Props) {
   const dayBasePay = 120
   const [editingNoteKey, setEditingNoteKey] = useState<string | null>(null)
   const [eodReportText, setEodReportText] = useState('')
+  const [eodAgentSortBy, setEodAgentSortBy] = useState<'cpa' | 'sales'>('cpa')
+  const [eodAgentSortDir, setEodAgentSortDir] = useState<'asc' | 'desc'>('desc')
   const [noteDraft, setNoteDraft] = useState('')
   const [auditHistoryExpanded, setAuditHistoryExpanded] = useState(false)
   const [editingAuditId, setEditingAuditId] = useState<string | null>(null)
@@ -163,6 +178,19 @@ export function TasksPage({
   const formatCurrency = (amount: number): string => `$${amount.toFixed(2)}`
   const agentName = (agentId: string): string => activeAgents.find((a) => a.id === agentId)?.name ?? agentId
   const noteKeyFor = (agentId: string, dateKey: string): string => `${agentId}::${dateKey}`
+  const eodDisplayedAgentRows = useMemo(() => {
+    const rows = [...agentPerformanceRows]
+    if (eodAgentSortBy === 'cpa') {
+      rows.sort((a, b) => {
+        const va = a.cpa ?? -Infinity
+        const vb = b.cpa ?? -Infinity
+        return eodAgentSortDir === 'desc' ? vb - va : va - vb
+      })
+    } else {
+      rows.sort((a, b) => (eodAgentSortDir === 'desc' ? b.sales - a.sales : a.sales - b.sales))
+    }
+    return rows
+  }, [agentPerformanceRows, eodAgentSortBy, eodAgentSortDir])
   const renderMissingNames = (rows: Array<{ id: string; name: string }>) =>
     rows.map((agent, idx) => (
       <span key={agent.id}>
@@ -774,6 +802,76 @@ export function TasksPage({
                     : `$${formatNum(weekTrend.currentCpa)}`
               }
             />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-slate-700">Agent Performance (reference)</h3>
+            <p className="text-xs text-slate-500">Data: {lastSnapshotLabel}</p>
+            {agentPerformanceRows.length === 0 ? (
+              <p className="text-sm text-slate-500">No active agents.</p>
+            ) : (
+              <>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="flex items-center gap-2 text-sm text-slate-600">
+                    Sort by
+                    <select
+                      value={eodAgentSortBy}
+                      onChange={(e) => setEodAgentSortBy(e.target.value as 'cpa' | 'sales')}
+                      className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                    >
+                      <option value="cpa">CPA</option>
+                      <option value="sales">Sales</option>
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-slate-600">
+                    Order
+                    <select
+                      value={eodAgentSortDir}
+                      onChange={(e) => setEodAgentSortDir(e.target.value as 'asc' | 'desc')}
+                      className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                    >
+                      <option value="desc">Descending (high first)</option>
+                      <option value="asc">Ascending (low first)</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="overflow-x-auto overflow-y-auto max-h-[320px] rounded border border-slate-200">
+                  <table className="w-full text-left text-sm">
+                    <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.06)]">
+                      <tr className="border-b border-slate-200">
+                        <th className="pb-2 pt-2 pr-4 font-medium text-slate-700">Agent</th>
+                        <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">CPA</th>
+                        <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Sales</th>
+                        <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Calls</th>
+                        <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Marketing</th>
+                        <th className="pb-2 pt-2 text-right font-medium text-slate-700">CVR</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {eodDisplayedAgentRows.map((row) => {
+                        const cpaOverThreshold = row.cpa !== null && row.cpa > CPA_HIGHLIGHT_THRESHOLD
+                        return (
+                          <tr
+                            key={row.agentId}
+                            className={`border-b border-slate-100 ${cpaOverThreshold ? 'bg-red-500/10' : ''}`}
+                          >
+                            <td className="py-2 pr-4 font-medium">{row.agentName}</td>
+                            <td className="py-2 pr-4 text-right tabular-nums">
+                              {row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}
+                            </td>
+                            <td className="py-2 pr-4 text-right tabular-nums">{row.sales}</td>
+                            <td className="py-2 pr-4 text-right tabular-nums">{row.calls}</td>
+                            <td className="py-2 pr-4 text-right tabular-nums">${formatNum(row.marketing, 0)}</td>
+                            <td className="py-2 text-right tabular-nums">
+                              {row.cvr === null ? 'N/A' : `${formatNum(row.cvr * 100)}%`}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </div>
           <Field>
             <FieldLabel>Report</FieldLabel>
