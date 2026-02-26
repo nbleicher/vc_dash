@@ -784,134 +784,138 @@ export function TasksPage({
       {taskPage === 'eodReport' && (
         <Card className="space-y-4">
           <CardTitle>EOD Report</CardTitle>
-          <p className="text-sm text-slate-500">House metrics for the current week. Write your report and submit to save to vault history.</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <MetricCard
-              title={house6pmSnapshotForToday ? 'House Sales (6 PM)' : 'House Sales'}
-              value={house6pmSnapshotForToday ? house6pmSnapshotForToday.houseSales : weekTrend.totalSales}
-            />
-            <MetricCard
-              title={house6pmSnapshotForToday ? 'House CPA (6 PM)' : 'House CPA'}
-              value={
-                house6pmSnapshotForToday
-                  ? house6pmSnapshotForToday.houseCpa === null
-                    ? 'N/A'
-                    : `$${formatNum(house6pmSnapshotForToday.houseCpa)}`
-                  : weekTrend.currentCpa === null
-                    ? 'N/A'
-                    : `$${formatNum(weekTrend.currentCpa)}`
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium text-slate-700">Agent Performance (reference)</h3>
-            <p className="text-xs text-slate-500">Data: {lastSnapshotLabel}</p>
-            {agentPerformanceRows.length === 0 ? (
-              <p className="text-sm text-slate-500">No active agents.</p>
-            ) : (
-              <>
-                <div className="flex flex-wrap items-center gap-3">
-                  <label className="flex items-center gap-2 text-sm text-slate-600">
-                    Sort by
-                    <select
-                      value={eodAgentSortBy}
-                      onChange={(e) => setEodAgentSortBy(e.target.value as 'cpa' | 'sales')}
-                      className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
-                    >
-                      <option value="cpa">CPA</option>
-                      <option value="sales">Sales</option>
-                    </select>
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-slate-600">
-                    Order
-                    <select
-                      value={eodAgentSortDir}
-                      onChange={(e) => setEodAgentSortDir(e.target.value as 'asc' | 'desc')}
-                      className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
-                    >
-                      <option value="desc">Descending (high first)</option>
-                      <option value="asc">Ascending (low first)</option>
-                    </select>
-                  </label>
-                </div>
-                <div className="overflow-x-auto overflow-y-auto max-h-[320px] rounded border border-slate-200">
-                  <table className="w-full text-left text-sm">
-                    <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.06)]">
-                      <tr className="border-b border-slate-200">
-                        <th className="pb-2 pt-2 pr-4 font-medium text-slate-700">Agent</th>
-                        <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">CPA</th>
-                        <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Sales</th>
-                        <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Calls</th>
-                        <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Marketing</th>
-                        <th className="pb-2 pt-2 text-right font-medium text-slate-700">CVR</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {eodDisplayedAgentRows.map((row) => {
-                        const cpaOverThreshold = row.cpa !== null && row.cpa > CPA_HIGHLIGHT_THRESHOLD
-                        return (
-                          <tr
-                            key={row.agentId}
-                            className={`border-b border-slate-100 ${cpaOverThreshold ? 'bg-red-500/10' : ''}`}
-                          >
-                            <td className="py-2 pr-4 font-medium">{row.agentName}</td>
-                            <td className="py-2 pr-4 text-right tabular-nums">
-                              {row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}
-                            </td>
-                            <td className="py-2 pr-4 text-right tabular-nums">{row.sales}</td>
-                            <td className="py-2 pr-4 text-right tabular-nums">{row.calls}</td>
-                            <td className="py-2 pr-4 text-right tabular-nums">${formatNum(row.marketing, 0)}</td>
-                            <td className="py-2 text-right tabular-nums">
-                              {row.cvr === null ? 'N/A' : `${formatNum(row.cvr * 100)}%`}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-          </div>
-          <Field>
-            <FieldLabel>Report</FieldLabel>
-            <Textarea
-              value={eodReportText}
-              onChange={(e) => setEodReportText(e.target.value)}
-              placeholder="Enter your EOD report..."
-              rows={6}
-              className="w-full"
-            />
-          </Field>
-          <Button
-            type="button"
-            variant="default"
-            onClick={() => {
-              const sales = house6pmSnapshotForToday ? house6pmSnapshotForToday.houseSales : weekTrend.totalSales
-              const cpa = house6pmSnapshotForToday ? house6pmSnapshotForToday.houseCpa : weekTrend.currentCpa
-              onSaveEodReport(currentWeekKey, eodReportText, sales, cpa)
-              setEodReportText('')
-            }}
-          >
-            Submit & Save to Vault
-          </Button>
-          {eodReports.length > 0 && (
-            <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <h3 className="text-sm font-medium text-slate-700">EOD Report History (Vault)</h3>
-              <ul className="max-h-48 space-y-1 overflow-y-auto text-sm text-slate-600">
-                {[...eodReports]
-                  .sort((a, b) => (b.submittedAt > a.submittedAt ? 1 : -1))
-                  .slice(0, 10)
-                  .map((r) => (
-                    <li key={r.id}>
-                      {formatDateKey(r.dateKey)} — Sales: {r.houseSales}, CPA:{' '}
-                      {r.houseCpa === null ? 'N/A' : `$${formatNum(r.houseCpa)}`}
-                      {r.reportText.trim() ? ` — ${r.reportText.trim().slice(0, 60)}${r.reportText.trim().length > 60 ? '…' : ''}` : ''}
-                    </li>
-                  ))}
-              </ul>
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+            <div className="xl:col-span-1 space-y-2">
+              <h3 className="text-sm font-medium text-slate-700">Agent Performance</h3>
+              <p className="text-xs text-slate-500">Data: {lastSnapshotLabel}</p>
+              {agentPerformanceRows.length === 0 ? (
+                <p className="text-sm text-slate-500">No active agents.</p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="flex items-center gap-2 text-sm text-slate-600">
+                      Sort by
+                      <select
+                        value={eodAgentSortBy}
+                        onChange={(e) => setEodAgentSortBy(e.target.value as 'cpa' | 'sales')}
+                        className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                      >
+                        <option value="cpa">CPA</option>
+                        <option value="sales">Sales</option>
+                      </select>
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-slate-600">
+                      Order
+                      <select
+                        value={eodAgentSortDir}
+                        onChange={(e) => setEodAgentSortDir(e.target.value as 'asc' | 'desc')}
+                        className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                      >
+                        <option value="desc">Descending (high first)</option>
+                        <option value="asc">Ascending (low first)</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div className="overflow-x-auto overflow-y-auto max-h-[500px] rounded border border-slate-200">
+                    <table className="w-full text-left text-sm">
+                      <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.06)]">
+                        <tr className="border-b border-slate-200">
+                          <th className="pb-2 pt-2 pr-4 font-medium text-slate-700">Agent</th>
+                          <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">CPA</th>
+                          <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Sales</th>
+                          <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Calls</th>
+                          <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Marketing</th>
+                          <th className="pb-2 pt-2 text-right font-medium text-slate-700">CVR</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {eodDisplayedAgentRows.map((row) => {
+                          const cpaOverThreshold = row.cpa !== null && row.cpa > CPA_HIGHLIGHT_THRESHOLD
+                          return (
+                            <tr
+                              key={row.agentId}
+                              className={`border-b border-slate-100 ${cpaOverThreshold ? 'bg-red-500/10' : ''}`}
+                            >
+                              <td className="py-2 pr-4 font-medium">{row.agentName}</td>
+                              <td className="py-2 pr-4 text-right tabular-nums">
+                                {row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}
+                              </td>
+                              <td className="py-2 pr-4 text-right tabular-nums">{row.sales}</td>
+                              <td className="py-2 pr-4 text-right tabular-nums">{row.calls}</td>
+                              <td className="py-2 pr-4 text-right tabular-nums">${formatNum(row.marketing, 0)}</td>
+                              <td className="py-2 text-right tabular-nums">
+                                {row.cvr === null ? 'N/A' : `${formatNum(row.cvr * 100)}%`}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
             </div>
-          )}
+            <div className="flex flex-col gap-5 xl:col-span-2">
+              <p className="text-sm text-slate-500">House metrics for the current week. Write your report and submit to save to vault history.</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <MetricCard
+                  title={house6pmSnapshotForToday ? 'House Sales (6 PM)' : 'House Sales'}
+                  value={house6pmSnapshotForToday ? house6pmSnapshotForToday.houseSales : weekTrend.totalSales}
+                />
+                <MetricCard
+                  title={house6pmSnapshotForToday ? 'House CPA (6 PM)' : 'House CPA'}
+                  value={
+                    house6pmSnapshotForToday
+                      ? house6pmSnapshotForToday.houseCpa === null
+                        ? 'N/A'
+                        : `$${formatNum(house6pmSnapshotForToday.houseCpa)}`
+                      : weekTrend.currentCpa === null
+                        ? 'N/A'
+                        : `$${formatNum(weekTrend.currentCpa)}`
+                  }
+                />
+              </div>
+              <Field>
+                <FieldLabel>Report</FieldLabel>
+                <Textarea
+                  value={eodReportText}
+                  onChange={(e) => setEodReportText(e.target.value)}
+                  placeholder="Enter your EOD report..."
+                  rows={6}
+                  className="w-full"
+                />
+              </Field>
+              <Button
+                type="button"
+                variant="default"
+                onClick={() => {
+                  const sales = house6pmSnapshotForToday ? house6pmSnapshotForToday.houseSales : weekTrend.totalSales
+                  const cpa = house6pmSnapshotForToday ? house6pmSnapshotForToday.houseCpa : weekTrend.currentCpa
+                  onSaveEodReport(currentWeekKey, eodReportText, sales, cpa)
+                  setEodReportText('')
+                }}
+              >
+                Submit & Save to Vault
+              </Button>
+              {eodReports.length > 0 && (
+                <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <h3 className="text-sm font-medium text-slate-700">EOD Report History (Vault)</h3>
+                  <ul className="max-h-48 space-y-1 overflow-y-auto text-sm text-slate-600">
+                    {[...eodReports]
+                      .sort((a, b) => (b.submittedAt > a.submittedAt ? 1 : -1))
+                      .slice(0, 10)
+                      .map((r) => (
+                        <li key={r.id}>
+                          {formatDateKey(r.dateKey)} — Sales: {r.houseSales}, CPA:{' '}
+                          {r.houseCpa === null ? 'N/A' : `$${formatNum(r.houseCpa)}`}
+                          {r.reportText.trim() ? ` — ${r.reportText.trim().slice(0, 60)}${r.reportText.trim().length > 60 ? '…' : ''}` : ''}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
         </Card>
       )}
     </div>
