@@ -49,6 +49,7 @@ mkdir -p ~/bot && cd ~/bot
 - `bot.py` (from this repo)
 - `policies_bot.py` (from this repo; optional — see below)
 - `freeze_eod.py` (from this repo; for 11:50 PM EOD freeze cron)
+- `populate_6pm_house.py` (from this repo; for 6:00 PM house CPA/sales snapshot cron)
 - `requirements.txt` (from this repo)
 
 **Create `.env`:**
@@ -102,6 +103,12 @@ CRON_TZ=America/New_York
 50 23 * * * cd /home/ubuntu/bot && /home/ubuntu/bot/venv/bin/python freeze_eod.py >> /home/ubuntu/bot/freeze.log 2>&1
 ```
 If you already have other cron jobs, add only the `50 23` line and ensure `CRON_TZ=America/New_York` is set once at the top of the crontab if you want EST/EDT. Monitor: `tail -f ~/bot/freeze.log`
+
+**Cron (6:00 PM EST — populate house CPA and sales):** Saves that day’s house sales and CPA into vault so the EOD Report task can show “6 PM” values. Add to `crontab -e`:
+```
+0 18 * * * cd /home/ubuntu/bot && /home/ubuntu/bot/venv/bin/python populate_6pm_house.py >> /home/ubuntu/bot/populate_6pm.log 2>&1
+```
+Monitor: `tail -f ~/bot/populate_6pm.log`
 
 **Monitor:** `tail -f ~/bot/bot.log`
 
