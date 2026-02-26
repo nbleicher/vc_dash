@@ -17,6 +17,10 @@ const seedState = {
     weeklyTargets: [],
     vaultMeetings: [],
     vaultDocs: [],
+    eodReports: [],
+    house6pmSnapshots: [],
+    lastPoliciesBotRun: null,
+    houseMarketing: null,
 };
 runMigrations(DB_PATH);
 const store = new SqliteStore(DB_PATH);

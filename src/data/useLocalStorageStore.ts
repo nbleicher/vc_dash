@@ -4,6 +4,8 @@ import type {
   AttendanceRecord,
   AttendanceSubmission,
   AuditRecord,
+  EodReport,
+  House6pmSnapshot,
   IntraSubmission,
   PerfHistory,
   QaRecord,
@@ -50,6 +52,8 @@ export function useDataStore(): DataStore {
   const [weeklyTargets, setWeeklyTargets] = useStoredState<WeeklyTarget[]>('vc_weekly_targets', [])
   const [vaultMeetings, setVaultMeetings] = useStoredState<VaultMeeting[]>('vc_vault_meetings', [])
   const [vaultDocs, setVaultDocs] = useStoredState<VaultDoc[]>('vc_vault_docs', [])
+  const [eodReports, setEodReports] = useStoredState<EodReport[]>('vc_eod_reports', [])
+  const [house6pmSnapshots, setHouse6pmSnapshots] = useStoredState<House6pmSnapshot[]>('vc_house_6pm_snapshots', [])
 
   return {
     loggedIn,
@@ -94,5 +98,9 @@ export function useDataStore(): DataStore {
     setVaultMeetings,
     vaultDocs,
     setVaultDocs,
+    eodReports,
+    setEodReports,
+    house6pmSnapshots,
+    setHouse6pmSnapshots,
   }
 }

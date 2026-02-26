@@ -5,6 +5,8 @@ import type {
   AttendanceRecord,
   AttendanceSubmission,
   AuditRecord,
+  EodReport,
+  House6pmSnapshot,
   IntraSubmission,
   PerfHistory,
   QaRecord,
@@ -43,6 +45,8 @@ export function useDataStore(): DataStore {
   const [weeklyTargetsState, setWeeklyTargetsState] = useState<WeeklyTarget[]>([])
   const [vaultMeetingsState, setVaultMeetingsState] = useState<VaultMeeting[]>([])
   const [vaultDocsState, setVaultDocsState] = useState<VaultDoc[]>([])
+  const [eodReportsState, setEodReportsState] = useState<EodReport[]>([])
+  const [house6pmSnapshotsState, setHouse6pmSnapshotsState] = useState<House6pmSnapshot[]>([])
   const [lastFetchedAt, setLastFetchedAt] = useState<string | null>(null)
   const [lastPoliciesBotRun, setLastPoliciesBotRun] = useState<string | null>(null)
   const [houseMarketing, setHouseMarketing] = useState<{ dateKey: string; amount: number } | null>(null)
@@ -77,6 +81,8 @@ export function useDataStore(): DataStore {
       setWeeklyTargetsState(state.weeklyTargets)
       setVaultMeetingsState(state.vaultMeetings)
       setVaultDocsState(state.vaultDocs)
+      setEodReportsState(state.eodReports ?? [])
+      setHouse6pmSnapshotsState(state.house6pmSnapshots ?? [])
       setLastPoliciesBotRun(state.lastPoliciesBotRun ?? null)
       setHouseMarketing(state.houseMarketing ?? null)
       hasLoadedRemoteRef.current = true
@@ -115,6 +121,8 @@ export function useDataStore(): DataStore {
   const setWeeklyTargets = wrapSetter(setWeeklyTargetsState)
   const setVaultMeetings = wrapSetter(setVaultMeetingsState)
   const setVaultDocs = wrapSetter(setVaultDocsState)
+  const setEodReports = wrapSetter(setEodReportsState)
+  const setHouse6pmSnapshots = wrapSetter(setHouse6pmSnapshotsState)
 
   const login = useCallback(
     async (username: string, password: string) => {
@@ -223,6 +231,12 @@ export function useDataStore(): DataStore {
   useEffect(() => {
     void syncCollection('vaultDocs', vaultDocsState)
   }, [vaultDocsState, syncCollection])
+  useEffect(() => {
+    void syncCollection('eodReports', eodReportsState)
+  }, [eodReportsState, syncCollection])
+  useEffect(() => {
+    void syncCollection('house6pmSnapshots', house6pmSnapshotsState)
+  }, [house6pmSnapshotsState, syncCollection])
 
   return {
     loggedIn,
@@ -268,6 +282,10 @@ export function useDataStore(): DataStore {
     setVaultMeetings,
     vaultDocs: vaultDocsState,
     setVaultDocs,
+    eodReports: eodReportsState,
+    setEodReports,
+    house6pmSnapshots: house6pmSnapshotsState,
+    setHouse6pmSnapshots,
     lastPoliciesBotRun,
     houseMarketing,
   }

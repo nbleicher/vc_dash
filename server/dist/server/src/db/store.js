@@ -21,6 +21,10 @@ export class SqliteStore {
             weeklyTargets: this.getWeeklyTargets(),
             vaultMeetings: this.getVaultMeetings(),
             vaultDocs: this.getVaultDocs(),
+            eodReports: this.getEodReports(),
+            house6pmSnapshots: this.getHouse6pmSnapshots(),
+            lastPoliciesBotRun: await this.getLastPoliciesBotRun(),
+            houseMarketing: await this.getHouseMarketing(),
         };
     }
     async getCollection(key) {
@@ -131,6 +135,22 @@ export class SqliteStore {
                             .run(row);
                     }
                     break;
+                case 'eodReports':
+                    this.db.prepare('DELETE FROM eod_reports').run();
+                    for (const row of rows) {
+                        this.db
+                            .prepare('INSERT INTO eod_reports (id,weekKey,dateKey,houseSales,houseCpa,reportText,submittedAt) VALUES (@id,@weekKey,@dateKey,@houseSales,@houseCpa,@reportText,@submittedAt)')
+                            .run(row);
+                    }
+                    break;
+                case 'house6pmSnapshots':
+                    this.db.prepare('DELETE FROM house_6pm_snapshots').run();
+                    for (const row of rows) {
+                        this.db
+                            .prepare('INSERT INTO house_6pm_snapshots (dateKey,houseSales,houseCpa,capturedAt) VALUES (@dateKey,@houseSales,@houseCpa,@capturedAt)')
+                            .run(row);
+                    }
+                    break;
             }
         });
         tx();
@@ -200,5 +220,45 @@ export class SqliteStore {
         return this.db
             .prepare('SELECT id,agentId,fileName,fileSize,uploadedAt FROM vault_docs')
             .all();
+    }
+    getEodReports() {
+        return this.db
+            .prepare('SELECT id,weekKey,dateKey,houseSales,houseCpa,reportText,submittedAt FROM eod_reports')
+            .all();
+    }
+    getHouse6pmSnapshots() {
+        return this.db
+            .prepare('SELECT dateKey,houseSales,houseCpa,capturedAt FROM house_6pm_snapshots')
+            .all();
+    }
+    readLastPoliciesBotRun() {
+        const row = this.db.prepare("SELECT value FROM app_meta WHERE key = 'lastPoliciesBotRun'").get();
+        return row?.value ?? null;
+    }
+    async getLastPoliciesBotRun() {
+        return Promise.resolve(this.readLastPoliciesBotRun());
+    }
+    async setLastPoliciesBotRun(iso) {
+        this.db.prepare("INSERT OR REPLACE INTO app_meta (key, value) VALUES ('lastPoliciesBotRun', ?)").run(iso);
+    }
+    readHouseMarketing() {
+        const row = this.db.prepare("SELECT value FROM app_meta WHERE key = 'houseMarketing'").get();
+        if (!row?.value)
+            return null;
+        try {
+            const parsed = JSON.parse(row.value);
+            if (typeof parsed?.dateKey === 'string' && Number.isFinite(parsed?.amount))
+                return { dateKey: parsed.dateKey, amount: Number(parsed.amount) };
+        }
+        catch {
+            // ignore
+        }
+        return null;
+    }
+    async getHouseMarketing() {
+        return Promise.resolve(this.readHouseMarketing());
+    }
+    async setHouseMarketing(dateKey, amount) {
+        this.db.prepare("INSERT OR REPLACE INTO app_meta (key, value) VALUES ('houseMarketing', ?)").run(JSON.stringify({ dateKey, amount }));
     }
 }

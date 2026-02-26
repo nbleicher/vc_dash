@@ -115,6 +115,23 @@ CREATE TABLE IF NOT EXISTS vault_docs (
   uploadedAt TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS eod_reports (
+  id TEXT PRIMARY KEY,
+  weekKey TEXT NOT NULL,
+  dateKey TEXT NOT NULL,
+  houseSales INTEGER NOT NULL,
+  houseCpa REAL,
+  reportText TEXT NOT NULL,
+  submittedAt TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS house_6pm_snapshots (
+  dateKey TEXT PRIMARY KEY,
+  houseSales INTEGER NOT NULL,
+  houseCpa REAL,
+  capturedAt TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS app_meta (
   key TEXT PRIMARY KEY,
   value TEXT

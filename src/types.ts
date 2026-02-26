@@ -1,5 +1,5 @@
 export type TopPage = 'dashboard' | 'tasks' | 'metrics' | 'eod' | 'vault' | 'settings'
-export type TaskPage = 'spiff' | 'attendance' | 'qa' | 'audit' | 'targets'
+export type TaskPage = 'spiff' | 'attendance' | 'qa' | 'audit' | 'targets' | 'eodReport'
 export type VaultHistoryView = 'attendance' | 'qa' | 'audit' | 'targets'
 export type VaultScope = 'agent' | 'house'
 export type MetricsScope = 'house' | 'agent'
@@ -123,6 +123,23 @@ export type VaultDoc = {
   fileName: string
   fileSize: number
   uploadedAt: string
+}
+
+export type EodReport = {
+  id: string
+  weekKey: string
+  dateKey: string
+  houseSales: number
+  houseCpa: number | null
+  reportText: string
+  submittedAt: string
+}
+
+export type House6pmSnapshot = {
+  dateKey: string
+  houseSales: number
+  houseCpa: number | null
+  capturedAt: string
 }
 
 export type ExportFlags = {

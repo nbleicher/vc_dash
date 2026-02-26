@@ -20,6 +20,8 @@ const seedState: StoreState = {
   weeklyTargets: [],
   vaultMeetings: [],
   vaultDocs: [],
+  eodReports: [],
+  house6pmSnapshots: [],
   lastPoliciesBotRun: null,
   houseMarketing: null,
 }

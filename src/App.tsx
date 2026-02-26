@@ -37,6 +37,8 @@ function App() {
     setVaultMeetings,
     vaultDocs,
     setVaultDocs,
+    eodReports,
+    setEodReports,
     loggedIn,
     login,
     logout,
@@ -66,6 +68,7 @@ function App() {
     floorCapacity,
     weekTarget,
     weekTrend,
+    house6pmSnapshotForToday,
     attendanceAlert,
     taskPage,
     setTaskPage,
@@ -241,6 +244,21 @@ function App() {
       },
     ])
     setAuditForm({ agentId: '', carrier: CARRIERS[0], clientName: '', reason: '', currentStatus: 'pending_cms' })
+  }
+
+  const handleSaveEodReport = (weekKey: string, reportText: string, houseSales: number, houseCpa: number | null): void => {
+    setEodReports((prev) => [
+      ...prev,
+      {
+        id: uid('eod'),
+        weekKey,
+        dateKey: todayKey,
+        houseSales,
+        houseCpa,
+        reportText: reportText.trim(),
+        submittedAt: new Date().toISOString(),
+      },
+    ])
   }
 
   const handleAuditNoActionSubmit = (): void => {
@@ -639,6 +657,7 @@ function App() {
         </div>
       </header>
       <main className="page-grid mt-4">
+        {topPage !== 'dashboard' && (
         <section className="panel page-head">
           <div className="page-head-copy">
             <p className="page-kicker">VC Dashboard</p>
@@ -646,6 +665,7 @@ function App() {
             <p className="page-subtext">{pageMeta[topPage].subtitle}</p>
           </div>
         </section>
+        )}
         {(uiError || error) && (
           <section className="rounded-xl2 border border-red-200 bg-red-50 p-4 text-red-800 shadow-soft">
             <strong>Action required</strong>
@@ -722,6 +742,10 @@ function App() {
             onAuditNoActionSubmit={handleAuditNoActionSubmit}
             onUpdateAuditRecord={handleAuditUpdate}
             onDeleteAuditRecord={handleAuditDelete}
+            weekTrend={weekTrend}
+            house6pmSnapshotForToday={house6pmSnapshotForToday}
+            eodReports={eodReports}
+            onSaveEodReport={handleSaveEodReport}
           />
         )}
 

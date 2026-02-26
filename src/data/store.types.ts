@@ -4,6 +4,8 @@ import type {
   AttendanceRecord,
   AttendanceSubmission,
   AuditRecord,
+  EodReport,
+  House6pmSnapshot,
   IntraSubmission,
   PerfHistory,
   QaRecord,
@@ -69,4 +71,10 @@ export interface DataStore {
 
   vaultDocs: VaultDoc[]
   setVaultDocs: Dispatch<SetStateAction<VaultDoc[]>>
+
+  eodReports: EodReport[]
+  setEodReports: Dispatch<SetStateAction<EodReport[]>>
+
+  house6pmSnapshots: House6pmSnapshot[]
+  setHouse6pmSnapshots: Dispatch<SetStateAction<House6pmSnapshot[]>>
 }

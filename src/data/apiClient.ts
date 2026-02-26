@@ -3,6 +3,8 @@ import type {
   AttendanceRecord,
   AttendanceSubmission,
   AuditRecord,
+  EodReport,
+  House6pmSnapshot,
   IntraSubmission,
   PerfHistory,
   QaRecord,
@@ -26,6 +28,8 @@ export type StoreCollections = {
   weeklyTargets: WeeklyTarget[]
   vaultMeetings: VaultMeeting[]
   vaultDocs: VaultDoc[]
+  eodReports: EodReport[]
+  house6pmSnapshots: House6pmSnapshot[]
   lastPoliciesBotRun: string | null
   houseMarketing: { dateKey: string; amount: number } | null
 }

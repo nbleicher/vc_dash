@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react'
 import { WeeklyTargetEditor } from '../components'
-import { Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Tabs, Textarea } from '../components'
+import { Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, MetricCard, Select, TableWrap, Tabs, Textarea } from '../components'
 import { CARRIERS, POLICY_STATUSES } from '../constants'
 import type { AttendanceRecord, AuditRecord } from '../types'
 import type { AttendancePercent } from '../types'
 import type { SpiffRecord, TaskPage } from '../types'
 import type { DataStore } from '../data'
-import { formatDateKey, formatLastParsedDate, formatTimestamp } from '../utils'
+import { formatDateKey, formatLastParsedDate, formatNum, formatTimestamp } from '../utils'
 
 const AUDIT_HISTORY_PREVIEW_ROWS = 5
 
@@ -61,6 +61,18 @@ type Props = {
     patch: Pick<AuditRecord, 'currentStatus' | 'resolutionTs' | 'notes'>,
   ) => void
   onDeleteAuditRecord: (id: string) => void
+  weekTrend: { totalSales: number; currentCpa: number | null }
+  house6pmSnapshotForToday: { dateKey: string; houseSales: number; houseCpa: number | null; capturedAt: string } | null
+  eodReports: Array<{
+    id: string
+    weekKey: string
+    dateKey: string
+    houseSales: number
+    houseCpa: number | null
+    reportText: string
+    submittedAt: string
+  }>
+  onSaveEodReport: (weekKey: string, reportText: string, houseSales: number, houseCpa: number | null) => void
 }
 
 export function TasksPage({
@@ -95,9 +107,14 @@ export function TasksPage({
   onAuditNoActionSubmit,
   onUpdateAuditRecord,
   onDeleteAuditRecord,
+  weekTrend,
+  house6pmSnapshotForToday,
+  eodReports,
+  onSaveEodReport,
 }: Props) {
   const dayBasePay = 120
   const [editingNoteKey, setEditingNoteKey] = useState<string | null>(null)
+  const [eodReportText, setEodReportText] = useState('')
   const [noteDraft, setNoteDraft] = useState('')
   const [auditHistoryExpanded, setAuditHistoryExpanded] = useState(false)
   const [editingAuditId, setEditingAuditId] = useState<string | null>(null)
@@ -160,6 +177,7 @@ export function TasksPage({
     { key: 'qa' as const, label: 'Daily QA' },
     { key: 'audit' as const, label: 'Action Needed Audit' },
     { key: 'targets' as const, label: 'Weekly Targets' },
+    { key: 'eodReport' as const, label: 'EOD Report' },
   ]
 
   return (
@@ -732,6 +750,70 @@ export function TasksPage({
           <CardTitle>Weekly Targets</CardTitle>
           <p className="text-sm text-slate-500">Set the current week sales and CPA goals here.</p>
           <WeeklyTargetEditor target={weekTarget} onSave={onSaveWeeklyTarget} />
+        </Card>
+      )}
+
+      {taskPage === 'eodReport' && (
+        <Card className="space-y-4">
+          <CardTitle>EOD Report</CardTitle>
+          <p className="text-sm text-slate-500">House metrics for the current week. Write your report and submit to save to vault history.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <MetricCard
+              title={house6pmSnapshotForToday ? 'House Sales (6 PM)' : 'House Sales'}
+              value={house6pmSnapshotForToday ? house6pmSnapshotForToday.houseSales : weekTrend.totalSales}
+            />
+            <MetricCard
+              title={house6pmSnapshotForToday ? 'House CPA (6 PM)' : 'House CPA'}
+              value={
+                house6pmSnapshotForToday
+                  ? house6pmSnapshotForToday.houseCpa === null
+                    ? 'N/A'
+                    : `$${formatNum(house6pmSnapshotForToday.houseCpa)}`
+                  : weekTrend.currentCpa === null
+                    ? 'N/A'
+                    : `$${formatNum(weekTrend.currentCpa)}`
+              }
+            />
+          </div>
+          <Field>
+            <FieldLabel>Report</FieldLabel>
+            <Textarea
+              value={eodReportText}
+              onChange={(e) => setEodReportText(e.target.value)}
+              placeholder="Enter your EOD report..."
+              rows={6}
+              className="w-full"
+            />
+          </Field>
+          <Button
+            type="button"
+            variant="default"
+            onClick={() => {
+              const sales = house6pmSnapshotForToday ? house6pmSnapshotForToday.houseSales : weekTrend.totalSales
+              const cpa = house6pmSnapshotForToday ? house6pmSnapshotForToday.houseCpa : weekTrend.currentCpa
+              onSaveEodReport(currentWeekKey, eodReportText, sales, cpa)
+              setEodReportText('')
+            }}
+          >
+            Submit & Save to Vault
+          </Button>
+          {eodReports.length > 0 && (
+            <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <h3 className="text-sm font-medium text-slate-700">EOD Report History (Vault)</h3>
+              <ul className="max-h-48 space-y-1 overflow-y-auto text-sm text-slate-600">
+                {[...eodReports]
+                  .sort((a, b) => (b.submittedAt > a.submittedAt ? 1 : -1))
+                  .slice(0, 10)
+                  .map((r) => (
+                    <li key={r.id}>
+                      {formatDateKey(r.dateKey)} — Sales: {r.houseSales}, CPA:{' '}
+                      {r.houseCpa === null ? 'N/A' : `$${formatNum(r.houseCpa)}`}
+                      {r.reportText.trim() ? ` — ${r.reportText.trim().slice(0, 60)}${r.reportText.trim().length > 60 ? '…' : ''}` : ''}
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
         </Card>
       )}
     </div>

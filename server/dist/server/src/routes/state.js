@@ -12,10 +12,18 @@ const keySchema = z.enum([
     'weeklyTargets',
     'vaultMeetings',
     'vaultDocs',
+    'eodReports',
+    'house6pmSnapshots',
 ]);
 export async function stateRoutes(app) {
     app.get('/state', { preHandler: [app.authenticate] }, async (_request, reply) => {
+        reply.header('Cache-Control', 'no-store, no-cache, must-revalidate');
+        reply.header('Pragma', 'no-cache');
         return reply.send({ data: await app.store.getState() });
+    });
+    app.get('/state/last-policies-bot-run', { preHandler: [app.authenticate] }, async (_request, reply) => {
+        const lastPoliciesBotRun = await app.store.getLastPoliciesBotRun();
+        return reply.send({ data: { lastPoliciesBotRun } });
     });
     app.get('/state/:key', { preHandler: [app.authenticate] }, async (request, reply) => {
         const parse = keySchema.safeParse(request.params.key);
@@ -42,6 +50,29 @@ export async function stateRoutes(app) {
         const rows = request.body;
         const next = await app.store.replaceCollection(parse.data, rows);
         return reply.send({ data: next });
+    });
+    app.post('/state/last-policies-bot-run', { preHandler: [app.authenticate] }, async (request, reply) => {
+        const body = request.body;
+        const timestamp = typeof body?.timestamp === 'string' ? body.timestamp.trim() : null;
+        if (!timestamp) {
+            return reply.code(400).send({
+                error: { code: 'VALIDATION_ERROR', message: 'Body must include timestamp (ISO string).' },
+            });
+        }
+        await app.store.setLastPoliciesBotRun(timestamp);
+        return reply.send({ data: { ok: true } });
+    });
+    app.post('/state/house-marketing', { preHandler: [app.authenticate] }, async (request, reply) => {
+        const body = request.body;
+        const dateKey = typeof body?.dateKey === 'string' ? body.dateKey.trim() : null;
+        const amount = typeof body?.amount === 'number' && Number.isFinite(body.amount) ? body.amount : Number(body?.amount);
+        if (!dateKey || !Number.isFinite(amount)) {
+            return reply.code(400).send({
+                error: { code: 'VALIDATION_ERROR', message: 'Body must include dateKey (string) and amount (number).' },
+            });
+        }
+        await app.store.setHouseMarketing(dateKey, amount);
+        return reply.send({ data: { ok: true } });
     });
     app.post('/export/csv', { preHandler: [app.authenticate] }, async (request, reply) => {
         const flags = (request.body ?? {});
