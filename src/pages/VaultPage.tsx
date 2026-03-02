@@ -507,14 +507,20 @@ export function VaultPage({
               </tr>
             )}
             {tableRows.map((row) => {
-              const isRejectedOrWithdrawn =
-                row.currentStatus === 'rejected' || row.currentStatus === 'withdrawn'
+              const isRedStatus =
+                row.currentStatus === 'rejected' ||
+                row.currentStatus === 'withdrawn' ||
+                row.currentStatus === 'future_cancellation' ||
+                row.currentStatus === 'old_policy_terminated'
+              const isFlagged = row.currentStatus === 'flagged'
               const rowClass =
                 row.currentStatus === 'accepted'
                   ? '!bg-green-400/30'
-                  : isRejectedOrWithdrawn
+                  : isRedStatus
                     ? '!bg-red-400/30'
-                    : undefined
+                    : isFlagged
+                      ? '!bg-yellow-400/30'
+                      : undefined
               return (
               <tr key={row.id} className={rowClass}>
                 <td>{agentName(row.agentId)}</td>
@@ -1273,14 +1279,20 @@ export function VaultPage({
                       </tr>
                     )}
                     {auditPagedRows.map((row) => {
-                      const isRejectedOrWithdrawn =
-                        row.currentStatus === 'rejected' || row.currentStatus === 'withdrawn'
+                      const isRedStatus =
+                        row.currentStatus === 'rejected' ||
+                        row.currentStatus === 'withdrawn' ||
+                        row.currentStatus === 'future_cancellation' ||
+                        row.currentStatus === 'old_policy_terminated'
+                      const isFlagged = row.currentStatus === 'flagged'
                       const rowClass =
                         row.currentStatus === 'accepted'
                           ? '!bg-green-400/30'
-                          : isRejectedOrWithdrawn
+                          : isRedStatus
                             ? '!bg-red-400/30'
-                            : undefined
+                            : isFlagged
+                              ? '!bg-yellow-400/30'
+                              : undefined
                       return (
                       <tr key={row.id} className={rowClass}>
                         <td>{agentName(row.agentId)}</td>

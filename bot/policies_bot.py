@@ -399,13 +399,16 @@ async def main_async() -> int:
         return 1
 
     existing = api_get_audit_records(session, api_base)
-    current_month_prefix = current_month + "-"
+    # One record per (clientName, agentId): keep latest by discoveryTs so we don't create duplicates across months
     by_client_agent: dict[tuple[str, str], dict] = {}
     for r in existing:
-        discovery = r.get("discoveryTs") or ""
-        if discovery.startswith(current_month_prefix):
-            key = (r.get("clientName", "").strip(), r.get("agentId", ""))
+        key = (r.get("clientName", "").strip(), (r.get("agentId") or "").strip())
+        if not key[0] and not key[1]:
+            continue
+        existing_ts = r.get("discoveryTs") or ""
+        if key not in by_client_agent or (existing_ts > (by_client_agent[key].get("discoveryTs") or "")):
             by_client_agent[key] = r
+    existing = list(by_client_agent.values())
 
     added = 0
     updated = 0
