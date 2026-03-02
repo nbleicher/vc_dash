@@ -631,7 +631,8 @@ export function TasksPage({
                           row.currentStatus === 'rejected' ||
                           row.currentStatus === 'withdrawn' ||
                           row.currentStatus === 'future_cancellation' ||
-                          row.currentStatus === 'old_policy_terminated'
+                          row.currentStatus === 'old_policy_terminated' ||
+                          row.currentStatus === 'cancelled'
                         const isFlagged = row.currentStatus === 'flagged'
                         const rowClass =
                           row.currentStatus === 'accepted'
