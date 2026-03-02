@@ -90,6 +90,22 @@ def load_agent_map(bot_dir: Path) -> dict[str, str]:
         return json.load(f)
 
 
+def _policy_key(r: dict) -> tuple[str, str]:
+    """Normalized key for deduplication: collapse whitespace and strip so 'John  Doe' matches 'John Doe'."""
+    name = " ".join((r.get("client_name") or "").strip().split())
+    aid = (r.get("agent_id") or "").strip()
+    return (name, aid)
+
+
+def _dedupe_policies(policies: list[dict]) -> list[dict]:
+    """Remove duplicate entries by (client_name, agent_id). Last occurrence wins. Uses normalized key."""
+    seen: dict[tuple[str, str], dict] = {}
+    for r in policies:
+        key = _policy_key(r)
+        seen[key] = r
+    return list(seen.values())
+
+
 async def set_date_range(page, which: str) -> bool:
     """Open date picker, click This Month or Last Month, click Apply. which is 'this_month' or 'last_month'. Return True if done."""
     label = "This Month" if which == "this_month" else "Last Month"
@@ -246,22 +262,32 @@ async def scrape_policyden_policies(
             await page.wait_for_timeout(2000)
             this_month_policies = await scrape_policies_table(page, agent_map)
             log(f"  PolicyDen policies (This Month): scraped {len(this_month_policies)} rows (valid agent + carrier).")
-            all_policies.extend(this_month_policies)
+            # One row per (client_name, agent_id); last occurrence wins (most recent status). Use normalized key.
+            by_key: dict[tuple[str, str], dict] = {}
+            for r in this_month_policies:
+                by_key[_policy_key(r)] = r
 
             if include_last_month:
                 await set_date_range(page, "last_month")
                 await page.wait_for_timeout(2000)
                 last_month_policies = await scrape_policies_table(page, agent_map)
                 log(f"  PolicyDen policies (Last Month): scraped {len(last_month_policies)} rows (valid agent + carrier).")
-                seen: set[tuple[str, str]] = {(r["client_name"], r["agent_id"]) for r in this_month_policies}
+                # Only add from last month if not already in this month (most recent = this month wins)
                 for r in last_month_policies:
-                    key = (r["client_name"], r["agent_id"])
-                    if key not in seen:
-                        seen.add(key)
-                        all_policies.append(r)
+                    key = _policy_key(r)
+                    if key not in by_key:
+                        by_key[key] = r
 
-            policies = all_policies
-            log(f"  PolicyDen policies: total {len(policies)} rows (this month + last month if first week).")
+            policies = list(by_key.values())
+            raw_count = len(this_month_policies)
+            if include_last_month:
+                raw_count += len(last_month_policies)
+            before_dedupe = len(policies)
+            policies = _dedupe_policies(policies)
+            if raw_count > len(policies) or before_dedupe > len(policies):
+                log(f"  PolicyDen policies: {raw_count} raw rows -> {len(policies)} unique (removed {raw_count - len(policies)} duplicate(s)).")
+            else:
+                log(f"  PolicyDen policies: total {len(policies)} unique rows (this month + last month if first week).")
         except Exception as e:
             log(f"  PolicyDen policies scrape failed: {e}")
             policies = []
@@ -385,8 +411,8 @@ async def main_async() -> int:
     updated = 0
 
     for row in scraped:
-        client_name = row["client_name"]
-        agent_id = row["agent_id"]
+        client_name = row["client_name"].strip()
+        agent_id = row["agent_id"].strip()
         status = row["status"]
         carrier = row["carrier"]
         key = (client_name, agent_id)
