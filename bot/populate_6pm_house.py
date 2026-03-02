@@ -122,8 +122,10 @@ def main() -> int:
             continue
         calls = source.get("billableCalls", 0) or 0
         sales = source.get("sales", 0) or 0
+        raw_marketing = source.get("marketing")
+        marketing = float(raw_marketing) if isinstance(raw_marketing, (int, float)) else calls * 15
         total_sales += sales
-        total_marketing += calls * 15
+        total_marketing += marketing
 
     house_cpa = (total_marketing / total_sales) if total_sales > 0 else None
     captured_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")

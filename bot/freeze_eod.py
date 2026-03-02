@@ -30,8 +30,9 @@ def get_date_key_est() -> str:
     return datetime.now(ZoneInfo(ZONE)).strftime("%Y-%m-%d")
 
 
-def compute_metrics(calls: int, sales: int) -> dict:
-    marketing = calls * 15
+def compute_metrics(calls: int, sales: int, marketing: float | None = None) -> dict:
+    if marketing is None:
+        marketing = calls * 15
     cpa = (marketing / sales) if sales > 0 else None
     cvr = (sales / calls) if calls > 0 else None
     return {"marketing": marketing, "cpa": cpa, "cvr": cvr}
@@ -132,7 +133,9 @@ def main() -> int:
             continue
         calls = source.get("billableCalls", 0) or 0
         sales = source.get("sales", 0) or 0
-        m = compute_metrics(calls, sales)
+        raw_marketing = source.get("marketing")
+        marketing_val = float(raw_marketing) if isinstance(raw_marketing, (int, float)) else None
+        m = compute_metrics(calls, sales, marketing_val)
         frozen_rows.append({
             "id": f"perf_{uuid.uuid4()}",
             "dateKey": date_key,

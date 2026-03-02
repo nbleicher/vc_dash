@@ -141,15 +141,18 @@ export function useAppData(store: DataStore) {
       const snap = liveByAgent.get(agent.id)
       const calls = snap?.billableCalls ?? 0
       const sales = snap?.sales ?? 0
-      const metrics = computeMetrics(calls, sales)
+      const fallbackMetrics = computeMetrics(calls, sales)
+      const marketing = snap?.marketing ?? fallbackMetrics.marketing
+      const cpa = sales > 0 ? marketing / sales : marketing
+      const cvr = calls > 0 ? sales / calls : null
       return {
         agentId: agent.id,
         agentName: agent.name,
         calls,
         sales,
-        marketing: metrics.marketing,
-        cpa: metrics.cpa,
-        cvr: metrics.cvr,
+        marketing,
+        cpa,
+        cvr,
       }
     })
     return rows.sort((a, b) => (b.cpa ?? -Infinity) - (a.cpa ?? -Infinity))
@@ -228,7 +231,7 @@ export function useAppData(store: DataStore) {
           const snap = liveByAgent.get(agent.id)
           if (snap) {
             totalSales += snap.sales
-            totalMarketing += snap.billableCalls * 15
+            totalMarketing += (snap.marketing ?? snap.billableCalls * 15)
           }
           continue
         }
@@ -237,7 +240,7 @@ export function useAppData(store: DataStore) {
         )
         if (snap17) {
           totalSales += snap17.sales
-          totalMarketing += snap17.billableCalls * 15
+          totalMarketing += (snap17.marketing ?? snap17.billableCalls * 15)
           continue
         }
         const perf = perfHistory.find((p) => p.dateKey === dateKey && p.agentId === agent.id)
@@ -334,8 +337,10 @@ export function useAppData(store: DataStore) {
     const aggregate = (rows: PerfHistory[]) => {
       const calls = rows.reduce((acc, r) => acc + r.billableCalls, 0)
       const sales = rows.reduce((acc, r) => acc + r.sales, 0)
-      const m = computeMetrics(calls, sales)
-      return { calls, sales, marketing: m.marketing, cpa: m.cpa, cvr: m.cvr }
+      const marketing = rows.reduce((acc, r) => acc + r.marketing, 0)
+      const cpa = sales > 0 ? marketing / sales : marketing
+      const cvr = calls > 0 ? sales / calls : null
+      return { calls, sales, marketing, cpa, cvr }
     }
     return { daily: aggregate(dailyRows), weekly: aggregate(weeklyRows), monthly: aggregate(monthlyRows) }
   }, [metricsScope, effectiveMetricsAgentId, perfHistory, snapshots, todayKey, weekDates, liveByAgent, activeAgents])
@@ -365,7 +370,7 @@ export function useAppData(store: DataStore) {
         const existing = byAgent.get(agentId) ?? { calls: 0, sales: 0, marketing: 0 }
         existing.calls += snap.billableCalls
         existing.sales += snap.sales
-        existing.marketing += snap.billableCalls * 15
+        existing.marketing += snap.marketing ?? snap.billableCalls * 15
         byAgent.set(agentId, existing)
       }
     }
@@ -469,7 +474,7 @@ export function useAppData(store: DataStore) {
           const snap = liveByAgent.get(agent.id)
           if (snap) {
             deals += snap.sales
-            marketing += snap.billableCalls * 15
+            marketing += snap.marketing ?? snap.billableCalls * 15
             setLatest(snap.updatedAt)
           }
           continue
@@ -479,7 +484,7 @@ export function useAppData(store: DataStore) {
         )
         if (snap17) {
           deals += snap17.sales
-          marketing += snap17.billableCalls * 15
+          marketing += snap17.marketing ?? snap17.billableCalls * 15
           setLatest(snap17.updatedAt)
           continue
         }
@@ -590,7 +595,7 @@ export function useAppData(store: DataStore) {
           if (isCurrentWeek) {
             for (const snap of liveByAgent.values()) {
               actualSales += snap.sales
-              actualMarketing += snap.billableCalls * 15
+              actualMarketing += snap.marketing ?? snap.billableCalls * 15
             }
           }
           const actualCpa = actualSales > 0 ? actualMarketing / actualSales : null
@@ -621,7 +626,9 @@ export function useAppData(store: DataStore) {
       const existing = prev.find((s) => s.dateKey === todayKey && s.slot === slot.key && s.agentId === agentId)
       if (existing) {
         return prev.map((s) =>
-          s.id === existing.id ? { ...s, billableCalls: calls, sales, updatedAt: new Date().toISOString() } : s,
+          s.id === existing.id
+            ? { ...s, billableCalls: calls, sales, updatedAt: new Date().toISOString() }
+            : s,
         )
       }
       return [
@@ -634,6 +641,7 @@ export function useAppData(store: DataStore) {
           agentId,
           billableCalls: calls,
           sales,
+          marketing: null,
           updatedAt: new Date().toISOString(),
         },
       ]

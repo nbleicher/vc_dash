@@ -1,6 +1,6 @@
 # Intra-day bot: session capture and scraper
 
-This bot scrapes PolicyDen (sales) and WeGenerate (calls), merges by agent, and pushes snapshots to the VC Dash API. The dashboard **Agent Performance** card shows data from the latest snapshot per agent (no manual intra-day entry; the intra-performance alert has been removed).
+This bot scrapes PolicyDen (sales) and WeGenerate (calls + per-agent marketing), merges by agent, and pushes snapshots to the VC Dash API. The dashboard **Agent Performance** card shows data from the latest snapshot per agent (no manual intra-day entry; the intra-performance alert has been removed). When WeGenerate per-agent marketing is unavailable for a run, existing marketing values for that slot are preserved and the dashboard falls back to a fixed cost-per-call assumption only where marketing is missing.
 
 ## 1. capture.py (run locally on your Mac)
 

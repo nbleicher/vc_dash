@@ -631,6 +631,7 @@ async def main_async() -> int:
     if verbose:
         log("  [verbose] PolicyDen scraped (name -> sales): " + str(dict(sorted(sales_by_agent.items()))))
         log("  [verbose] WeGenerate scraped (name -> calls): " + str(dict(sorted(calls_by_agent.items()))))
+        log("  [verbose] WeGenerate scraped (name -> marketing): " + str(dict(sorted(marketing_by_agent.items()))))
         log("  [verbose] agent_map keys (display names): " + str(list(agent_map.keys())))
 
     import requests
@@ -662,6 +663,14 @@ async def main_async() -> int:
         calls = calls_by_agent.get(display_name, 0)
         existing = existing_by_key.get((date_key, slot_key, agent_id))
         snap_id = existing["id"] if existing else f"snap_{uuid.uuid4()}"
+        # Prefer fresh marketing from WeGenerate; otherwise preserve existing value for this slot if present.
+        raw_marketing = marketing_by_agent.get(display_name)
+        if isinstance(raw_marketing, (int, float)):
+            marketing = float(raw_marketing)
+        elif existing and isinstance(existing.get("marketing"), (int, float)):
+            marketing = float(existing.get("marketing"))  # type: ignore[arg-type]
+        else:
+            marketing = None
         new_rows.append({
             "id": snap_id,
             "dateKey": date_key,
@@ -670,10 +679,14 @@ async def main_async() -> int:
             "agentId": agent_id,
             "billableCalls": calls,
             "sales": sales,
+            "marketing": marketing,
             "updatedAt": now_iso,
         })
         if verbose:
-            log(f"  [verbose] Row: {display_name!r} -> agentId={agent_id[:8]}... sales={sales} calls={calls}")
+            log(
+                f"  [verbose] Row: {display_name!r} -> agentId={agent_id[:8]}... "
+                f"sales={sales} calls={calls} marketing={marketing!r}"
+            )
 
     if not new_rows:
         log("No snapshot rows to push (check agent_map and active agents).")
@@ -686,7 +699,7 @@ async def main_async() -> int:
             if api_set_house_marketing(session, api_base, date_key, campaign_marketing):
                 log(f"Set house marketing ${campaign_marketing:,.2f} for {date_key}.")
             else:
-                log("  Failed to set house marketing; house pulse CPA will use calls*15 until next run.")
+                log("  Failed to set house marketing; skipping houseMarketing update for this run.")
         return 0
     return 1
 
