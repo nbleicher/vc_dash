@@ -67,7 +67,7 @@ SELECTORS_WEGENERATE = {
     ],
     "col_agent": 1,   # Agent column
     "col_calls": 2,   # Billable column
-    "col_marketing": 3,  # Per-agent marketing/spend column (WeGenerate Agent Performance)
+    "col_marketing": 4,  # Marketing column (Rank=0, Agent=1, Billable=2, Sales=3, Marketing=4, CPA=5)
     "campaign_marketing_cell": "td.font-bold",  # Campaign Performance table: cell with $ amount
     "campaign_marketing_fallbacks": ["td[class*='font-bold']", "[class*='font-bold']"],
 }
