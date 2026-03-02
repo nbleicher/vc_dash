@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { Button, Card, LoginForm, TopNav } from './components'
 import { useDataStore } from './data'
 import { useAppData } from './hooks'
-import type { AttendancePercent, ExportFlags, QaRecord, TopPage, VaultMeeting } from './types'
-import { csvEscape, estDateKey, formatDateKey, uid } from './utils'
+import type { ExportFlags, QaRecord, TopPage, VaultMeeting } from './types'
+import { csvEscape, estDateKey, uid } from './utils'
 import { DashboardPage } from './pages/DashboardPage'
 import { MetricsPage } from './pages/MetricsPage'
 import { EodPage } from './pages/EodPage'
@@ -28,7 +28,6 @@ function App() {
     setSnapshots,
     pushSnapshotsToApi,
     setPerfHistory,
-    attendanceSubmissions,
     setAttendanceSubmissions,
     setIntraSubmissions,
     setWeeklyTargets,
@@ -105,7 +104,6 @@ function App() {
     vaultAuditHistory,
     weeklyTargetHistory,
     snapshots,
-    attendanceSubmissions: dataAttendanceSubmissions,
   } = data
 
   const [topPage, setTopPage] = useState<TopPage>('dashboard')
@@ -127,15 +125,6 @@ function App() {
   })
 
   const ensureAgentDefault = (agentId: string): string => (agentId ? agentId : activeAgents[0]?.id ?? '')
-
-  const buildAttendanceDaySignature = (dateKey: string): string =>
-    [...activeAgents]
-      .sort((a, b) => a.id.localeCompare(b.id))
-      .map((agent) => {
-        const row = attendance.find((item) => item.agentId === agent.id && item.dateKey === dateKey)
-        return `${agent.id}:${row?.percent ?? 'NA'}`
-      })
-      .join('|')
 
   const [uiError, setUiError] = useState<string | null>(null)
   const pageMeta: Record<TopPage, { title: string; subtitle: string }> = {
@@ -350,22 +339,6 @@ function App() {
     )
   }
 
-  const setAttendancePercent = (agentId: string, dateKey: string, percent: AttendancePercent): void => {
-    setAttendance((prev) => {
-      const existing = prev.find((a) => a.agentId === agentId && a.dateKey === dateKey)
-      if (!existing)
-        return [...prev, { id: uid('att'), weekKey: selectedAttendanceWeekKey, dateKey, agentId, percent, notes: '' }]
-      if (existing.percent !== percent) {
-        const agentName = agents.find((a) => a.id === agentId)?.name ?? 'Agent'
-        const proceed = window.confirm(
-          `Attendance for ${agentName} on ${formatDateKey(dateKey)} already exists. Overwrite it?`,
-        )
-        if (!proceed) return prev
-      }
-      return prev.map((a) => (a.id === existing.id ? { ...a, percent } : a))
-    })
-  }
-
   const setSpiffAmount = (agentId: string, dateKey: string, amount: number): void => {
     const nextAmount = Number.isFinite(amount) ? Math.max(0, Math.round(amount * 100) / 100) : 0
     setSpiffRecords((prev) => {
@@ -374,60 +347,6 @@ function App() {
         return [...prev, { id: uid('spiff'), weekKey: selectedAttendanceWeekKey, dateKey, agentId, amount: nextAmount }]
       }
       return prev.map((row) => (row.id === existing.id ? { ...row, amount: nextAmount } : row))
-    })
-  }
-
-  const submitAttendanceDay = (dateKey: string): void => {
-    const nowIso = new Date().toISOString()
-    const nextSignature = buildAttendanceDaySignature(dateKey)
-    const existing = attendanceSubmissions.find((submission) => submission.dateKey === dateKey)
-    if (existing && existing.daySignature !== nextSignature) {
-      const proceed = window.confirm(
-        `Attendance for ${formatDateKey(dateKey)} was already submitted. Overwrite submission?`,
-      )
-      if (!proceed) return
-    }
-    setAttendanceSubmissions((prev) => {
-      const current = prev.find((submission) => submission.dateKey === dateKey)
-      if (!current) {
-        return [
-          ...prev,
-          {
-            id: uid('att_submit'),
-            dateKey,
-            submittedAt: nowIso,
-            updatedAt: nowIso,
-            submittedBy: 'manual',
-            daySignature: nextSignature,
-          },
-        ]
-      }
-      return prev.map((submission) =>
-        submission.id === current.id
-          ? { ...submission, updatedAt: nowIso, submittedAt: nowIso, submittedBy: 'manual', daySignature: nextSignature }
-          : submission,
-      )
-    })
-  }
-
-  const addAttendanceNote = (agentId: string, dateKey: string, note: string): void => {
-    const trimmedNote = note.trim()
-    if (!trimmedNote) return
-    setAttendance((prev) => {
-      const existing = prev.find((a) => a.agentId === agentId && a.dateKey === dateKey)
-      if (!existing)
-        return [
-          ...prev,
-          {
-            id: uid('att'),
-            weekKey: selectedAttendanceWeekKey,
-            dateKey,
-            agentId,
-            percent: 100,
-            notes: trimmedNote,
-          },
-        ]
-      return prev.map((a) => (a.id === existing.id ? { ...a, notes: trimmedNote } : a))
     })
   }
 
@@ -671,7 +590,6 @@ function App() {
           <TasksPage
             taskPage={taskPage}
             setTaskPage={setTaskPage}
-            todayKey={todayKey}
             activeAgents={activeAgents}
             auditRecords={auditRecords}
             spiffRecords={spiffRecords}

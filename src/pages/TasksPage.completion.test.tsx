@@ -6,7 +6,6 @@ function baseProps() {
   return {
     taskPage: 'qa' as const,
     setTaskPage: vi.fn(),
-    todayKey: '2026-02-15',
     activeAgents: [
       { id: 'a1', name: 'Alex', active: true, createdAt: new Date().toISOString() },
       { id: 'a2', name: 'Jordan', active: true, createdAt: new Date().toISOString() },

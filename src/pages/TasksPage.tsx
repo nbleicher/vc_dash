@@ -13,7 +13,6 @@ const CPA_HIGHLIGHT_THRESHOLD = 130
 type Props = {
   taskPage: TaskPage
   setTaskPage: (p: TaskPage) => void
-  todayKey: string
   activeAgents: DataStore['agents']
   auditRecords: AuditRecord[]
   spiffRecords: SpiffRecord[]
@@ -68,7 +67,6 @@ type Props = {
 export function TasksPage({
   taskPage,
   setTaskPage,
-  todayKey,
   activeAgents,
   auditRecords,
   spiffRecords,
@@ -101,7 +99,6 @@ export function TasksPage({
   const [eodReportText, setEodReportText] = useState('')
   const [eodAgentSortBy, setEodAgentSortBy] = useState<'cpa' | 'sales'>('cpa')
   const [eodAgentSortDir, setEodAgentSortDir] = useState<'asc' | 'desc'>('desc')
-  const [noteDraft, setNoteDraft] = useState('')
   const [auditHistoryExpanded, setAuditHistoryExpanded] = useState(false)
   const [editingAuditId, setEditingAuditId] = useState<string | null>(null)
   const [auditDraft, setAuditDraft] = useState<{
