@@ -46,7 +46,7 @@ export function useAppData(store: DataStore) {
   } = store
 
   const [now, setNow] = useState<Date>(new Date())
-  const [taskPage, setTaskPage] = useState<TaskPage>('attendance')
+  const [taskPage, setTaskPage] = useState<TaskPage>('spiff')
   const [metricsScope, setMetricsScope] = useState<MetricsScope>('house')
   const [metricsAgentId, setMetricsAgentId] = useState('')
   const [vaultAgentId, setVaultAgentId] = useState('')

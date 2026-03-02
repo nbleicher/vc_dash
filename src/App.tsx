@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Button, Card, LoginForm, TopNav } from './components'
 import { useDataStore } from './data'
 import { useAppData } from './hooks'
-import { CARRIERS } from './constants'
 import type { AttendancePercent, ExportFlags, QaRecord, TopPage, VaultMeeting } from './types'
 import { csvEscape, estDateKey, formatDateKey, uid } from './utils'
 import { DashboardPage } from './pages/DashboardPage'
@@ -69,7 +68,6 @@ function App() {
     weekTarget,
     weekTrend,
     house6pmSnapshotForToday,
-    attendanceAlert,
     taskPage,
     setTaskPage,
     selectedEodWeekKey,
@@ -113,19 +111,7 @@ function App() {
   const [topPage, setTopPage] = useState<TopPage>('dashboard')
   const [newAgent, setNewAgent] = useState('')
   const [qaForm, setQaForm] = useState({ agentId: '', clientName: '', decision: 'Good Sale', callId: '', notes: '' })
-  const [auditForm, setAuditForm] = useState<{
-    agentId: string
-    carrier: string
-    clientName: string
-    reason: string
-    currentStatus: string
-  }>({
-    agentId: '',
-    carrier: CARRIERS[0] as string,
-    clientName: '',
-    reason: '',
-    currentStatus: 'pending_cms',
-  })
+  const [auditForm, setAuditForm] = useState<{ agentId: string }>({ agentId: '' })
   const [meetingForm, setMeetingForm] = useState({
     dateKey: estDateKey(new Date()),
     meetingType: 'Coaching' as VaultMeeting['meetingType'],
@@ -221,29 +207,6 @@ function App() {
     ])
     setQaForm({ agentId: '', clientName: '', decision: 'Good Sale', callId: '', notes: '' })
     setUiError(null)
-  }
-
-  const handleAuditSubmit = (e: React.FormEvent): void => {
-    e.preventDefault()
-    const agentId = ensureAgentDefault(auditForm.agentId)
-    if (!agentId || !auditForm.clientName.trim()) return
-    setAuditRecords((prev) => [
-      ...prev,
-      {
-        id: uid('audit'),
-        agentId,
-        carrier: auditForm.carrier,
-        clientName: auditForm.clientName.trim(),
-        reason: auditForm.reason.trim(),
-        currentStatus: auditForm.currentStatus,
-        discoveryTs: new Date().toISOString(),
-        mgmtNotified: false,
-        outreachMade: false,
-        resolutionTs: null,
-        notes: '',
-      },
-    ])
-    setAuditForm({ agentId: '', carrier: CARRIERS[0], clientName: '', reason: '', currentStatus: 'pending_cms' })
   }
 
   const handleSaveEodReport = (weekKey: string, reportText: string, houseSales: number, houseCpa: number | null): void => {
@@ -698,13 +661,8 @@ function App() {
             weekTrend={weekTrend}
             actionQa={actionQa}
             actionAudit={actionAudit}
-            attendanceAlert={attendanceAlert}
             onResolveQa={resolveQa}
             onToggleAuditFlag={toggleAuditFlag}
-            onGoToAttendance={() => {
-              setTopPage('tasks')
-              setTaskPage('attendance')
-            }}
             onRefreshData={() => void reload()}
           />
         )}
@@ -716,9 +674,7 @@ function App() {
             todayKey={todayKey}
             activeAgents={activeAgents}
             auditRecords={auditRecords}
-            attendance={attendance}
             spiffRecords={spiffRecords}
-            attendanceSubmissions={dataAttendanceSubmissions}
             currentWeekKey={currentWeekKey}
             selectedAttendanceWeekKey={selectedAttendanceWeekKey}
             setSelectedAttendanceWeekKey={setSelectedAttendanceWeekKey}
@@ -732,13 +688,9 @@ function App() {
             incompleteQaAgentsToday={incompleteQaAgentsToday}
             incompleteAuditAgentsToday={incompleteAuditAgentsToday}
             lastPoliciesBotRun={store.lastPoliciesBotRun ?? null}
-            onSetAttendancePercent={setAttendancePercent}
             onSetSpiffAmount={setSpiffAmount}
-            onSubmitAttendanceDay={submitAttendanceDay}
-            onAddAttendanceNote={addAttendanceNote}
             onSaveWeeklyTarget={saveWeeklyTarget}
             onQaSubmit={handleQaSubmit}
-            onAuditSubmit={handleAuditSubmit}
             onAuditNoActionSubmit={handleAuditNoActionSubmit}
             onUpdateAuditRecord={handleAuditUpdate}
             onDeleteAuditRecord={handleAuditDelete}

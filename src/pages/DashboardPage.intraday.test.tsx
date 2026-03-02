@@ -26,10 +26,8 @@ function baseProps() {
     weekTrend: { totalSales: 0, currentCpa: null, salesProgress: null, cpaTarget: null, cpaDelta: null },
     actionQa: [],
     actionAudit: [],
-    attendanceAlert: false,
     onResolveQa: vi.fn(),
     onToggleAuditFlag: vi.fn(),
-    onGoToAttendance: vi.fn(),
     onRefreshData: vi.fn(),
   }
 }

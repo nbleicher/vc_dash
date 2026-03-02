@@ -44,10 +44,8 @@ type Props = {
     outreachMade: boolean
     resolutionTs: string | null
   }>
-  attendanceAlert: boolean
   onResolveQa: (id: string) => void
   onToggleAuditFlag: (id: string, field: 'mgmtNotified' | 'outreachMade') => void
-  onGoToAttendance: () => void
   onRefreshData: () => void
 }
 
@@ -64,10 +62,8 @@ export function DashboardPage({
   weekTrend,
   actionQa,
   actionAudit,
-  attendanceAlert,
   onResolveQa,
   onToggleAuditFlag,
-  onGoToAttendance,
   onRefreshData,
 }: Props) {
   const cpaCardToneClass =
@@ -95,18 +91,6 @@ export function DashboardPage({
 
   return (
     <div className="page-grid">
-      {attendanceAlert && (
-        <Card className="border-amber-200 bg-amber-50 text-amber-900">
-          <div className="flex items-center justify-between gap-3">
-            <strong>Attendance Alert</strong>
-            <Badge variant="warning">Needs Review</Badge>
-          </div>
-          <p>Attendance is incomplete for today after 5:30 PM EST.</p>
-          <Button variant="default" className="mt-2" onClick={onGoToAttendance}>
-            Complete Attendance
-          </Button>
-        </Card>
-      )}
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
         <div className="xl:col-span-1">
       <Card className="space-y-4">
