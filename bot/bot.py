@@ -11,22 +11,22 @@ auth_policyden.json, auth_wegenerate.json, agent_map.json.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import sys
 import uuid
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from dotenv import load_dotenv
 
-from auth_login import login_and_save
+from auth_login import login_and_save_async
 
 # Optional: reduce detection on datacenter IPs
 try:
-    from playwright_stealth import stealth_sync
+    from playwright_stealth import stealth_async
 except ImportError:
-    stealth_sync = None
+    stealth_async = None
 
 # --- Config (match dashboard) ---
 ZONE = "America/New_York"
@@ -115,7 +115,7 @@ def load_agent_map(bot_dir: Path) -> dict[str, str]:
         raise
 
 
-def set_date_on_page(page, date_key: str, selectors: dict) -> bool:
+async def set_date_on_page(page, date_key: str, selectors: dict) -> bool:
     """Optional: open date picker, select date_key, click Apply. Return True if done."""
     if not selectors.get("date_apply"):
         log("  Date apply selector not configured; skipping date filter (using page default).")
@@ -126,7 +126,7 @@ def set_date_on_page(page, date_key: str, selectors: dict) -> bool:
     trigger_clicked = False
     for trigger_sel in triggers:
         try:
-            page.click(trigger_sel, timeout=4000)
+            await page.click(trigger_sel, timeout=4000)
             trigger_clicked = True
             break
         except Exception:
@@ -135,15 +135,13 @@ def set_date_on_page(page, date_key: str, selectors: dict) -> bool:
         log("  Date picker: could not open (trigger not found). Scraping page default date.")
         return False
     try:
-        # Wait for popover content to appear (reka popover; id can vary)
-        page.wait_for_timeout(600)
+        await page.wait_for_timeout(600)
         popover = page.locator('[id^="reka-popover-content-"], [role="dialog"]').first
         try:
-            popover.wait_for(state="visible", timeout=4000)
+            await popover.wait_for(state="visible", timeout=4000)
         except Exception:
             pass
-        page.wait_for_timeout(400)
-        # Click "Today" *inside* the popover (enables Apply)
+        await page.wait_for_timeout(400)
         today_selectors = (
             'button:has-text("Today")',
             'button.bg-primary-500:has-text("Today")',
@@ -151,19 +149,17 @@ def set_date_on_page(page, date_key: str, selectors: dict) -> bool:
         )
         for today_sel in today_selectors:
             try:
-                # Prefer Today inside the popover
                 loc = popover.locator(today_sel)
-                if loc.count() == 0:
+                if await loc.count() == 0:
                     loc = page.locator(today_sel)
-                loc.wait_for(state="visible", timeout=2000)
-                if loc.count() > 0:
-                    loc.first.click(timeout=2000)
-                    page.wait_for_timeout(600)
+                await loc.wait_for(state="visible", timeout=2000)
+                if await loc.count() > 0:
+                    await loc.first.click(timeout=2000)
+                    await page.wait_for_timeout(600)
                     break
             except Exception:
                 continue
-        # Otherwise click the day cell so Apply becomes enabled
-        day = date_key.split("-")[2].lstrip("0") or "1"  # e.g. "24"
+        day = date_key.split("-")[2].lstrip("0") or "1"
         day_sel = (
             f'[data-date="{date_key}"]',
             f'[data-value="{date_key}"]',
@@ -175,38 +171,35 @@ def set_date_on_page(page, date_key: str, selectors: dict) -> bool:
         for sel in day_sel:
             try:
                 loc = page.locator(sel)
-                if loc.count() > 0:
-                    loc.first.click(timeout=2000)
+                if await loc.count() > 0:
+                    await loc.first.click(timeout=2000)
                     clicked_day = True
                     break
             except Exception:
                 continue
         if clicked_day:
-            page.wait_for_timeout(400)
-        # Wait for Apply to be enabled (it starts disabled until a date is chosen), then click
+            await page.wait_for_timeout(400)
         apply_loc = page.locator(selectors["date_apply"])
         try:
-            apply_loc.wait_for(state="visible", timeout=3000)
-            # Poll until enabled (up to 10s)
+            await apply_loc.wait_for(state="visible", timeout=3000)
             for _ in range(50):
-                if apply_loc.is_enabled():
+                if await apply_loc.is_enabled():
                     break
-                page.wait_for_timeout(200)
-            apply_loc.click(timeout=5000)
+                await page.wait_for_timeout(200)
+            await apply_loc.click(timeout=5000)
         except Exception as e:
             log(f"  Apply button: {e}")
-            # Close popover so table is visible for scraping
-            page.keyboard.press("Escape")
-            page.wait_for_timeout(300)
+            await page.keyboard.press("Escape")
+            await page.wait_for_timeout(300)
             return False
-        page.wait_for_timeout(500)
+        await page.wait_for_timeout(500)
         return True
     except Exception as e:
         log(f"  Date picker failed: {e}")
         return False
 
 
-def scrape_policyden(
+async def scrape_policyden(
     auth_path: Path,
     date_key: str,
     bot_dir: Path,
@@ -214,7 +207,7 @@ def scrape_policyden(
     policyden_pass: str = "",
 ) -> dict[str, int]:
     """Return { agent_name: sales_count } via dashboard -> Open Live View (today's date auto-set)."""
-    from playwright.sync_api import sync_playwright
+    from playwright.async_api import async_playwright
 
     out: dict[str, int] = {}
     if not auth_path.exists():
@@ -226,63 +219,59 @@ def scrape_policyden(
         log("  Open Live View selector not configured; skipping PolicyDen.")
         return out
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(storage_state=str(auth_path))
-        page = context.new_page()
-        if stealth_sync:
-            stealth_sync(page)
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context(storage_state=str(auth_path))
+        page = await context.new_page()
+        if stealth_async:
+            await stealth_async(page)
         try:
-            page.goto(POLICYDEN_DASHBOARD, wait_until="networkidle", timeout=30000)
-            page.wait_for_timeout(2000)
+            await page.goto(POLICYDEN_DASHBOARD, wait_until="networkidle", timeout=30000)
+            await page.wait_for_timeout(2000)
 
-            # Session expired: on login page. Try auto re-login if credentials set.
             if "/login" in page.url:
-                browser.close()
+                await browser.close()
                 if policyden_user and policyden_pass:
-                    if login_and_save("policyden", policyden_user, policyden_pass, auth_path, log_fn=log):
-                        return scrape_policyden(auth_path, date_key, bot_dir, policyden_user, policyden_pass)
+                    if await login_and_save_async("policyden", policyden_user, policyden_pass, auth_path, log_fn=log):
+                        return await scrape_policyden(auth_path, date_key, bot_dir, policyden_user, policyden_pass)
                 log("  PolicyDen: session expired (no credentials in .env for auto re-login).")
                 return out
 
-            # Click Open Live View (may open new tab or navigate same page; today's date auto-set)
             live_page = page
             try:
-                with context.expect_page(timeout=6000) as popup_info:
-                    page.click(open_btn, timeout=8000)
-                live_page = popup_info.value
-                live_page.wait_for_load_state("networkidle", timeout=15000)
+                async with context.expect_page(timeout=6000) as popup_info:
+                    await page.click(open_btn, timeout=8000)
+                live_page = await popup_info.value
+                await live_page.wait_for_load_state("networkidle", timeout=15000)
             except Exception:
-                # Same-page navigation or table appears on current page
-                page.wait_for_timeout(3000)
+                await page.wait_for_timeout(3000)
                 live_page = page
-            live_page.wait_for_timeout(2000)
+            await live_page.wait_for_timeout(2000)
 
             rows_sel = SELECTORS_POLICYDEN.get("table_rows") or "table tbody tr"
             col_agent = SELECTORS_POLICYDEN.get("col_agent")
             col_sales = SELECTORS_POLICYDEN.get("col_sales")
 
-            rows = live_page.query_selector_all(rows_sel)
+            rows = await live_page.locator(rows_sel).all()
             for row in rows:
-                cells = row.query_selector_all("td")
+                cells = await row.locator("td").all()
                 if not cells:
                     continue
                 agent = ""
                 sales = 0
                 if isinstance(col_agent, int) and 0 <= col_agent < len(cells):
-                    agent = (cells[col_agent].inner_text() or "").strip()
-                    # Live view has "Name\nemail" - take first line
+                    agent = (await cells[col_agent].inner_text() or "").strip()
                     if "\n" in agent:
                         agent = agent.split("\n")[0].strip()
                 if isinstance(col_sales, int) and 0 <= col_sales < len(cells):
                     try:
-                        sales = int((cells[col_sales].inner_text() or "0").replace(",", ""))
+                        sales = int((await cells[col_sales].inner_text() or "0").replace(",", ""))
                     except ValueError:
                         pass
                 if agent:
                     out[agent] = out.get(agent, 0) + sales
             if live_page != page:
-                live_page.close()
+                await live_page.close()
             n_rows = len(rows)
             if n_rows == 0:
                 log("  PolicyDen: 0 table rows (Open Live View may have failed or session expired).")
@@ -291,11 +280,11 @@ def scrape_policyden(
         except Exception as e:
             log(f"  PolicyDen scrape failed: {e}")
         finally:
-            browser.close()
+            await browser.close()
     return out
 
 
-def scrape_wegenerate(
+async def scrape_wegenerate(
     auth_path: Path,
     date_key: str,
     bot_dir: Path,
@@ -303,8 +292,8 @@ def scrape_wegenerate(
     wegenerate_pass: str = "",
 ) -> tuple[dict[str, int], float | None]:
     """Return ( { agent_name: billable_calls }, campaign_marketing_amount or None )."""
-    from playwright.sync_api import sync_playwright
     import re
+    from playwright.async_api import async_playwright
 
     out: dict[str, int] = {}
     campaign_marketing: float | None = None
@@ -312,28 +301,27 @@ def scrape_wegenerate(
         log("  auth_wegenerate.json not found; skipping WeGenerate.")
         return out, campaign_marketing
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(storage_state=str(auth_path))
-        page = context.new_page()
-        if stealth_sync:
-            stealth_sync(page)
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context(storage_state=str(auth_path))
+        page = await context.new_page()
+        if stealth_async:
+            await stealth_async(page)
         try:
-            page.goto(WEGENERATE_DASHBOARD, wait_until="networkidle", timeout=30000)
-            page.wait_for_timeout(3500)
+            await page.goto(WEGENERATE_DASHBOARD, wait_until="networkidle", timeout=30000)
+            await page.wait_for_timeout(3500)
 
-            # Session expired: on login page. Try auto re-login if credentials set.
             if "/login" in page.url:
-                browser.close()
+                await browser.close()
                 if wegenerate_user and wegenerate_pass:
-                    if login_and_save("wegenerate", wegenerate_user, wegenerate_pass, auth_path, log_fn=log):
-                        return scrape_wegenerate(auth_path, date_key, bot_dir, wegenerate_user, wegenerate_pass)
+                    if await login_and_save_async("wegenerate", wegenerate_user, wegenerate_pass, auth_path, log_fn=log):
+                        return await scrape_wegenerate(auth_path, date_key, bot_dir, wegenerate_user, wegenerate_pass)
                 log("  WeGenerate: session expired (no credentials in .env for auto re-login).")
                 return out, campaign_marketing
 
             if SELECTORS_WEGENERATE.get("date_trigger") and SELECTORS_WEGENERATE.get("date_apply"):
-                set_date_on_page(page, date_key, SELECTORS_WEGENERATE)
-                page.wait_for_timeout(1500)
+                await set_date_on_page(page, date_key, SELECTORS_WEGENERATE)
+                await page.wait_for_timeout(1500)
 
             rows_sel = SELECTORS_WEGENERATE.get("table_rows") or "table tbody tr"
             col_agent = SELECTORS_WEGENERATE.get("col_agent")
@@ -342,32 +330,32 @@ def scrape_wegenerate(
             card_heading = SELECTORS_WEGENERATE.get("card_heading")
             if card_heading:
                 try:
-                    page.locator(card_heading).first.scroll_into_view_if_needed(timeout=10000)
-                    page.wait_for_timeout(1200)
+                    await page.locator(card_heading).first.scroll_into_view_if_needed(timeout=10000)
+                    await page.wait_for_timeout(1200)
                 except Exception:
                     pass
             try:
-                page.wait_for_selector(rows_sel, state="attached", timeout=12000)
+                await page.wait_for_selector(rows_sel, state="attached", timeout=12000)
             except Exception:
                 pass
             try:
-                page.locator(rows_sel).first.scroll_into_view_if_needed(timeout=5000)
-                page.wait_for_timeout(400)
+                await page.locator(rows_sel).first.scroll_into_view_if_needed(timeout=5000)
+                await page.wait_for_timeout(400)
             except Exception:
                 pass
             try:
                 scroll_sel = "div:has(h3:has-text('Agent Performance')) div.overflow-y-auto"
                 scroll_container = page.locator(scroll_sel)
-                if scroll_container.count() > 0:
+                if await scroll_container.count() > 0:
                     for _ in range(8):
-                        scroll_container.first.evaluate("e => { e.scrollTop = e.scrollHeight; }")
-                        page.wait_for_timeout(200)
+                        await scroll_container.first.evaluate("e => { e.scrollTop = e.scrollHeight; }")
+                        await page.wait_for_timeout(200)
             except Exception:
                 pass
-            rows = page.query_selector_all(rows_sel)
+            rows = await page.locator(rows_sel).all()
             if len(rows) == 0 and SELECTORS_WEGENERATE.get("table_rows_fallbacks"):
                 for fallback in SELECTORS_WEGENERATE["table_rows_fallbacks"]:
-                    rows = page.query_selector_all(fallback)
+                    rows = await page.locator(fallback).all()
                     if len(rows) > 0:
                         rows_sel = fallback
                         break
@@ -376,10 +364,10 @@ def scrape_wegenerate(
                     if frame == page.main_frame:
                         continue
                     try:
-                        rows = frame.query_selector_all(rows_sel)
+                        rows = await frame.locator(rows_sel).all()
                         if len(rows) == 0:
                             for fallback in SELECTORS_WEGENERATE.get("table_rows_fallbacks") or []:
-                                rows = frame.query_selector_all(fallback)
+                                rows = await frame.locator(fallback).all()
                                 if len(rows) > 0:
                                     break
                         if len(rows) > 0:
@@ -387,16 +375,16 @@ def scrape_wegenerate(
                     except Exception:
                         continue
             for row in rows:
-                cells = row.query_selector_all("td")
+                cells = await row.locator("td").all()
                 if not cells:
                     continue
                 agent = ""
                 calls = 0
                 if isinstance(col_agent, int) and 0 <= col_agent < len(cells):
-                    agent = (cells[col_agent].inner_text() or "").strip()
+                    agent = (await cells[col_agent].inner_text() or "").strip()
                 if isinstance(col_calls, int) and 0 <= col_calls < len(cells):
                     try:
-                        calls = int((cells[col_calls].inner_text() or "0").replace(",", ""))
+                        calls = int((await cells[col_calls].inner_text() or "0").replace(",", ""))
                     except ValueError:
                         pass
                 if agent:
@@ -407,14 +395,13 @@ def scrape_wegenerate(
                 if os.environ.get("BOT_DEBUG_SCREENSHOT", "").strip().lower() in ("1", "true", "yes"):
                     try:
                         path = bot_dir / "wegenerate_debug.png"
-                        page.screenshot(path=str(path))
+                        await page.screenshot(path=str(path))
                         log(f"  Debug screenshot saved to {path}")
                     except Exception:
                         pass
             else:
                 log(f"  WeGenerate: {n_rows} table rows, {len(out)} agents with calls.")
 
-            # Campaign Performance table: scrape marketing $ (e.g. $2,695.00) for house pulse CPA.
             selectors_to_try = [SELECTORS_WEGENERATE.get("campaign_marketing_cell")] + list(
                 SELECTORS_WEGENERATE.get("campaign_marketing_fallbacks") or []
             )
@@ -422,9 +409,9 @@ def scrape_wegenerate(
                 if not sel:
                     continue
                 try:
-                    cells = page.query_selector_all(sel)
+                    cells = await page.locator(sel).all()
                     for cell in cells:
-                        text = (cell.inner_text() or "").strip()
+                        text = (await cell.inner_text() or "").strip()
                         if text.startswith("$"):
                             match = re.search(r"\$[\d,]+(?:\.\d{2})?", text)
                             if match:
@@ -442,7 +429,7 @@ def scrape_wegenerate(
         except Exception as e:
             log(f"  WeGenerate scrape failed: {e}")
         finally:
-            browser.close()
+            await browser.close()
     return out, campaign_marketing
 
 
@@ -529,7 +516,7 @@ def merge_snapshots(
     return rest + new_rows
 
 
-def _run_scrapes(
+async def _run_scrapes_async(
     auth_policyden: Path,
     auth_wegenerate: Path,
     date_key: str,
@@ -539,19 +526,23 @@ def _run_scrapes(
     wegenerate_user: str,
     wegenerate_pass: str,
 ):
-    """Run both scrapers in one thread (avoids Playwright sync API / asyncio loop conflict)."""
+    """Run both scrapers (async)."""
     log("Scraping PolicyDen (sales)...")
-    sales = scrape_policyden(
+    sales = await scrape_policyden(
         auth_policyden, date_key, bot_dir, policyden_user, policyden_pass
     )
     log("Scraping WeGenerate (calls)...")
-    calls, marketing = scrape_wegenerate(
+    calls, marketing = await scrape_wegenerate(
         auth_wegenerate, date_key, bot_dir, wegenerate_user, wegenerate_pass
     )
     return sales, calls, marketing
 
 
 def main() -> int:
+    return asyncio.run(main_async())
+
+
+async def main_async() -> int:
     load_dotenv()
     bot_dir = Path(__file__).resolve().parent
 
@@ -591,18 +582,16 @@ def main() -> int:
     wegenerate_user = os.environ.get("WEGENERATE_USERNAME", "").strip()
     wegenerate_pass = os.environ.get("WEGENERATE_PASSWORD", "").strip()
 
-    with ThreadPoolExecutor(max_workers=1) as ex:
-        sales_by_agent, calls_by_agent, campaign_marketing = ex.submit(
-            _run_scrapes,
-            auth_policyden,
-            auth_wegenerate,
-            date_key,
-            bot_dir,
-            policyden_user,
-            policyden_pass,
-            wegenerate_user,
-            wegenerate_pass,
-        ).result()
+    sales_by_agent, calls_by_agent, campaign_marketing = await _run_scrapes_async(
+        auth_policyden,
+        auth_wegenerate,
+        date_key,
+        bot_dir,
+        policyden_user,
+        policyden_pass,
+        wegenerate_user,
+        wegenerate_pass,
+    )
 
     if not sales_by_agent and not calls_by_agent:
         log("  Both scrapers empty. Re-run capture.py for both sites, re-upload auth_*.json to the VPS, and try again (sessions expire).")

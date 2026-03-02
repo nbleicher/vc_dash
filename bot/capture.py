@@ -9,11 +9,12 @@ Usage:
   python capture.py             # Interactive: choose which site
 """
 
+import asyncio
 import sys
 from pathlib import Path
 
 try:
-    from playwright.sync_api import sync_playwright
+    from playwright.async_api import async_playwright
 except ImportError:
     print("Install Playwright first: pip install playwright && playwright install chromium")
     sys.exit(1)
@@ -30,7 +31,7 @@ SITES = {
 }
 
 
-def capture(site_key: str) -> None:
+async def capture(site_key: str) -> None:
     if site_key not in SITES:
         print(f"Unknown site: {site_key}. Use one of: {list(SITES)}")
         sys.exit(1)
@@ -41,15 +42,15 @@ def capture(site_key: str) -> None:
     print(f"  Login URL: {site['url']}")
     print()
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
-        context = browser.new_context()
-        page = context.new_page()
-        page.goto(site["url"])
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=False)
+        context = await browser.new_context()
+        page = await context.new_page()
+        await page.goto(site["url"])
         print("  Log in in the browser window. When you're on the dashboard, come back here.")
         input("  Press Enter here to save the session... ")
-        context.storage_state(path=str(out_path))
-        browser.close()
+        await context.storage_state(path=str(out_path))
+        await browser.close()
 
     print(f"Saved session to {out_path}")
     print(f"Upload this file to your VPS at e.g. ~/bot/{site['out']}")
@@ -58,7 +59,7 @@ def capture(site_key: str) -> None:
 def main() -> None:
     if len(sys.argv) >= 2:
         key = sys.argv[1].lower().strip()
-        capture(key)
+        asyncio.run(capture(key))
         return
     print("Which site do you want to capture?")
     for i, key in enumerate(SITES, 1):
@@ -71,7 +72,7 @@ def main() -> None:
     if not key or key not in SITES:
         print("Invalid choice. Exiting.")
         sys.exit(1)
-    capture(key)
+    asyncio.run(capture(key))
 
 
 if __name__ == "__main__":

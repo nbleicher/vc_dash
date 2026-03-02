@@ -8,22 +8,22 @@ Requires: .env (API_BASE_URL, ADMIN_USERNAME, ADMIN_PASSWORD), auth_policyden.js
 agent_map.json. Same auth as the main sales bot.
 """
 
+import asyncio
 import json
 import os
 import sys
 import uuid
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
 
-from auth_login import login_and_save
+from auth_login import login_and_save_async
 
 try:
-    from playwright_stealth import stealth_sync
+    from playwright_stealth import stealth_async
 except ImportError:
-    stealth_sync = None
+    stealth_async = None
 
 ZONE = "America/New_York"
 POLICYDEN_POLICIES = "https://app.policyden.com/policies"
@@ -90,56 +90,54 @@ def load_agent_map(bot_dir: Path) -> dict[str, str]:
         return json.load(f)
 
 
-def set_date_this_month(page) -> bool:
+async def set_date_this_month(page) -> bool:
     """Open date picker, click This Month, click Apply. Return True if done."""
     try:
         date_trigger = page.locator("button#date, button:has-text('Pick a date range')").first
-        date_trigger.click(timeout=5000)
-        page.wait_for_timeout(700)
+        await date_trigger.click(timeout=5000)
+        await page.wait_for_timeout(700)
         popover = page.locator('[id^="reka-popover-content-"], [role="dialog"]').first
         try:
-            popover.wait_for(state="visible", timeout=4000)
+            await popover.wait_for(state="visible", timeout=4000)
         except Exception:
             pass
-        page.wait_for_timeout(400)
+        await page.wait_for_timeout(400)
         this_month = popover.locator('button:has-text("This Month")').first
-        if this_month.count() == 0:
+        if await this_month.count() == 0:
             this_month = page.locator('button:has-text("This Month")').first
-        if this_month.count() > 0:
-            this_month.click(timeout=2000)
-            page.wait_for_timeout(500)
+        if await this_month.count() > 0:
+            await this_month.click(timeout=2000)
+            await page.wait_for_timeout(500)
         apply_btn = page.locator('button:has-text("Apply")').first
         for _ in range(30):
-            if apply_btn.is_enabled():
+            if await apply_btn.is_enabled():
                 break
-            page.wait_for_timeout(200)
-        apply_btn.click(timeout=5000)
-        page.wait_for_timeout(1500)
+            await page.wait_for_timeout(200)
+        await apply_btn.click(timeout=5000)
+        await page.wait_for_timeout(1500)
         return True
     except Exception as e:
         log(f"  Date picker (This Month) failed: {e}")
         try:
-            page.keyboard.press("Escape")
+            await page.keyboard.press("Escape")
         except Exception:
             pass
         return False
 
 
-def scrape_policies_table(page, agent_map: dict[str, str]) -> list[dict]:
+async def scrape_policies_table(page, agent_map: dict[str, str]) -> list[dict]:
     """Return list of { agent_name, agent_id, client_name, status, carrier }."""
     try:
-        page.wait_for_selector("td[data-slot='table-cell']", state="attached", timeout=15000)
+        await page.wait_for_selector("td[data-slot='table-cell']", state="attached", timeout=15000)
     except Exception:
         pass
-    page.wait_for_timeout(1000)
+    await page.wait_for_timeout(1000)
 
-    # Scroll the table so all rows load (virtualized or overflow scroll)
-    def _scroll_until_stable(max_scrolls: int = 80, stable_rounds: int = 4) -> None:
+    async def _scroll_until_stable(max_scrolls: int = 80, stable_rounds: int = 4) -> None:
         last_count = 0
         stable = 0
         for step in range(max_scrolls):
-            # Scroll any scrollable ancestor of the table to bottom
-            page.evaluate("""
+            await page.evaluate("""
                 () => {
                     const table = document.querySelector('table tbody');
                     if (table) {
@@ -152,8 +150,8 @@ def scrape_policies_table(page, agent_map: dict[str, str]) -> list[dict]:
                     window.scrollBy(0, 600);
                 }
             """)
-            page.wait_for_timeout(250)
-            rows_now = len(page.query_selector_all("table tbody tr"))
+            await page.wait_for_timeout(250)
+            rows_now = len(await page.locator("table tbody tr").all())
             if rows_now == last_count:
                 stable += 1
                 if stable >= stable_rounds:
@@ -161,31 +159,31 @@ def scrape_policies_table(page, agent_map: dict[str, str]) -> list[dict]:
             else:
                 stable = 0
             last_count = rows_now
-        page.wait_for_timeout(500)
+        await page.wait_for_timeout(500)
 
-    _scroll_until_stable()
+    await _scroll_until_stable()
 
-    rows = page.query_selector_all("table tbody tr")
+    rows = await page.locator("table tbody tr").all()
     if len(rows) == 0:
-        rows = page.query_selector_all("[role='row']")
+        rows = await page.locator("[role='row']").all()
     out: list[dict] = []
     for row in rows:
-        cells = row.query_selector_all("td")
+        cells = await row.locator("td").all()
         if len(cells) <= max(COL_STATUS, COL_CARRIER, COL_AGENT):
             continue
         client_name = ""
         contact_cell = cells[COL_CONTACT] if COL_CONTACT < len(cells) else None
         if contact_cell:
-            a = contact_cell.query_selector('a[href*="/contacts/"]')
-            if a:
-                client_name = (a.inner_text() or "").strip()
+            a = contact_cell.locator('a[href*="/contacts/"]').first
+            if await a.count() > 0:
+                client_name = (await a.inner_text() or "").strip()
             if not client_name:
-                client_name = (contact_cell.inner_text() or "").strip().split("\n")[-1].strip()
+                client_name = (await contact_cell.inner_text() or "").strip().split("\n")[-1].strip()
         if not client_name:
             continue
-        status_raw = (cells[COL_STATUS].inner_text() or "").strip() if COL_STATUS < len(cells) else ""
-        agent_name = (cells[COL_AGENT].inner_text() or "").strip() if COL_AGENT < len(cells) else ""
-        carrier_raw = (cells[COL_CARRIER].inner_text() or "").strip() if COL_CARRIER < len(cells) else ""
+        status_raw = (await cells[COL_STATUS].inner_text() or "").strip() if COL_STATUS < len(cells) else ""
+        agent_name = (await cells[COL_AGENT].inner_text() or "").strip() if COL_AGENT < len(cells) else ""
+        carrier_raw = (await cells[COL_CARRIER].inner_text() or "").strip() if COL_CARRIER < len(cells) else ""
         status = _normalize_status_label(status_raw)
         carrier = _normalize_carrier(carrier_raw)
         if carrier not in ALLOWED_CARRIERS:
@@ -203,48 +201,47 @@ def scrape_policies_table(page, agent_map: dict[str, str]) -> list[dict]:
     return out
 
 
-def scrape_policyden_policies(
+async def scrape_policyden_policies(
     auth_path: Path,
     bot_dir: Path,
     agent_map: dict[str, str],
     policyden_user: str = "",
     policyden_pass: str = "",
 ) -> list[dict]:
-    from playwright.sync_api import sync_playwright
+    from playwright.async_api import async_playwright
 
     if not auth_path.exists():
         log("  auth_policyden.json not found.")
         return []
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(storage_state=str(auth_path))
-        page = context.new_page()
-        if stealth_sync:
-            stealth_sync(page)
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context(storage_state=str(auth_path))
+        page = await context.new_page()
+        if stealth_async:
+            await stealth_async(page)
         try:
-            page.goto(POLICYDEN_POLICIES, wait_until="networkidle", timeout=30000)
-            page.wait_for_timeout(2500)
+            await page.goto(POLICYDEN_POLICIES, wait_until="networkidle", timeout=30000)
+            await page.wait_for_timeout(2500)
 
-            # Session expired: on login page. Try auto re-login if credentials set.
             if "/login" in page.url:
-                browser.close()
+                await browser.close()
                 if policyden_user and policyden_pass:
-                    if login_and_save("policyden", policyden_user, policyden_pass, auth_path, log_fn=log):
-                        return scrape_policyden_policies(
+                    if await login_and_save_async("policyden", policyden_user, policyden_pass, auth_path, log_fn=log):
+                        return await scrape_policyden_policies(
                             auth_path, bot_dir, agent_map, policyden_user, policyden_pass
                         )
                 log("  PolicyDen: session expired (no credentials in .env for auto re-login).")
                 return []
 
-            set_date_this_month(page)
-            page.wait_for_timeout(2000)
-            policies = scrape_policies_table(page, agent_map)
+            await set_date_this_month(page)
+            await page.wait_for_timeout(2000)
+            policies = await scrape_policies_table(page, agent_map)
             log(f"  PolicyDen policies: scraped {len(policies)} rows (valid agent + carrier).")
         except Exception as e:
             log(f"  PolicyDen policies scrape failed: {e}")
             policies = []
         finally:
-            browser.close()
+            await browser.close()
     return policies
 
 
@@ -298,6 +295,10 @@ def api_set_last_policies_bot_run(session, base_url: str, timestamp_iso: str) ->
 
 
 def main() -> int:
+    return asyncio.run(main_async())
+
+
+async def main_async() -> int:
     from datetime import datetime, timezone
     from zoneinfo import ZoneInfo
 
@@ -330,15 +331,13 @@ def main() -> int:
     auth_policyden = bot_dir / "auth_policyden.json"
     policyden_user = os.environ.get("POLICYDEN_USERNAME", "").strip()
     policyden_pass = os.environ.get("POLICYDEN_PASSWORD", "").strip()
-    with ThreadPoolExecutor(max_workers=1) as ex:
-        scraped = ex.submit(
-            scrape_policyden_policies,
-            auth_policyden,
-            bot_dir,
-            agent_map,
-            policyden_user,
-            policyden_pass,
-        ).result()
+    scraped = await scrape_policyden_policies(
+        auth_policyden,
+        bot_dir,
+        agent_map,
+        policyden_user,
+        policyden_pass,
+    )
 
     import requests
     session = requests.Session()
