@@ -51,7 +51,7 @@ SELECTORS_POLICYDEN = {
     "col_sales": 2,   # SALES column (e.g. 6)
 }
 # WeGenerate /dashboard: table is inside a card "Agent Performance"; must open date picker, click Today, Apply to load data.
-# Campaign Performance: marketing $ in a td with font-bold (e.g. $2,695.00).
+# Per-agent marketing: td with class font-bold in each row (e.g. $201.00). Campaign Performance: marketing $ in a td with font-bold (e.g. $2,695.00).
 SELECTORS_WEGENERATE = {
     "date_trigger": "button#date",
     "date_apply": "button:has-text('Apply')",
@@ -401,6 +401,21 @@ async def scrape_wegenerate(
                                 marketing_val = float(raw)
                             except ValueError:
                                 marketing_val = None
+                # Fallback: per-agent marketing cell is td.font-bold (e.g. $201.00) in this row
+                if marketing_val is None:
+                    for cell in cells:
+                        cls = await cell.get_attribute("class") or ""
+                        if "font-bold" in cls:
+                            text = (await cell.inner_text() or "").strip()
+                            if text and ("$" in text or re.search(r"[\d,]+(?:\.\d{2})?", text)):
+                                match = re.search(r"\$?[\d,]+(?:\.\d{2})?", text)
+                                if match:
+                                    raw = match.group(0).replace("$", "").replace(",", "")
+                                    try:
+                                        marketing_val = float(raw)
+                                        break
+                                    except ValueError:
+                                        pass
                 if agent:
                     out[agent] = out.get(agent, 0) + calls
                     if marketing_val is not None:
