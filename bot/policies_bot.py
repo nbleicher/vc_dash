@@ -90,8 +90,9 @@ def load_agent_map(bot_dir: Path) -> dict[str, str]:
         return json.load(f)
 
 
-async def set_date_this_month(page) -> bool:
-    """Open date picker, click This Month, click Apply. Return True if done."""
+async def set_date_range(page, which: str) -> bool:
+    """Open date picker, click This Month or Last Month, click Apply. which is 'this_month' or 'last_month'. Return True if done."""
+    label = "This Month" if which == "this_month" else "Last Month"
     try:
         date_trigger = page.locator("button#date, button:has-text('Pick a date range')").first
         await date_trigger.click(timeout=5000)
@@ -102,11 +103,11 @@ async def set_date_this_month(page) -> bool:
         except Exception:
             pass
         await page.wait_for_timeout(400)
-        this_month = popover.locator('button:has-text("This Month")').first
-        if await this_month.count() == 0:
-            this_month = page.locator('button:has-text("This Month")').first
-        if await this_month.count() > 0:
-            await this_month.click(timeout=2000)
+        btn = popover.locator(f'button:has-text("{label}")').first
+        if await btn.count() == 0:
+            btn = page.locator(f'button:has-text("{label}")').first
+        if await btn.count() > 0:
+            await btn.click(timeout=2000)
             await page.wait_for_timeout(500)
         apply_btn = page.locator('button:has-text("Apply")').first
         for _ in range(30):
@@ -117,12 +118,17 @@ async def set_date_this_month(page) -> bool:
         await page.wait_for_timeout(1500)
         return True
     except Exception as e:
-        log(f"  Date picker (This Month) failed: {e}")
+        log(f"  Date picker ({label}) failed: {e}")
         try:
             await page.keyboard.press("Escape")
         except Exception:
             pass
         return False
+
+
+async def set_date_this_month(page) -> bool:
+    """Open date picker, click This Month, click Apply. Return True if done."""
+    return await set_date_range(page, "this_month")
 
 
 async def scrape_policies_table(page, agent_map: dict[str, str]) -> list[dict]:
@@ -207,6 +213,7 @@ async def scrape_policyden_policies(
     agent_map: dict[str, str],
     policyden_user: str = "",
     policyden_pass: str = "",
+    include_last_month: bool = False,
 ) -> list[dict]:
     from playwright.async_api import async_playwright
 
@@ -228,15 +235,33 @@ async def scrape_policyden_policies(
                 if policyden_user and policyden_pass:
                     if await login_and_save_async("policyden", policyden_user, policyden_pass, auth_path, log_fn=log):
                         return await scrape_policyden_policies(
-                            auth_path, bot_dir, agent_map, policyden_user, policyden_pass
+                            auth_path, bot_dir, agent_map, policyden_user, policyden_pass, include_last_month
                         )
                 log("  PolicyDen: session expired (no credentials in .env for auto re-login).")
                 return []
 
-            await set_date_this_month(page)
+            all_policies: list[dict] = []
+
+            await set_date_range(page, "this_month")
             await page.wait_for_timeout(2000)
-            policies = await scrape_policies_table(page, agent_map)
-            log(f"  PolicyDen policies: scraped {len(policies)} rows (valid agent + carrier).")
+            this_month_policies = await scrape_policies_table(page, agent_map)
+            log(f"  PolicyDen policies (This Month): scraped {len(this_month_policies)} rows (valid agent + carrier).")
+            all_policies.extend(this_month_policies)
+
+            if include_last_month:
+                await set_date_range(page, "last_month")
+                await page.wait_for_timeout(2000)
+                last_month_policies = await scrape_policies_table(page, agent_map)
+                log(f"  PolicyDen policies (Last Month): scraped {len(last_month_policies)} rows (valid agent + carrier).")
+                seen: set[tuple[str, str]] = {(r["client_name"], r["agent_id"]) for r in this_month_policies}
+                for r in last_month_policies:
+                    key = (r["client_name"], r["agent_id"])
+                    if key not in seen:
+                        seen.add(key)
+                        all_policies.append(r)
+
+            policies = all_policies
+            log(f"  PolicyDen policies: total {len(policies)} rows (this month + last month if first week).")
         except Exception as e:
             log(f"  PolicyDen policies scrape failed: {e}")
             policies = []
@@ -326,8 +351,9 @@ async def main_async() -> int:
     now = datetime.now(tz)
     now_iso = now.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
     current_month = now.strftime("%Y-%m")
+    first_week = now.day <= 7
 
-    log("Scraping PolicyDen /policies (this month, all statuses)...")
+    log("Scraping PolicyDen /policies (this month, all statuses)" + (" + last month (first week)" if first_week else "") + "...")
     auth_policyden = bot_dir / "auth_policyden.json"
     policyden_user = os.environ.get("POLICYDEN_USERNAME", "").strip()
     policyden_pass = os.environ.get("POLICYDEN_PASSWORD", "").strip()
@@ -337,6 +363,7 @@ async def main_async() -> int:
         agent_map,
         policyden_user,
         policyden_pass,
+        include_last_month=first_week,
     )
 
     import requests
