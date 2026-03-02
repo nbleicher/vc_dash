@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Refresh PolicyDen and WeGenerate auth sessions, then upload to the VPS.
+# Optional: set POLICYDEN_USERNAME, POLICYDEN_PASSWORD, WEGENERATE_USERNAME, WEGENERATE_PASSWORD
+# in .env on the VPS and the bot will re-login automatically when sessions expire.
 # Override with: export VPS_TARGET=user@host:/path/to/bot
 
 set -e

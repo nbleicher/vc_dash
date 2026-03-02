@@ -46,6 +46,7 @@ mkdir -p ~/bot && cd ~/bot
 **Upload these files into `~/bot/`:**
 - `auth_policyden.json` (from capture.py)
 - `auth_wegenerate.json` (from capture.py)
+- `auth_login.py` (from this repo; used for auto re-login when sessions expire)
 - `bot.py` (from this repo)
 - `policies_bot.py` (from this repo; optional — see below)
 - `freeze_eod.py` (from this repo; for 11:50 PM EOD freeze cron)
@@ -60,8 +61,16 @@ ADMIN_PASSWORD=your-dashboard-password
 # Optional: get notified when PolicyDen/WeGenerate sessions expire
 TELEGRAM_BOT_TOKEN=your-bot-token-from-BotFather
 TELEGRAM_CHAT_ID=your-chat-id
+# Optional: auto re-login when sessions expire (no need to run refresh.sh / capture.py for expiry)
+POLICYDEN_USERNAME=your-policyden-email
+POLICYDEN_PASSWORD=your-policyden-password
+WEGENERATE_USERNAME=your-wegenerate-email
+WEGENERATE_PASSWORD=your-wegenerate-password
 ```
-To get these: create a bot with [@BotFather](https://t.me/BotFather), then send any message to your bot and open `https://api.telegram.org/bot<TOKEN>/getUpdates` to find your `chat_id` (under `message.chat.id`). If `TELEGRAM_BOT_TOKEN` or `TELEGRAM_CHAT_ID` is missing, the bot will still run but won’t send session-expiry alerts.
+
+To get these: create a bot with [@BotFather](https://t.me/BotFather), then send any message to your bot and open `https://api.telegram.org/bot<TOKEN>/getUpdates` to find your `chat_id` (under `message.chat.id`). If `TELEGRAM_BOT_TOKEN` or `TELEGRAM_CHAT_ID` is missing, the bot will still run but won't send session-expiry alerts.
+
+If you set `POLICYDEN_USERNAME`/`POLICYDEN_PASSWORD` and `WEGENERATE_USERNAME`/`WEGENERATE_PASSWORD`, the bot will automatically re-login when it detects an expired session (login page), save the new session to the auth files, and retry the scrape. You then don't need to re-run `capture.py` or `refresh.sh` just for session expiry. If a site uses 2FA or CAPTCHA on login, automatic login will fail and you'll still need to use `capture.py` and upload the auth files for that site.
 
 **Create `agent_map.json`:**  
 Copy `agent_map.example.json` to `agent_map.json` and fill in the mapping from agent names (as shown in PolicyDen/WeGenerate) to dashboard agent IDs (from your app’s Agents / GET /state → agents).
@@ -161,4 +170,4 @@ If the PolicyDen Policies table layout changes (column order or selectors), edit
   The site’s UI likely changed. Open the dashboard in a browser, use DevTools to find the date control and table selectors, and update `SELECTORS_WEGENERATE` (and `SELECTORS_POLICYDEN` if needed) in `bot.py` (see **Configure selectors** above).
 
 - **Both PolicyDen and WeGenerate return {}**  
-  Saved sessions often expire. Re-run `capture.py` for both sites (on your Mac), then re-upload the new `auth_policyden.json` and `auth_wegenerate.json` to the VPS with `scp`. Without valid auth, the dashboards show a login page and the bot sees no table rows. If you set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env`, the bot will send you a Telegram message when it detects expired sessions (either or both sites).
+  Saved sessions often expire. If you have set `POLICYDEN_USERNAME`/`POLICYDEN_PASSWORD` and `WEGENERATE_USERNAME`/`WEGENERATE_PASSWORD` in `.env` on the VPS, the bot will automatically re-login when it detects an expired session and retry the scrape. Otherwise, re-run `capture.py` for both sites (on your Mac), then re-upload the new `auth_policyden.json` and `auth_wegenerate.json` to the VPS with `scp`. Without valid auth, the dashboards show a login page and the bot sees no table rows. If you set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env`, the bot will send you a Telegram message when it detects expired sessions (either or both sites).

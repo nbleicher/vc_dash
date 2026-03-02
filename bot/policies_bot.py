@@ -12,10 +12,13 @@ import json
 import os
 import sys
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
+
+from auth_login import login_and_save
 
 try:
     from playwright_stealth import stealth_sync
@@ -200,7 +203,13 @@ def scrape_policies_table(page, agent_map: dict[str, str]) -> list[dict]:
     return out
 
 
-def scrape_policyden_policies(auth_path: Path, bot_dir: Path, agent_map: dict[str, str]) -> list[dict]:
+def scrape_policyden_policies(
+    auth_path: Path,
+    bot_dir: Path,
+    agent_map: dict[str, str],
+    policyden_user: str = "",
+    policyden_pass: str = "",
+) -> list[dict]:
     from playwright.sync_api import sync_playwright
 
     if not auth_path.exists():
@@ -215,6 +224,18 @@ def scrape_policyden_policies(auth_path: Path, bot_dir: Path, agent_map: dict[st
         try:
             page.goto(POLICYDEN_POLICIES, wait_until="networkidle", timeout=30000)
             page.wait_for_timeout(2500)
+
+            # Session expired: on login page. Try auto re-login if credentials set.
+            if "/login" in page.url:
+                browser.close()
+                if policyden_user and policyden_pass:
+                    if login_and_save("policyden", policyden_user, policyden_pass, auth_path, log_fn=log):
+                        return scrape_policyden_policies(
+                            auth_path, bot_dir, agent_map, policyden_user, policyden_pass
+                        )
+                log("  PolicyDen: session expired (no credentials in .env for auto re-login).")
+                return []
+
             set_date_this_month(page)
             page.wait_for_timeout(2000)
             policies = scrape_policies_table(page, agent_map)
@@ -307,7 +328,17 @@ def main() -> int:
 
     log("Scraping PolicyDen /policies (this month, all statuses)...")
     auth_policyden = bot_dir / "auth_policyden.json"
-    scraped = scrape_policyden_policies(auth_policyden, bot_dir, agent_map)
+    policyden_user = os.environ.get("POLICYDEN_USERNAME", "").strip()
+    policyden_pass = os.environ.get("POLICYDEN_PASSWORD", "").strip()
+    with ThreadPoolExecutor(max_workers=1) as ex:
+        scraped = ex.submit(
+            scrape_policyden_policies,
+            auth_policyden,
+            bot_dir,
+            agent_map,
+            policyden_user,
+            policyden_pass,
+        ).result()
 
     import requests
     session = requests.Session()

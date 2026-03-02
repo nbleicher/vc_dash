@@ -9,14 +9,18 @@ no manual intra-day entry and no intra-performance alert.
 Requires on VPS: .env (API_BASE_URL, ADMIN_USERNAME, ADMIN_PASSWORD),
 auth_policyden.json, auth_wegenerate.json, agent_map.json.
 """
+from __future__ import annotations
 
 import json
 import os
 import sys
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+from auth_login import login_and_save
 
 # Optional: reduce detection on datacenter IPs
 try:
@@ -202,7 +206,13 @@ def set_date_on_page(page, date_key: str, selectors: dict) -> bool:
         return False
 
 
-def scrape_policyden(auth_path: Path, date_key: str, bot_dir: Path) -> dict[str, int]:
+def scrape_policyden(
+    auth_path: Path,
+    date_key: str,
+    bot_dir: Path,
+    policyden_user: str = "",
+    policyden_pass: str = "",
+) -> dict[str, int]:
     """Return { agent_name: sales_count } via dashboard -> Open Live View (today's date auto-set)."""
     from playwright.sync_api import sync_playwright
 
@@ -225,6 +235,16 @@ def scrape_policyden(auth_path: Path, date_key: str, bot_dir: Path) -> dict[str,
         try:
             page.goto(POLICYDEN_DASHBOARD, wait_until="networkidle", timeout=30000)
             page.wait_for_timeout(2000)
+
+            # Session expired: on login page. Try auto re-login if credentials set.
+            if "/login" in page.url:
+                browser.close()
+                if policyden_user and policyden_pass:
+                    if login_and_save("policyden", policyden_user, policyden_pass, auth_path, log_fn=log):
+                        return scrape_policyden(auth_path, date_key, bot_dir, policyden_user, policyden_pass)
+                log("  PolicyDen: session expired (no credentials in .env for auto re-login).")
+                return out
+
             # Click Open Live View (may open new tab or navigate same page; today's date auto-set)
             live_page = page
             try:
@@ -275,7 +295,13 @@ def scrape_policyden(auth_path: Path, date_key: str, bot_dir: Path) -> dict[str,
     return out
 
 
-def scrape_wegenerate(auth_path: Path, date_key: str, bot_dir: Path) -> tuple[dict[str, int], float | None]:
+def scrape_wegenerate(
+    auth_path: Path,
+    date_key: str,
+    bot_dir: Path,
+    wegenerate_user: str = "",
+    wegenerate_pass: str = "",
+) -> tuple[dict[str, int], float | None]:
     """Return ( { agent_name: billable_calls }, campaign_marketing_amount or None )."""
     from playwright.sync_api import sync_playwright
     import re
@@ -295,6 +321,15 @@ def scrape_wegenerate(auth_path: Path, date_key: str, bot_dir: Path) -> tuple[di
         try:
             page.goto(WEGENERATE_DASHBOARD, wait_until="networkidle", timeout=30000)
             page.wait_for_timeout(3500)
+
+            # Session expired: on login page. Try auto re-login if credentials set.
+            if "/login" in page.url:
+                browser.close()
+                if wegenerate_user and wegenerate_pass:
+                    if login_and_save("wegenerate", wegenerate_user, wegenerate_pass, auth_path, log_fn=log):
+                        return scrape_wegenerate(auth_path, date_key, bot_dir, wegenerate_user, wegenerate_pass)
+                log("  WeGenerate: session expired (no credentials in .env for auto re-login).")
+                return out, campaign_marketing
 
             if SELECTORS_WEGENERATE.get("date_trigger") and SELECTORS_WEGENERATE.get("date_apply"):
                 set_date_on_page(page, date_key, SELECTORS_WEGENERATE)
@@ -494,6 +529,28 @@ def merge_snapshots(
     return rest + new_rows
 
 
+def _run_scrapes(
+    auth_policyden: Path,
+    auth_wegenerate: Path,
+    date_key: str,
+    bot_dir: Path,
+    policyden_user: str,
+    policyden_pass: str,
+    wegenerate_user: str,
+    wegenerate_pass: str,
+):
+    """Run both scrapers in one thread (avoids Playwright sync API / asyncio loop conflict)."""
+    log("Scraping PolicyDen (sales)...")
+    sales = scrape_policyden(
+        auth_policyden, date_key, bot_dir, policyden_user, policyden_pass
+    )
+    log("Scraping WeGenerate (calls)...")
+    calls, marketing = scrape_wegenerate(
+        auth_wegenerate, date_key, bot_dir, wegenerate_user, wegenerate_pass
+    )
+    return sales, calls, marketing
+
+
 def main() -> int:
     load_dotenv()
     bot_dir = Path(__file__).resolve().parent
@@ -529,10 +586,23 @@ def main() -> int:
     auth_policyden = bot_dir / "auth_policyden.json"
     auth_wegenerate = bot_dir / "auth_wegenerate.json"
 
-    log("Scraping PolicyDen (sales)...")
-    sales_by_agent = scrape_policyden(auth_policyden, date_key, bot_dir)
-    log("Scraping WeGenerate (calls)...")
-    calls_by_agent, campaign_marketing = scrape_wegenerate(auth_wegenerate, date_key, bot_dir)
+    policyden_user = os.environ.get("POLICYDEN_USERNAME", "").strip()
+    policyden_pass = os.environ.get("POLICYDEN_PASSWORD", "").strip()
+    wegenerate_user = os.environ.get("WEGENERATE_USERNAME", "").strip()
+    wegenerate_pass = os.environ.get("WEGENERATE_PASSWORD", "").strip()
+
+    with ThreadPoolExecutor(max_workers=1) as ex:
+        sales_by_agent, calls_by_agent, campaign_marketing = ex.submit(
+            _run_scrapes,
+            auth_policyden,
+            auth_wegenerate,
+            date_key,
+            bot_dir,
+            policyden_user,
+            policyden_pass,
+            wegenerate_user,
+            wegenerate_pass,
+        ).result()
 
     if not sales_by_agent and not calls_by_agent:
         log("  Both scrapers empty. Re-run capture.py for both sites, re-upload auth_*.json to the VPS, and try again (sessions expire).")
