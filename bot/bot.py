@@ -67,6 +67,7 @@ SELECTORS_WEGENERATE = {
     ],
     "col_agent": 1,   # Agent column
     "col_calls": 2,   # Billable column
+    "col_marketing": 3,  # Per-agent marketing/spend column (WeGenerate Agent Performance)
     "campaign_marketing_cell": "td.font-bold",  # Campaign Performance table: cell with $ amount
     "campaign_marketing_fallbacks": ["td[class*='font-bold']", "[class*='font-bold']"],
 }
@@ -290,16 +291,17 @@ async def scrape_wegenerate(
     bot_dir: Path,
     wegenerate_user: str = "",
     wegenerate_pass: str = "",
-) -> tuple[dict[str, int], float | None]:
-    """Return ( { agent_name: billable_calls }, campaign_marketing_amount or None )."""
+) -> tuple[dict[str, int], dict[str, float], float | None]:
+    """Return ( { agent_name: billable_calls }, { agent_name: marketing }, campaign_marketing_amount or None )."""
     import re
     from playwright.async_api import async_playwright
 
     out: dict[str, int] = {}
+    marketing_by_agent: dict[str, float] = {}
     campaign_marketing: float | None = None
     if not auth_path.exists():
         log("  auth_wegenerate.json not found; skipping WeGenerate.")
-        return out, campaign_marketing
+        return out, marketing_by_agent, campaign_marketing
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
@@ -317,7 +319,7 @@ async def scrape_wegenerate(
                     if await login_and_save_async("wegenerate", wegenerate_user, wegenerate_pass, auth_path, log_fn=log):
                         return await scrape_wegenerate(auth_path, date_key, bot_dir, wegenerate_user, wegenerate_pass)
                 log("  WeGenerate: session expired (no credentials in .env for auto re-login).")
-                return out, campaign_marketing
+                return out, marketing_by_agent, campaign_marketing
 
             if SELECTORS_WEGENERATE.get("date_trigger") and SELECTORS_WEGENERATE.get("date_apply"):
                 await set_date_on_page(page, date_key, SELECTORS_WEGENERATE)
@@ -326,6 +328,7 @@ async def scrape_wegenerate(
             rows_sel = SELECTORS_WEGENERATE.get("table_rows") or "table tbody tr"
             col_agent = SELECTORS_WEGENERATE.get("col_agent")
             col_calls = SELECTORS_WEGENERATE.get("col_calls")
+            col_marketing = SELECTORS_WEGENERATE.get("col_marketing")
 
             card_heading = SELECTORS_WEGENERATE.get("card_heading")
             if card_heading:
@@ -380,6 +383,7 @@ async def scrape_wegenerate(
                     continue
                 agent = ""
                 calls = 0
+                marketing_val: float | None = None
                 if isinstance(col_agent, int) and 0 <= col_agent < len(cells):
                     agent = (await cells[col_agent].inner_text() or "").strip()
                 if isinstance(col_calls, int) and 0 <= col_calls < len(cells):
@@ -387,8 +391,20 @@ async def scrape_wegenerate(
                         calls = int((await cells[col_calls].inner_text() or "0").replace(",", ""))
                     except ValueError:
                         pass
+                if isinstance(col_marketing, int) and 0 <= col_marketing < len(cells):
+                    text = (await cells[col_marketing].inner_text() or "").strip()
+                    if text:
+                        match = re.search(r"\$?[\d,]+(?:\.\d{2})?", text)
+                        if match:
+                            raw = match.group(0).replace("$", "").replace(",", "")
+                            try:
+                                marketing_val = float(raw)
+                            except ValueError:
+                                marketing_val = None
                 if agent:
                     out[agent] = out.get(agent, 0) + calls
+                    if marketing_val is not None:
+                        marketing_by_agent[agent] = marketing_by_agent.get(agent, 0.0) + marketing_val
             n_rows = len(rows)
             if n_rows == 0:
                 log("  WeGenerate: 0 table rows (session may have expired or page structure changed).")
@@ -430,7 +446,7 @@ async def scrape_wegenerate(
             log(f"  WeGenerate scrape failed: {e}")
         finally:
             await browser.close()
-    return out, campaign_marketing
+    return out, marketing_by_agent, campaign_marketing
 
 
 def api_login(session, base_url: str, username: str, password: str) -> bool:
@@ -531,11 +547,11 @@ async def _run_scrapes_async(
     sales = await scrape_policyden(
         auth_policyden, date_key, bot_dir, policyden_user, policyden_pass
     )
-    log("Scraping WeGenerate (calls)...")
-    calls, marketing = await scrape_wegenerate(
+    log("Scraping WeGenerate (calls + marketing)...")
+    calls, marketing_by_agent, campaign_marketing = await scrape_wegenerate(
         auth_wegenerate, date_key, bot_dir, wegenerate_user, wegenerate_pass
     )
-    return sales, calls, marketing
+    return sales, calls, marketing_by_agent, campaign_marketing
 
 
 def main() -> int:
@@ -582,7 +598,7 @@ async def main_async() -> int:
     wegenerate_user = os.environ.get("WEGENERATE_USERNAME", "").strip()
     wegenerate_pass = os.environ.get("WEGENERATE_PASSWORD", "").strip()
 
-    sales_by_agent, calls_by_agent, campaign_marketing = await _run_scrapes_async(
+    sales_by_agent, calls_by_agent, marketing_by_agent, campaign_marketing = await _run_scrapes_async(
         auth_policyden,
         auth_wegenerate,
         date_key,

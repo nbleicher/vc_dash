@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS snapshots (
   agentId TEXT NOT NULL,
   billableCalls INTEGER NOT NULL,
   sales INTEGER NOT NULL,
+  marketing REAL,
   updatedAt TEXT NOT NULL
 );
 

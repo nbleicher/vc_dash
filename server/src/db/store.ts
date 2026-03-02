@@ -23,6 +23,11 @@ export class SqliteStore implements StoreAdapter {
 
   constructor(dbPath: string) {
     this.db = new Database(dbPath)
+    try {
+      this.db.exec('ALTER TABLE snapshots ADD COLUMN marketing REAL')
+    } catch {
+      // ignore if column already exists or table is missing
+    }
   }
 
   close(): void {
@@ -71,7 +76,7 @@ export class SqliteStore implements StoreAdapter {
           for (const row of rows as Snapshot[]) {
             this.db
               .prepare(
-                'INSERT INTO snapshots (id,dateKey,slot,slotLabel,agentId,billableCalls,sales,updatedAt) VALUES (@id,@dateKey,@slot,@slotLabel,@agentId,@billableCalls,@sales,@updatedAt)',
+                'INSERT INTO snapshots (id,dateKey,slot,slotLabel,agentId,billableCalls,sales,marketing,updatedAt) VALUES (@id,@dateKey,@slot,@slotLabel,@agentId,@billableCalls,@sales,@marketing,@updatedAt)',
               )
               .run(row)
           }
@@ -220,7 +225,7 @@ export class SqliteStore implements StoreAdapter {
 
   private getSnapshots(): Snapshot[] {
     return this.db
-      .prepare('SELECT id,dateKey,slot,slotLabel,agentId,billableCalls,sales,updatedAt FROM snapshots')
+      .prepare('SELECT id,dateKey,slot,slotLabel,agentId,billableCalls,sales,marketing,updatedAt FROM snapshots')
       .all() as Snapshot[]
   }
 

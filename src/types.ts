@@ -24,6 +24,7 @@ export type Snapshot = {
   agentId: string
   billableCalls: number
   sales: number
+  marketing: number | null
   updatedAt: string
 }
 
