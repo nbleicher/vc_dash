@@ -6,9 +6,13 @@ Run on the VPS via cron so the freeze happens even when the dashboard is closed.
 Cron (11:50 PM EST daily; set CRON_TZ=America/New_York or use TZ in the job):
   50 23 * * * cd /home/ubuntu/bot && /home/ubuntu/bot/venv/bin/python freeze_eod.py >> /home/ubuntu/bot/freeze.log 2>&1
 
+Backfill a past date (creates or replaces perf_history rows from snapshots for that date):
+  ./venv/bin/python freeze_eod.py --date 2025-03-02
+
 Uses same .env as bot: API_BASE_URL, ADMIN_USERNAME, ADMIN_PASSWORD.
 """
 
+import argparse
 import os
 import sys
 import uuid
@@ -75,8 +79,24 @@ def api_put_perf_history(session: requests.Session, base_url: str, perf_history:
     return True
 
 
+def api_set_house_marketing(session: requests.Session, base_url: str, date_key: str, amount: float) -> bool:
+    r = session.post(
+        f"{base_url.rstrip('/')}/state/house-marketing",
+        json={"dateKey": date_key, "amount": round(amount, 2)},
+        timeout=10,
+    )
+    if r.status_code != 200:
+        log(f"  POST /state/house-marketing failed: {r.status_code} {r.text[:200]}")
+        return False
+    return True
+
+
 def main() -> int:
     load_dotenv()
+    parser = argparse.ArgumentParser(description="Freeze snapshots into perfHistory for EOD.")
+    parser.add_argument("--date", default=None, help="Backfill date YYYY-MM-DD (default: today; skips time check)")
+    args = parser.parse_args()
+
     api_base = os.environ.get("API_BASE_URL", "").strip()
     if not api_base:
         log("Set API_BASE_URL in .env")
@@ -89,12 +109,17 @@ def main() -> int:
         log("Set ADMIN_USERNAME, ADMIN_PASSWORD in .env")
         return 1
 
-    now = datetime.now(ZoneInfo(ZONE))
-    if now.hour < 23 or (now.hour == 23 and now.minute < 50):
-        log("Before 11:50 PM EST; skipping (run at 11:50 PM or later).")
-        return 0
+    backfill_date = args.date.strip() if args.date else None
+    if backfill_date:
+        date_key = backfill_date
+        log(f"Backfilling perf_history for {date_key}.")
+    else:
+        now = datetime.now(ZoneInfo(ZONE))
+        if now.hour < 23 or (now.hour == 23 and now.minute < 50):
+            log("Before 11:50 PM EST; skipping (run at 11:50 PM or later).")
+            return 0
+        date_key = get_date_key_est()
 
-    date_key = get_date_key_est()
     session = requests.Session()
     session.headers["Content-Type"] = "application/json"
 
@@ -107,11 +132,14 @@ def main() -> int:
     agents = state.get("agents") or []
     active_ids = {a["id"] for a in agents if a.get("active")}
     snapshots = state.get("snapshots") or []
-    perf_history = state.get("perfHistory") or []
+    perf_history = list(state.get("perfHistory") or [])
 
-    if any(p.get("dateKey") == date_key for p in perf_history):
+    if not backfill_date and any(p.get("dateKey") == date_key for p in perf_history):
         log(f"perfHistory already has rows for {date_key}; skipping.")
         return 0
+
+    if backfill_date:
+        perf_history = [p for p in perf_history if p.get("dateKey") != date_key]
 
     today_snapshots = [s for s in snapshots if s.get("dateKey") == date_key]
     slot_priority = {k: i for i, k in enumerate(SLOT_ORDER)}
@@ -155,6 +183,11 @@ def main() -> int:
     merged = perf_history + frozen_rows
     if api_put_perf_history(session, api_base, merged):
         log(f"Froze {len(frozen_rows)} rows for {date_key} (EOD save).")
+        total_marketing = sum(r["marketing"] for r in frozen_rows)
+        if api_set_house_marketing(session, api_base, date_key, total_marketing):
+            log(f"Set house marketing from frozen sum: ${total_marketing:,.2f} for {date_key}.")
+        else:
+            log("  Failed to set house marketing from frozen sum.")
         return 0
     return 1
 

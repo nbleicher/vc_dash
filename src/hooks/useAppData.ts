@@ -479,6 +479,13 @@ export function useAppData(store: DataStore) {
           }
           continue
         }
+        const perf = perfHistory.find((p) => p.dateKey === dateKey && p.agentId === agent.id)
+        if (perf) {
+          deals += perf.sales
+          marketing += perf.marketing
+          setLatest(perf.frozenAt)
+          continue
+        }
         const snap17 = snapshots.find(
           (s) => s.dateKey === dateKey && s.slot === '17:00' && s.agentId === agent.id,
         )
@@ -487,12 +494,6 @@ export function useAppData(store: DataStore) {
           marketing += snap17.marketing ?? snap17.billableCalls * 15
           setLatest(snap17.updatedAt)
           continue
-        }
-        const perf = perfHistory.find((p) => p.dateKey === dateKey && p.agentId === agent.id)
-        if (perf) {
-          deals += perf.sales
-          marketing += perf.marketing
-          setLatest(perf.frozenAt)
         }
       }
       totalsByDate.set(dateKey, { deals, marketing, updatedAt })

@@ -50,6 +50,7 @@ mkdir -p ~/bot && cd ~/bot
 - `bot.py` (from this repo)
 - `policies_bot.py` (from this repo; optional — see below)
 - `freeze_eod.py` (from this repo; for 11:50 PM EOD freeze cron)
+- `run_eod_freeze.sh` (from this repo; wrapper that runs bot then freeze at 11:50 PM)
 - `populate_6pm_house.py` (from this repo; for 6:00 PM house CPA/sales snapshot cron)
 - `requirements.txt` (from this repo)
 
@@ -106,12 +107,12 @@ Add (replace `ubuntu` with your username if different):
 ```
 To avoid launching the bot at all between 1–8 AM EST (saves cron + Python startup), you can use `*/10 9-23 * * *` instead of `*/10 * * * *` (and set `CRON_TZ=America/New_York`). The bot also exits without scraping if run between 12:01–8:59 AM EST.
 
-**Cron (EOD freeze at 11:50 PM EST):** So the day’s snapshots are saved to perfHistory even when the dashboard is closed. Uses the same `.env` as the bot. Add this line in `crontab -e` (use your timezone; example is 11:50 PM America/New_York):
+**Cron (EOD freeze at 11:50 PM EST):** At 11:50 PM the main bot runs once more to pull marketing (and sales/calls) one last time for the day, then the freeze runs so EOD and weekly totals use that final data. Uses the same `.env` as the bot. Add this line in `crontab -e` (use your timezone; example is 11:50 PM America/New_York):
 ```
 CRON_TZ=America/New_York
-50 23 * * * cd /home/ubuntu/bot && /home/ubuntu/bot/venv/bin/python freeze_eod.py >> /home/ubuntu/bot/freeze.log 2>&1
+50 23 * * * cd /home/ubuntu/bot && ./run_eod_freeze.sh >> /home/ubuntu/bot/freeze.log 2>&1
 ```
-If you already have other cron jobs, add only the `50 23` line and ensure `CRON_TZ=America/New_York` is set once at the top of the crontab if you want EST/EDT. Monitor: `tail -f ~/bot/freeze.log`
+If you already have other cron jobs, add only the `50 23` line and ensure `CRON_TZ=America/New_York` is set once at the top of the crontab if you want EST/EDT. Ensure `run_eod_freeze.sh` is executable (`chmod +x run_eod_freeze.sh`). Monitor: `tail -f ~/bot/freeze.log`
 
 **Cron (6:00 PM EST — populate house CPA and sales):** Saves that day’s house sales and CPA into vault so the EOD Report task can show “6 PM” values. Add to `crontab -e`:
 ```
