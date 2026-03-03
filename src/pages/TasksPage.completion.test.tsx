@@ -22,7 +22,6 @@ function baseProps() {
     setQaForm: vi.fn(),
     auditForm: { agentId: '' },
     setAuditForm: vi.fn(),
-    incompleteQaAgentsToday: [] as Array<{ id: string; name: string }>,
     incompleteQaAgentsForSelectedDate: [] as Array<{ id: string; name: string }>,
     todayKey: '2026-02-15',
     incompleteAuditAgentsToday: [] as Array<{ id: string; name: string }>,
@@ -48,10 +47,6 @@ describe('TasksPage completion boxes', () => {
       <TasksPage
         {...baseProps()}
         taskPage="qa"
-        incompleteQaAgentsToday={[
-          { id: 'a1', name: 'Alex' },
-          { id: 'a2', name: 'Jordan' },
-        ]}
         incompleteQaAgentsForSelectedDate={[
           { id: 'a1', name: 'Alex' },
           { id: 'a2', name: 'Jordan' },
@@ -69,7 +64,6 @@ describe('TasksPage completion boxes', () => {
       <TasksPage
         {...baseProps()}
         taskPage="qa"
-        incompleteQaAgentsToday={[]}
         incompleteQaAgentsForSelectedDate={[]}
       />,
     )

@@ -35,7 +35,6 @@ type Props = {
   >
   auditForm: { agentId: string }
   setAuditForm: React.Dispatch<React.SetStateAction<{ agentId: string }>>
-  incompleteQaAgentsToday: Array<{ id: string; name: string }>
   incompleteQaAgentsForSelectedDate: Array<{ id: string; name: string }>
   todayKey: string
   incompleteAuditAgentsToday: Array<{ id: string; name: string }>
@@ -89,7 +88,6 @@ export function TasksPage({
   setQaForm,
   auditForm,
   setAuditForm,
-            incompleteQaAgentsToday,
             incompleteQaAgentsForSelectedDate,
             todayKey,
             incompleteAuditAgentsToday,

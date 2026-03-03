@@ -61,7 +61,6 @@ function App() {
     lastSnapshotLabel,
     actionQa,
     actionAudit,
-    incompleteQaAgentsToday,
     incompleteAuditAgentsToday,
     floorCapacity,
     weekTarget,
@@ -615,7 +614,6 @@ function App() {
             setQaForm={setQaForm}
             auditForm={auditForm}
             setAuditForm={setAuditForm}
-            incompleteQaAgentsToday={incompleteQaAgentsToday}
             incompleteQaAgentsForSelectedDate={incompleteQaAgentsForSelectedDate}
             todayKey={todayKey}
             incompleteAuditAgentsToday={incompleteAuditAgentsToday}
