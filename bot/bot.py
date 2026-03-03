@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 VPS intra-day bot: scrape PolicyDen (sales) and WeGenerate (calls), merge into
-dashboard snapshots via API. Run every 10 min via cron.
+dashboard snapshots via API. Run every 5 min via cron.
 
 The dashboard Agent Performance card uses the latest snapshot per agent; there is
 no manual intra-day entry and no intra-performance alert.

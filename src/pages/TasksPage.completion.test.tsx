@@ -18,11 +18,13 @@ function baseProps() {
     attendanceWeekDates: ['2026-02-13'],
     attendanceWeekOptions: [{ weekKey: '2026-02-09', label: '2/9-2/13' }],
     weekTarget: null,
-    qaForm: { agentId: '', clientName: '', decision: 'Good Sale', callId: '', notes: '' },
+    qaForm: { dateKey: '2026-02-15', agentId: '', clientName: '', decision: 'Good Sale', callId: '', notes: '' },
     setQaForm: vi.fn(),
     auditForm: { agentId: '' },
     setAuditForm: vi.fn(),
     incompleteQaAgentsToday: [] as Array<{ id: string; name: string }>,
+    incompleteQaAgentsForSelectedDate: [] as Array<{ id: string; name: string }>,
+    todayKey: '2026-02-15',
     incompleteAuditAgentsToday: [] as Array<{ id: string; name: string }>,
     lastPoliciesBotRun: null as string | null,
     onSetSpiffAmount: vi.fn(),
@@ -50,6 +52,10 @@ describe('TasksPage completion boxes', () => {
           { id: 'a1', name: 'Alex' },
           { id: 'a2', name: 'Jordan' },
         ]}
+        incompleteQaAgentsForSelectedDate={[
+          { id: 'a1', name: 'Alex' },
+          { id: 'a2', name: 'Jordan' },
+        ]}
       />,
     )
     expect(screen.getByText('Daily QA Completion')).toBeInTheDocument()
@@ -59,7 +65,14 @@ describe('TasksPage completion boxes', () => {
   })
 
   it('shows QA success message when all completed', () => {
-    render(<TasksPage {...baseProps()} taskPage="qa" incompleteQaAgentsToday={[]} />)
+    render(
+      <TasksPage
+        {...baseProps()}
+        taskPage="qa"
+        incompleteQaAgentsToday={[]}
+        incompleteQaAgentsForSelectedDate={[]}
+      />,
+    )
     expect(screen.getByText('All active agents have Daily QA completed for today.')).toBeInTheDocument()
   })
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Button, Card, LoginForm, TopNav } from './components'
 import { useDataStore } from './data'
 import { useAppData } from './hooks'
@@ -108,7 +108,14 @@ function App() {
 
   const [topPage, setTopPage] = useState<TopPage>('dashboard')
   const [newAgent, setNewAgent] = useState('')
-  const [qaForm, setQaForm] = useState({ agentId: '', clientName: '', decision: 'Good Sale', callId: '', notes: '' })
+  const [qaForm, setQaForm] = useState({
+    dateKey: estDateKey(new Date()),
+    agentId: '',
+    clientName: '',
+    decision: 'Good Sale',
+    callId: '',
+    notes: '',
+  })
   const [auditForm, setAuditForm] = useState<{ agentId: string }>({ agentId: '' })
   const [meetingForm, setMeetingForm] = useState({
     dateKey: estDateKey(new Date()),
@@ -135,6 +142,11 @@ function App() {
     vault: { title: 'Vault', subtitle: 'Review history, coaching notes, and document records.' },
     settings: { title: 'Settings', subtitle: 'Maintain agents and export operational data.' },
   }
+
+  const incompleteQaAgentsForSelectedDate = useMemo(() => {
+    const completed = new Set(qaRecords.filter((r) => r.dateKey === qaForm.dateKey).map((r) => r.agentId))
+    return activeAgents.filter((agent) => !completed.has(agent.id))
+  }, [activeAgents, qaRecords, qaForm.dateKey])
 
   const handleLogin = async (username: string, password: string): Promise<void> => {
     try {
@@ -168,7 +180,7 @@ function App() {
       setUiError('Call ID is required when decision is Check Recording.')
       return
     }
-    const duplicate = qaRecords.some((r) => r.dateKey === todayKey && r.agentId === agentId)
+    const duplicate = qaRecords.some((r) => r.dateKey === qaForm.dateKey && r.agentId === agentId)
     if (duplicate) {
       const agentName = agents.find((a) => a.id === agentId)?.name ?? 'Agent'
       const proceed = window.confirm(`QA for ${agentName} has already been done.`)
@@ -184,7 +196,7 @@ function App() {
       ...prev,
       {
         id: uid('qa'),
-        dateKey: todayKey,
+        dateKey: qaForm.dateKey,
         agentId,
         clientName: qaForm.clientName.trim(),
         decision: qaForm.decision as QaRecord['decision'],
@@ -194,7 +206,7 @@ function App() {
         resolvedAt: null,
       },
     ])
-    setQaForm({ agentId: '', clientName: '', decision: 'Good Sale', callId: '', notes: '' })
+    setQaForm({ dateKey: todayKey, agentId: '', clientName: '', decision: 'Good Sale', callId: '', notes: '' })
     setUiError(null)
   }
 
@@ -604,6 +616,8 @@ function App() {
             auditForm={auditForm}
             setAuditForm={setAuditForm}
             incompleteQaAgentsToday={incompleteQaAgentsToday}
+            incompleteQaAgentsForSelectedDate={incompleteQaAgentsForSelectedDate}
+            todayKey={todayKey}
             incompleteAuditAgentsToday={incompleteAuditAgentsToday}
             lastPoliciesBotRun={store.lastPoliciesBotRun ?? null}
             onSetSpiffAmount={setSpiffAmount}

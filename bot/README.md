@@ -97,15 +97,15 @@ cd ~/bot
 ./venv/bin/python bot.py
 ```
 
-**Cron (every 10 minutes):** Use the venv Python so all dependencies are available. The bot skips scraping between 12:01 AM and 8:59 AM EST (exits immediately to save memory); it only runs the browser during 9 AM–midnight EST.
+**Cron (every 5 minutes):** Use the venv Python so all dependencies are available. The bot skips scraping between 12:01 AM and 8:59 AM EST (exits immediately to save memory); it only runs the browser during 9 AM–midnight EST.
 ```bash
 crontab -e
 ```
 Add (replace `ubuntu` with your username if different):
 ```
-*/10 * * * * cd /home/ubuntu/bot && /home/ubuntu/bot/venv/bin/python bot.py >> /home/ubuntu/bot/bot.log 2>&1
+*/5 * * * * cd /home/ubuntu/bot && /home/ubuntu/bot/venv/bin/python bot.py >> /home/ubuntu/bot/bot.log 2>&1
 ```
-To avoid launching the bot at all between 1–8 AM EST (saves cron + Python startup), you can use `*/10 9-23 * * *` instead of `*/10 * * * *` (and set `CRON_TZ=America/New_York`). The bot also exits without scraping if run between 12:01–8:59 AM EST.
+To avoid launching the bot at all between 1–8 AM EST (saves cron + Python startup), you can use `*/5 9-23 * * *` instead of `*/5 * * * *` (and set `CRON_TZ=America/New_York`). The bot also exits without scraping if run between 12:01–8:59 AM EST.
 
 **Cron (EOD freeze at 11:50 PM EST):** At 11:50 PM the main bot runs once more to pull marketing (and sales/calls) one last time for the day, then the freeze runs so EOD and weekly totals use that final data. Uses the same `.env` as the bot. Add this line in `crontab -e` (use your timezone; example is 11:50 PM America/New_York):
 ```
@@ -152,7 +152,7 @@ If the PolicyDen Policies table layout changes (column order or selectors), edit
   The dashboard uses `VITE_API_URL` set at **build time** (e.g. in Cloudflare Pages). The bot uses `API_BASE_URL` in `.env` on the VPS. These must be the **exact same** Railway API URL. If the frontend was built with a different or old URL, it will never see the data the bot pushes. In Cloudflare Pages (or your frontend host), set `VITE_API_URL=https://your-railway-app.up.railway.app` (same as bot `API_BASE_URL`), then **rebuild and redeploy** the frontend.
 
 - **Refresh delay**  
-  The dashboard refetches from the API every 10 minutes. After the bot runs, use **Reload** (in the app nav) to fetch the latest snapshots immediately.
+  The dashboard refetches from the API every 5 minutes. After the bot runs, use **Reload** (in the app nav) to fetch the latest snapshots immediately.
 
 - **Agent names must match exactly**  
   Each key in `agent_map.json` must match the name exactly as it appears in the PolicyDen and WeGenerate tables (same spelling, spaces, punctuation). If a name doesn’t match, that agent’s calls/sales will be 0. Check `bot.log` for `Pushed N snapshots for YYYY-MM-DD HH:MM` to confirm the bot is pushing; then compare dashboard agent names with the names in the scraped tools.

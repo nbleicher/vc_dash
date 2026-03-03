@@ -22,13 +22,22 @@ type Props = {
   attendanceWeekDates: string[]
   attendanceWeekOptions: Array<{ weekKey: string; label: string }>
   weekTarget: { weekKey: string; targetSales: number; targetCpa: number; setAt: string } | null
-  qaForm: { agentId: string; clientName: string; decision: string; callId: string; notes: string }
+  qaForm: { dateKey: string; agentId: string; clientName: string; decision: string; callId: string; notes: string }
   setQaForm: React.Dispatch<
-    React.SetStateAction<{ agentId: string; clientName: string; decision: string; callId: string; notes: string }>
+    React.SetStateAction<{
+      dateKey: string
+      agentId: string
+      clientName: string
+      decision: string
+      callId: string
+      notes: string
+    }>
   >
   auditForm: { agentId: string }
   setAuditForm: React.Dispatch<React.SetStateAction<{ agentId: string }>>
   incompleteQaAgentsToday: Array<{ id: string; name: string }>
+  incompleteQaAgentsForSelectedDate: Array<{ id: string; name: string }>
+  todayKey: string
   incompleteAuditAgentsToday: Array<{ id: string; name: string }>
   lastPoliciesBotRun: string | null
   onSetSpiffAmount: (agentId: string, dateKey: string, amount: number) => void
@@ -81,6 +90,8 @@ export function TasksPage({
   auditForm,
   setAuditForm,
             incompleteQaAgentsToday,
+            incompleteQaAgentsForSelectedDate,
+            todayKey,
             incompleteAuditAgentsToday,
             lastPoliciesBotRun,
   onSetSpiffAmount,
@@ -257,15 +268,29 @@ export function TasksPage({
           <CardTitle>Daily QA Log</CardTitle>
           <div className="control-bar">
             <strong>Daily QA Completion</strong>
-            {incompleteQaAgentsToday.length > 0 ? (
+            {incompleteQaAgentsForSelectedDate.length > 0 ? (
               <p>
-                Missing ({incompleteQaAgentsToday.length}): {renderMissingNames(incompleteQaAgentsToday)}
+                Missing ({incompleteQaAgentsForSelectedDate.length}):{' '}
+                {renderMissingNames(incompleteQaAgentsForSelectedDate)}
+                {qaForm.dateKey !== todayKey ? ` for ${formatDateKey(qaForm.dateKey)}` : ''}
               </p>
             ) : (
-              <p>All active agents have Daily QA completed for today.</p>
+              <p>
+                All active agents have Daily QA completed
+                {qaForm.dateKey === todayKey ? ' for today.' : ` for ${formatDateKey(qaForm.dateKey)}.`}
+              </p>
             )}
           </div>
           <form onSubmit={onQaSubmit} className="form-grid">
+            <Field>
+              <FieldLabel>Date</FieldLabel>
+              <Input
+                type="date"
+                value={qaForm.dateKey}
+                max={todayKey}
+                onChange={(e) => setQaForm((prev) => ({ ...prev, dateKey: e.target.value }))}
+              />
+            </Field>
             <Field>
               <FieldLabel>Agent</FieldLabel>
               <Select
