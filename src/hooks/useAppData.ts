@@ -228,11 +228,20 @@ export function useAppData(store: DataStore) {
     for (const dateKey of weekDates) {
       for (const agent of activeAgents) {
         if (dateKey === todayKey) {
-          const snap = liveByAgent.get(agent.id)
+          const snap17 = snapshots.find(
+            (s) => s.dateKey === todayKey && s.slot === '17:00' && s.agentId === agent.id,
+          )
+          const snap = snap17 ?? liveByAgent.get(agent.id)
           if (snap) {
             totalSales += snap.sales
-            totalMarketing += (snap.marketing ?? snap.billableCalls * 15)
+            totalMarketing += snap.marketing ?? snap.billableCalls * 15
           }
+          continue
+        }
+        const perf = perfHistory.find((p) => p.dateKey === dateKey && p.agentId === agent.id)
+        if (perf) {
+          totalSales += perf.sales
+          totalMarketing += perf.marketing
           continue
         }
         const snap17 = snapshots.find(
@@ -240,13 +249,7 @@ export function useAppData(store: DataStore) {
         )
         if (snap17) {
           totalSales += snap17.sales
-          totalMarketing += (snap17.marketing ?? snap17.billableCalls * 15)
-          continue
-        }
-        const perf = perfHistory.find((p) => p.dateKey === dateKey && p.agentId === agent.id)
-        if (perf) {
-          totalSales += perf.sales
-          totalMarketing += perf.marketing
+          totalMarketing += snap17.marketing ?? snap17.billableCalls * 15
         }
       }
     }
