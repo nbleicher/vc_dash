@@ -48,7 +48,6 @@ type Props = {
     patch: Pick<AuditRecord, 'currentStatus' | 'resolutionTs' | 'notes'>,
   ) => void
   onDeleteAuditRecord: (id: string) => void
-  weekTrend: { totalSales: number; currentCpa: number | null }
   eodTodayTotals: { sales: number; marketing: number; cpa: number | null }
   eodReports: Array<{
     id: string
@@ -98,7 +97,6 @@ export function TasksPage({
   onAuditNoActionSubmit,
   onUpdateAuditRecord,
   onDeleteAuditRecord,
-  weekTrend,
   eodTodayTotals,
   eodReports,
   onSaveEodReport,

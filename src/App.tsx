@@ -624,7 +624,6 @@ function App() {
             onAuditNoActionSubmit={handleAuditNoActionSubmit}
             onUpdateAuditRecord={handleAuditUpdate}
             onDeleteAuditRecord={handleAuditDelete}
-            weekTrend={weekTrend}
             eodReports={eodReports}
             eodTodayTotals={eodTodayTotals}
             onSaveEodReport={handleSaveEodReport}
