@@ -72,6 +72,7 @@ function App() {
     eodWeekOptions,
     eodWeeklyRows,
     eodWeeklySummary,
+    eodTodayTotals,
     monthLabel,
     metricsScope,
     setMetricsScope,
@@ -625,6 +626,7 @@ function App() {
             onDeleteAuditRecord={handleAuditDelete}
             weekTrend={weekTrend}
             eodReports={eodReports}
+            eodTodayTotals={eodTodayTotals}
             onSaveEodReport={handleSaveEodReport}
             agentPerformanceRows={agentPerformanceRows}
             lastSnapshotLabel={lastSnapshotLabel}

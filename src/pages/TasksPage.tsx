@@ -49,6 +49,7 @@ type Props = {
   ) => void
   onDeleteAuditRecord: (id: string) => void
   weekTrend: { totalSales: number; currentCpa: number | null }
+  eodTodayTotals: { sales: number; marketing: number; cpa: number | null }
   eodReports: Array<{
     id: string
     weekKey: string
@@ -98,6 +99,7 @@ export function TasksPage({
   onUpdateAuditRecord,
   onDeleteAuditRecord,
   weekTrend,
+  eodTodayTotals,
   eodReports,
   onSaveEodReport,
   agentPerformanceRows,
@@ -662,18 +664,18 @@ export function TasksPage({
               )}
             </div>
             <div className="flex flex-col gap-5 xl:col-span-2">
-              <p className="text-sm text-slate-500">House metrics for the current week. Write your report and submit to save to vault history.</p>
+              <p className="text-sm text-slate-500">House metrics for today (EOD). Write your report and submit to save to vault history.</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <MetricCard
                   title="House Sales"
-                  value={weekTrend.totalSales}
+                  value={eodTodayTotals.sales}
                 />
                 <MetricCard
                   title="House CPA"
                   value={
-                    weekTrend.currentCpa === null
+                    eodTodayTotals.cpa === null
                       ? 'N/A'
-                      : `$${formatNum(weekTrend.currentCpa)}`
+                      : `$${formatNum(eodTodayTotals.cpa)}`
                   }
                 />
               </div>
@@ -691,7 +693,7 @@ export function TasksPage({
                 type="button"
                 variant="default"
                 onClick={() => {
-                  onSaveEodReport(currentWeekKey, eodReportText, weekTrend.totalSales, weekTrend.currentCpa)
+                  onSaveEodReport(currentWeekKey, eodReportText, eodTodayTotals.sales, eodTodayTotals.cpa)
                   setEodReportText('')
                 }}
               >

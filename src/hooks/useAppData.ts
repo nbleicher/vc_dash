@@ -507,6 +507,38 @@ export function useAppData(store: DataStore) {
     return totalsByDate
   }, [activeAgents, effectiveEodWeekKey, houseMarketing, liveByAgent, perfHistory, snapshots, todayKey])
 
+  const eodTodayTotals = useMemo(() => {
+    const dateKey = todayKey
+    let sales = 0
+    let marketing = 0
+    for (const agent of activeAgents) {
+      const perf = perfHistory.find((p) => p.dateKey === dateKey && p.agentId === agent.id)
+      if (perf) {
+        sales += perf.sales
+        marketing += perf.marketing
+        continue
+      }
+      const snap = liveByAgent.get(agent.id)
+      if (snap) {
+        sales += snap.sales
+        marketing += snap.marketing ?? snap.billableCalls * 15
+        continue
+      }
+      const snap17 = snapshots.find(
+        (s) => s.dateKey === dateKey && s.slot === '17:00' && s.agentId === agent.id,
+      )
+      if (snap17) {
+        sales += snap17.sales
+        marketing += snap17.marketing ?? snap17.billableCalls * 15
+      }
+    }
+    if (houseMarketing?.dateKey === todayKey) {
+      marketing = Number(houseMarketing.amount)
+    }
+    const cpa = sales > 0 ? marketing / sales : null
+    return { sales, marketing, cpa }
+  }, [activeAgents, houseMarketing, liveByAgent, perfHistory, snapshots, todayKey])
+
   const eodWeeklyRows = useMemo(() => {
     const dates = monFriDatesForWeek(effectiveEodWeekKey)
     return dates.map((dateKey, idx) => {
@@ -687,6 +719,7 @@ export function useAppData(store: DataStore) {
     eodWeekOptions,
     eodWeeklyRows,
     eodWeeklySummary,
+    eodTodayTotals,
     monthLabel,
     metricsScope,
     setMetricsScope,
