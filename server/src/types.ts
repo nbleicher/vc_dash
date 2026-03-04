@@ -125,13 +125,6 @@ export type EodReport = {
   submittedAt: string
 }
 
-export type House6pmSnapshot = {
-  dateKey: string
-  houseSales: number
-  houseCpa: number | null
-  capturedAt: string
-}
-
 export type StoreState = {
   agents: Agent[]
   snapshots: Snapshot[]
@@ -146,7 +139,6 @@ export type StoreState = {
   vaultMeetings: VaultMeeting[]
   vaultDocs: VaultDoc[]
   eodReports: EodReport[]
-  house6pmSnapshots: House6pmSnapshot[]
   /** Last time the policies bot successfully ran (ISO string). */
   lastPoliciesBotRun: string | null
   /** Scraped campaign marketing for house pulse (dateKey + amount). Set by bot. */

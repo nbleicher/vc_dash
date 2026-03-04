@@ -136,13 +136,6 @@ export type EodReport = {
   submittedAt: string
 }
 
-export type House6pmSnapshot = {
-  dateKey: string
-  houseSales: number
-  houseCpa: number | null
-  capturedAt: string
-}
-
 export type ExportFlags = {
   agents: boolean
   performanceHistory: boolean

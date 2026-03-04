@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-EOD freeze: at 11:50 PM EST, copy today's snapshots into perfHistory so EOD/weekly totals are saved.
+EOD freeze: at 9:15 PM EST, copy today's snapshots into perfHistory so EOD/weekly totals are saved.
 Run on the VPS via cron so the freeze happens even when the dashboard is closed.
 
-Cron (11:50 PM EST daily; set CRON_TZ=America/New_York or use TZ in the job):
-  50 23 * * * cd /home/ubuntu/bot && /home/ubuntu/bot/venv/bin/python freeze_eod.py >> /home/ubuntu/bot/freeze.log 2>&1
+Cron (9:15 PM EST Mon–Fri; set CRON_TZ=America/New_York or use TZ in the job):
+  15 21 * * 1-5 cd /home/ubuntu/bot && ./run_eod_freeze.sh >> /home/ubuntu/bot/freeze.log 2>&1
 
 Backfill a past date (creates or replaces perf_history rows from snapshots for that date):
   ./venv/bin/python freeze_eod.py --date 2025-03-02
@@ -115,8 +115,8 @@ def main() -> int:
         log(f"Backfilling perf_history for {date_key}.")
     else:
         now = datetime.now(ZoneInfo(ZONE))
-        if now.hour < 23 or (now.hour == 23 and now.minute < 50):
-            log("Before 11:50 PM EST; skipping (run at 11:50 PM or later).")
+        if now.hour < 21 or (now.hour == 21 and now.minute < 15):
+            log("Before 9:15 PM EST; skipping (run at 9:15 PM or later).")
             return 0
         date_key = get_date_key_est()
 

@@ -65,7 +65,6 @@ function App() {
     floorCapacity,
     weekTarget,
     weekTrend,
-    house6pmSnapshotForToday,
     taskPage,
     setTaskPage,
     selectedEodWeekKey,
@@ -625,7 +624,6 @@ function App() {
             onUpdateAuditRecord={handleAuditUpdate}
             onDeleteAuditRecord={handleAuditDelete}
             weekTrend={weekTrend}
-            house6pmSnapshotForToday={house6pmSnapshotForToday}
             eodReports={eodReports}
             onSaveEodReport={handleSaveEodReport}
             agentPerformanceRows={agentPerformanceRows}

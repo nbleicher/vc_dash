@@ -42,7 +42,6 @@ export function useAppData(store: DataStore) {
     setPerfHistory,
     setSnapshots,
     houseMarketing,
-    house6pmSnapshots,
   } = store
 
   const [now, setNow] = useState<Date>(new Date())
@@ -218,10 +217,6 @@ export function useAppData(store: DataStore) {
     return entries.reduce((acc, a) => acc + a.percent, 0) / 100
   }, [attendance, currentWeekKey, activeAgents])
   const weekTarget = useMemo(() => weeklyTargets.find((w) => w.weekKey === currentWeekKey) ?? null, [weeklyTargets, currentWeekKey])
-  const house6pmSnapshotForToday = useMemo(
-    () => house6pmSnapshots.find((s) => s.dateKey === todayKey) ?? null,
-    [house6pmSnapshots, todayKey],
-  )
   const weekTrend = useMemo(() => {
     let totalSales = 0
     let totalMarketing = 0
@@ -676,7 +671,6 @@ export function useAppData(store: DataStore) {
     floorCapacity,
     weekTarget,
     weekTrend,
-    house6pmSnapshotForToday,
     attendanceAlert,
     taskPage,
     setTaskPage,

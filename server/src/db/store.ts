@@ -5,7 +5,6 @@ import type {
   AttendanceSubmission,
   AuditRecord,
   EodReport,
-  House6pmSnapshot,
   IntraSubmission,
   PerfHistory,
   QaRecord,
@@ -49,7 +48,6 @@ export class SqliteStore implements StoreAdapter {
       vaultMeetings: this.getVaultMeetings(),
       vaultDocs: this.getVaultDocs(),
       eodReports: this.getEodReports(),
-      house6pmSnapshots: this.getHouse6pmSnapshots(),
       lastPoliciesBotRun: await this.getLastPoliciesBotRun(),
       houseMarketing: await this.getHouseMarketing(),
     }
@@ -196,16 +194,6 @@ export class SqliteStore implements StoreAdapter {
               .run(row)
           }
           break
-        case 'house6pmSnapshots':
-          this.db.prepare('DELETE FROM house_6pm_snapshots').run()
-          for (const row of rows as House6pmSnapshot[]) {
-            this.db
-              .prepare(
-                'INSERT INTO house_6pm_snapshots (dateKey,houseSales,houseCpa,capturedAt) VALUES (@dateKey,@houseSales,@houseCpa,@capturedAt)',
-              )
-              .run(row)
-          }
-          break
       }
     })
 
@@ -314,12 +302,6 @@ export class SqliteStore implements StoreAdapter {
     return this.db
       .prepare('SELECT id,weekKey,dateKey,houseSales,houseCpa,reportText,submittedAt FROM eod_reports')
       .all() as EodReport[]
-  }
-
-  private getHouse6pmSnapshots(): House6pmSnapshot[] {
-    return this.db
-      .prepare('SELECT dateKey,houseSales,houseCpa,capturedAt FROM house_6pm_snapshots')
-      .all() as House6pmSnapshot[]
   }
 
   private readLastPoliciesBotRun(): string | null {

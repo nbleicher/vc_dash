@@ -49,9 +49,8 @@ mkdir -p ~/bot && cd ~/bot
 - `auth_login.py` (from this repo; used for auto re-login when sessions expire)
 - `bot.py` (from this repo)
 - `policies_bot.py` (from this repo; optional — see below)
-- `freeze_eod.py` (from this repo; for 11:50 PM EOD freeze cron)
-- `run_eod_freeze.sh` (from this repo; wrapper that runs bot then freeze at 11:50 PM)
-- `populate_6pm_house.py` (from this repo; for 6:00 PM house CPA/sales snapshot cron)
+- `freeze_eod.py` (from this repo; for 9:15 PM EOD freeze cron)
+- `run_eod_freeze.sh` (from this repo; wrapper that runs bot then freeze at 9:15 PM)
 - `requirements.txt` (from this repo)
 
 **Create `.env`:**
@@ -97,28 +96,22 @@ cd ~/bot
 ./venv/bin/python bot.py
 ```
 
-**Cron (every 5 minutes):** Use the venv Python so all dependencies are available. The bot skips scraping between 12:01 AM and 8:59 AM EST (exits immediately to save memory); it only runs the browser during 9 AM–midnight EST.
+**Cron (every 5 minutes, Mon–Fri):** Use the venv Python so all dependencies are available. The bot skips scraping outside 9 AM–9 PM EST and on weekends (exits immediately to save memory); it only runs the browser 9 AM–9 PM EST Monday–Friday.
 ```bash
 crontab -e
 ```
 Add (replace `ubuntu` with your username if different):
 ```
-*/5 * * * * cd /home/ubuntu/bot && /home/ubuntu/bot/venv/bin/python bot.py >> /home/ubuntu/bot/bot.log 2>&1
-```
-To avoid launching the bot at all between 1–8 AM EST (saves cron + Python startup), you can use `*/5 9-23 * * *` instead of `*/5 * * * *` (and set `CRON_TZ=America/New_York`). The bot also exits without scraping if run between 12:01–8:59 AM EST.
-
-**Cron (EOD freeze at 11:50 PM EST):** At 11:50 PM the main bot runs once more to pull marketing (and sales/calls) one last time for the day, then the freeze runs so EOD and weekly totals use that final data. Uses the same `.env` as the bot. Add this line in `crontab -e` (use your timezone; example is 11:50 PM America/New_York):
-```
 CRON_TZ=America/New_York
-50 23 * * * cd /home/ubuntu/bot && ./run_eod_freeze.sh >> /home/ubuntu/bot/freeze.log 2>&1
+*/5 9-21 * * 1-5 cd /home/ubuntu/bot && /home/ubuntu/bot/venv/bin/python bot.py >> /home/ubuntu/bot/bot.log 2>&1
 ```
-If you already have other cron jobs, add only the `50 23` line and ensure `CRON_TZ=America/New_York` is set once at the top of the crontab if you want EST/EDT. Ensure `run_eod_freeze.sh` is executable (`chmod +x run_eod_freeze.sh`). Monitor: `tail -f ~/bot/freeze.log`
+The bot also exits without scraping if run before 9 AM EST, after 9 PM EST, or on Saturday/Sunday.
 
-**Cron (6:00 PM EST — populate house CPA and sales):** Saves that day’s house sales and CPA into vault so the EOD Report task can show “6 PM” values. Add to `crontab -e`:
+**Cron (EOD freeze at 9:15 PM EST, Mon–Fri):** At 9:15 PM the main bot runs once more to pull marketing (and sales/calls) one last time for the day, then the freeze runs so EOD and weekly totals use that final data. Uses the same `.env` as the bot. Add this line in `crontab -e`:
 ```
-0 18 * * * cd /home/ubuntu/bot && /home/ubuntu/bot/venv/bin/python populate_6pm_house.py >> /home/ubuntu/bot/populate_6pm.log 2>&1
+15 21 * * 1-5 cd /home/ubuntu/bot && ./run_eod_freeze.sh >> /home/ubuntu/bot/freeze.log 2>&1
 ```
-Monitor: `tail -f ~/bot/populate_6pm.log`
+If you already have other cron jobs, add only the `15 21` line and ensure `CRON_TZ=America/New_York` is set once at the top of the crontab if you want EST/EDT. Ensure `run_eod_freeze.sh` is executable (`chmod +x run_eod_freeze.sh`). Monitor: `tail -f ~/bot/freeze.log`
 
 **Monitor:** `tail -f ~/bot/bot.log`
 

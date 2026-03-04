@@ -21,7 +21,6 @@ const seedState: StoreState = {
   vaultMeetings: [],
   vaultDocs: [],
   eodReports: [],
-  house6pmSnapshots: [],
   lastPoliciesBotRun: null,
   houseMarketing: null,
 }

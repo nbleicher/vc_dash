@@ -126,13 +126,6 @@ CREATE TABLE IF NOT EXISTS eod_reports (
   submittedAt TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS house_6pm_snapshots (
-  dateKey TEXT PRIMARY KEY,
-  houseSales INTEGER NOT NULL,
-  houseCpa REAL,
-  capturedAt TEXT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS app_meta (
   key TEXT PRIMARY KEY,
   value TEXT

@@ -597,7 +597,13 @@ async def main_async() -> int:
     from zoneinfo import ZoneInfo
     now_est = datetime.now(ZoneInfo(ZONE))
     if now_est.hour < 9:
-        log("Outside scraping window (9 AM–midnight EST); skipping.")
+        log("Outside scraping window (9 AM–9 PM EST, Mon–Fri); skipping.")
+        return 0
+    if now_est.hour > 21:
+        log("Outside scraping window (9 AM–9 PM EST, Mon–Fri); skipping.")
+        return 0
+    if now_est.weekday() >= 5:
+        log("Outside scraping window (9 AM–9 PM EST, Mon–Fri); skipping.")
         return 0
 
     agent_map = load_agent_map(bot_dir)

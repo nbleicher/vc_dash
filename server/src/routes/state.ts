@@ -16,7 +16,6 @@ const keySchema = z.enum([
   'vaultMeetings',
   'vaultDocs',
   'eodReports',
-  'house6pmSnapshots',
 ])
 
 export async function stateRoutes(app: FastifyInstance): Promise<void> {

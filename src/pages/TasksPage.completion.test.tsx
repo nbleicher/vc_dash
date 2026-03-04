@@ -33,7 +33,6 @@ function baseProps() {
     onUpdateAuditRecord: vi.fn(),
     onDeleteAuditRecord: vi.fn(),
     weekTrend: { totalSales: 0, currentCpa: null as number | null },
-    house6pmSnapshotForToday: null as { dateKey: string; houseSales: number; houseCpa: number | null; capturedAt: string } | null,
     eodReports: [],
     onSaveEodReport: vi.fn(),
     agentPerformanceRows: [] as Array<{ agentId: string; agentName: string; calls: number; sales: number; marketing: number; cpa: number | null; cvr: number | null }>,

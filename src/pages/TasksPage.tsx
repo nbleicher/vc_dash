@@ -49,7 +49,6 @@ type Props = {
   ) => void
   onDeleteAuditRecord: (id: string) => void
   weekTrend: { totalSales: number; currentCpa: number | null }
-  house6pmSnapshotForToday: { dateKey: string; houseSales: number; houseCpa: number | null; capturedAt: string } | null
   eodReports: Array<{
     id: string
     weekKey: string
@@ -99,7 +98,6 @@ export function TasksPage({
   onUpdateAuditRecord,
   onDeleteAuditRecord,
   weekTrend,
-  house6pmSnapshotForToday,
   eodReports,
   onSaveEodReport,
   agentPerformanceRows,
@@ -667,19 +665,15 @@ export function TasksPage({
               <p className="text-sm text-slate-500">House metrics for the current week. Write your report and submit to save to vault history.</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <MetricCard
-                  title={house6pmSnapshotForToday ? 'House Sales (6 PM)' : 'House Sales'}
-                  value={house6pmSnapshotForToday ? house6pmSnapshotForToday.houseSales : weekTrend.totalSales}
+                  title="House Sales"
+                  value={weekTrend.totalSales}
                 />
                 <MetricCard
-                  title={house6pmSnapshotForToday ? 'House CPA (6 PM)' : 'House CPA'}
+                  title="House CPA"
                   value={
-                    house6pmSnapshotForToday
-                      ? house6pmSnapshotForToday.houseCpa === null
-                        ? 'N/A'
-                        : `$${formatNum(house6pmSnapshotForToday.houseCpa)}`
-                      : weekTrend.currentCpa === null
-                        ? 'N/A'
-                        : `$${formatNum(weekTrend.currentCpa)}`
+                    weekTrend.currentCpa === null
+                      ? 'N/A'
+                      : `$${formatNum(weekTrend.currentCpa)}`
                   }
                 />
               </div>
@@ -697,9 +691,7 @@ export function TasksPage({
                 type="button"
                 variant="default"
                 onClick={() => {
-                  const sales = house6pmSnapshotForToday ? house6pmSnapshotForToday.houseSales : weekTrend.totalSales
-                  const cpa = house6pmSnapshotForToday ? house6pmSnapshotForToday.houseCpa : weekTrend.currentCpa
-                  onSaveEodReport(currentWeekKey, eodReportText, sales, cpa)
+                  onSaveEodReport(currentWeekKey, eodReportText, weekTrend.totalSales, weekTrend.currentCpa)
                   setEodReportText('')
                 }}
               >

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# EOD at 11:50 PM: pull marketing (and sales/calls) one last time, then freeze today's snapshots.
-# Run from cron: 50 23 * * * cd /home/ubuntu/bot && ./run_eod_freeze.sh >> /home/ubuntu/bot/freeze.log 2>&1
+# EOD at 9:15 PM: pull marketing (and sales/calls) one last time, then freeze today's snapshots.
+# Run from cron: 15 21 * * 1-5 cd /home/ubuntu/bot && ./run_eod_freeze.sh >> /home/ubuntu/bot/freeze.log 2>&1
 set -e
 cd "$(dirname "$0")"
 
