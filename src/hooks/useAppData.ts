@@ -128,7 +128,7 @@ export function useAppData(store: DataStore) {
     }
     const marketing =
       houseMarketing?.dateKey === todayKey
-        ? houseMarketing.amount
+        ? Number(houseMarketing.amount)
         : computeMetrics(totalCalls, totalSales).marketing
     const cpa = totalSales > 0 ? marketing / totalSales : null
     const cvr = totalCalls > 0 ? totalSales / totalCalls : null
@@ -250,7 +250,7 @@ export function useAppData(store: DataStore) {
         }
       }
       if (dateKey === todayKey) {
-        totalMarketing += houseMarketing?.dateKey === todayKey ? houseMarketing.amount : todayMarketingFromAgents
+        totalMarketing += houseMarketing?.dateKey === todayKey ? Number(houseMarketing.amount) : todayMarketingFromAgents
       }
     }
     const currentCpa = totalSales > 0 ? totalMarketing / totalSales : null
@@ -500,7 +500,7 @@ export function useAppData(store: DataStore) {
         }
       }
       if (dateKey === todayKey && houseMarketing?.dateKey === todayKey) {
-        marketing = houseMarketing.amount
+        marketing = Number(houseMarketing.amount)
       }
       totalsByDate.set(dateKey, { deals, marketing, updatedAt })
     }
