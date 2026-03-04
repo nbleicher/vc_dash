@@ -220,12 +220,14 @@ export function useAppData(store: DataStore) {
   const weekTrend = useMemo(() => {
     let totalSales = 0
     let totalMarketing = 0
+    let todayMarketingFromAgents = 0
     for (const dateKey of weekDates) {
       for (const agent of activeAgents) {
         const perf = perfHistory.find((p) => p.dateKey === dateKey && p.agentId === agent.id)
         if (perf) {
           totalSales += perf.sales
-          totalMarketing += perf.marketing
+          if (dateKey !== todayKey) totalMarketing += perf.marketing
+          else todayMarketingFromAgents += perf.marketing
           continue
         }
         if (dateKey === todayKey) {
@@ -235,7 +237,7 @@ export function useAppData(store: DataStore) {
           const snap = snap17 ?? liveByAgent.get(agent.id)
           if (snap) {
             totalSales += snap.sales
-            totalMarketing += snap.marketing ?? snap.billableCalls * 15
+            todayMarketingFromAgents += snap.marketing ?? snap.billableCalls * 15
           }
           continue
         }
@@ -247,13 +249,16 @@ export function useAppData(store: DataStore) {
           totalMarketing += snap17.marketing ?? snap17.billableCalls * 15
         }
       }
+      if (dateKey === todayKey) {
+        totalMarketing += houseMarketing?.dateKey === todayKey ? houseMarketing.amount : todayMarketingFromAgents
+      }
     }
     const currentCpa = totalSales > 0 ? totalMarketing / totalSales : null
     const salesProgress = weekTarget && weekTarget.targetSales > 0 ? Math.min((totalSales / weekTarget.targetSales) * 100, 100) : null
     const cpaTarget = weekTarget?.targetCpa ?? null
     const cpaDelta = currentCpa === null || cpaTarget === null ? null : currentCpa - cpaTarget
     return { totalSales, currentCpa, salesProgress, cpaTarget, cpaDelta }
-  }, [activeAgents, liveByAgent, perfHistory, snapshots, todayKey, weekDates, weekTarget])
+  }, [activeAgents, houseMarketing, liveByAgent, perfHistory, snapshots, todayKey, weekDates, weekTarget])
 
   const currentMinuteOfDay = est.hour * 60 + est.minute
   const attendanceSubmittedToday = useMemo(
@@ -494,10 +499,13 @@ export function useAppData(store: DataStore) {
           continue
         }
       }
+      if (dateKey === todayKey && houseMarketing?.dateKey === todayKey) {
+        marketing = houseMarketing.amount
+      }
       totalsByDate.set(dateKey, { deals, marketing, updatedAt })
     }
     return totalsByDate
-  }, [activeAgents, effectiveEodWeekKey, liveByAgent, perfHistory, snapshots, todayKey])
+  }, [activeAgents, effectiveEodWeekKey, houseMarketing, liveByAgent, perfHistory, snapshots, todayKey])
 
   const eodWeeklyRows = useMemo(() => {
     const dates = monFriDatesForWeek(effectiveEodWeekKey)
