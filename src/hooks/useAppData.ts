@@ -222,6 +222,12 @@ export function useAppData(store: DataStore) {
     let totalMarketing = 0
     for (const dateKey of weekDates) {
       for (const agent of activeAgents) {
+        const perf = perfHistory.find((p) => p.dateKey === dateKey && p.agentId === agent.id)
+        if (perf) {
+          totalSales += perf.sales
+          totalMarketing += perf.marketing
+          continue
+        }
         if (dateKey === todayKey) {
           const snap17 = snapshots.find(
             (s) => s.dateKey === todayKey && s.slot === '17:00' && s.agentId === agent.id,
@@ -231,12 +237,6 @@ export function useAppData(store: DataStore) {
             totalSales += snap.sales
             totalMarketing += snap.marketing ?? snap.billableCalls * 15
           }
-          continue
-        }
-        const perf = perfHistory.find((p) => p.dateKey === dateKey && p.agentId === agent.id)
-        if (perf) {
-          totalSales += perf.sales
-          totalMarketing += perf.marketing
           continue
         }
         const snap17 = snapshots.find(
@@ -468,6 +468,13 @@ export function useAppData(store: DataStore) {
         if (!updatedAt || new Date(normalizeIsoTimestamp(ts)).getTime() > new Date(normalizeIsoTimestamp(updatedAt)).getTime()) updatedAt = ts
       }
       for (const agent of activeAgents) {
+        const perf = perfHistory.find((p) => p.dateKey === dateKey && p.agentId === agent.id)
+        if (perf) {
+          deals += perf.sales
+          marketing += perf.marketing
+          setLatest(perf.frozenAt)
+          continue
+        }
         if (dateKey === todayKey) {
           const snap = liveByAgent.get(agent.id)
           if (snap) {
@@ -475,13 +482,6 @@ export function useAppData(store: DataStore) {
             marketing += snap.marketing ?? snap.billableCalls * 15
             setLatest(snap.updatedAt)
           }
-          continue
-        }
-        const perf = perfHistory.find((p) => p.dateKey === dateKey && p.agentId === agent.id)
-        if (perf) {
-          deals += perf.sales
-          marketing += perf.marketing
-          setLatest(perf.frozenAt)
           continue
         }
         const snap17 = snapshots.find(
