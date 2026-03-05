@@ -19,6 +19,7 @@ from typing import Optional
 from dotenv import load_dotenv
 
 from auth_login import login_and_save_async
+from http_retry import request_with_retries
 
 try:
     from playwright_stealth import stealth_async
@@ -297,10 +298,13 @@ async def scrape_policyden_policies(
 
 
 def api_login(session, base_url: str, username: str, password: str) -> bool:
-    r = session.post(
+    r = request_with_retries(
+        session,
+        "post",
         f"{base_url.rstrip('/')}/auth/login",
         json={"username": username, "password": password},
         timeout=15,
+        log_fn=log,
     )
     if r.status_code != 200:
         log(f"  Login failed: {r.status_code} {r.text[:200]}")
@@ -309,10 +313,13 @@ def api_login(session, base_url: str, username: str, password: str) -> bool:
 
 
 def api_get_audit_records(session, base_url: str) -> list[dict]:
-    r = session.get(
+    r = request_with_retries(
+        session,
+        "get",
         f"{base_url.rstrip('/')}/state/auditRecords",
-        timeout=15,
+        timeout=30,
         headers={"Cache-Control": "no-cache", "Pragma": "no-cache"},
+        log_fn=log,
     )
     if r.status_code != 200:
         log(f"  GET /state/auditRecords failed: {r.status_code}")
@@ -322,10 +329,13 @@ def api_get_audit_records(session, base_url: str) -> list[dict]:
 
 
 def api_put_audit_records(session, base_url: str, records: list[dict]) -> bool:
-    r = session.put(
+    r = request_with_retries(
+        session,
+        "put",
         f"{base_url.rstrip('/')}/state/auditRecords",
         json=records,
         timeout=15,
+        log_fn=log,
     )
     if r.status_code != 200:
         log(f"  PUT /state/auditRecords failed: {r.status_code} {r.text[:200]}")
@@ -334,10 +344,13 @@ def api_put_audit_records(session, base_url: str, records: list[dict]) -> bool:
 
 
 def api_set_last_policies_bot_run(session, base_url: str, timestamp_iso: str) -> bool:
-    r = session.post(
+    r = request_with_retries(
+        session,
+        "post",
         f"{base_url.rstrip('/')}/state/last-policies-bot-run",
         json={"timestamp": timestamp_iso},
         timeout=10,
+        log_fn=log,
     )
     if r.status_code != 200:
         log(f"  POST /state/last-policies-bot-run failed: {r.status_code} {r.text[:200]}")

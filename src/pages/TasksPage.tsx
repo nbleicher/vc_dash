@@ -5,7 +5,7 @@ import { POLICY_STATUSES } from '../constants'
 import type { AuditRecord } from '../types'
 import type { SpiffRecord, TaskPage } from '../types'
 import type { DataStore } from '../data'
-import { formatDateKey, formatLastParsedDate, formatNum, formatTimestamp } from '../utils'
+import { formatDateKey, formatLastParsedDate, formatNum, formatTimestamp, csvEscape } from '../utils'
 
 const AUDIT_HISTORY_PREVIEW_ROWS = 5
 const CPA_HIGHLIGHT_THRESHOLD = 130
@@ -152,6 +152,45 @@ export function TasksPage({
   const displayAuditRows = auditHistoryExpanded ? agentAuditRows : agentAuditRows.slice(0, AUDIT_HISTORY_PREVIEW_ROWS)
   const formatCurrency = (amount: number): string => `$${amount.toFixed(2)}`
   const agentName = (agentId: string): string => activeAgents.find((a) => a.id === agentId)?.name ?? agentId
+
+  const downloadAuditCsvForAgent = (
+    agentDisplayName: string,
+    rows: AuditRecord[],
+    agentNameLookup: (id: string) => string,
+    lastPoliciesBotRunValue: string | null,
+    dateKey: string,
+  ): void => {
+    const lastParsedLabel = lastPoliciesBotRunValue ? formatLastParsedDate(lastPoliciesBotRunValue) : 'Never'
+    const header =
+      'Agent,Discovered,Carrier,Client,Status,Last parsed,Resolution Ts,Mgmt Notified,Outreach Made,Reason,Notes'
+    const dataRows = rows.map((row) =>
+      [
+        agentNameLookup(row.agentId),
+        formatTimestamp(row.discoveryTs),
+        row.carrier,
+        row.clientName,
+        row.currentStatus,
+        lastParsedLabel,
+        row.resolutionTs ? formatTimestamp(row.resolutionTs) : '',
+        row.mgmtNotified ? 'Yes' : 'No',
+        row.outreachMade ? 'Yes' : 'No',
+        row.reason,
+        row.notes ?? '',
+      ]
+        .map(csvEscape)
+        .join(','),
+    )
+    const csv = [header, ...dataRows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    const safeName = agentDisplayName.replace(/[^a-zA-Z0-9-_]/g, '_')
+    a.download = `action_needed_audit_${safeName}_${dateKey}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const eodDisplayedAgentRows = useMemo(() => {
     const rows = [...agentPerformanceRows]
     if (eodAgentSortBy === 'cpa') {
@@ -384,6 +423,23 @@ export function TasksPage({
               onClick={onAuditNoActionSubmit}
             >
               Submit No Action Needed
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-fit"
+              disabled={!auditForm.agentId}
+              onClick={() =>
+                downloadAuditCsvForAgent(
+                  agentName(auditForm.agentId),
+                  agentAuditRows,
+                  agentName,
+                  lastPoliciesBotRun,
+                  todayKey,
+                )
+              }
+            >
+              Download CSV
             </Button>
           </div>
 

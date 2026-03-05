@@ -22,6 +22,8 @@ from zoneinfo import ZoneInfo
 import requests
 from dotenv import load_dotenv
 
+from http_retry import request_with_retries
+
 ZONE = "America/New_York"
 SLOT_ORDER = ("17:00", "15:00", "13:00", "11:00")
 
@@ -43,10 +45,13 @@ def compute_metrics(calls: int, sales: int, marketing: float | None = None) -> d
 
 
 def api_login(session: requests.Session, base_url: str, username: str, password: str) -> bool:
-    r = session.post(
+    r = request_with_retries(
+        session,
+        "post",
         f"{base_url.rstrip('/')}/auth/login",
         json={"username": username, "password": password},
         timeout=15,
+        log_fn=log,
     )
     if r.status_code != 200:
         log(f"  Login failed: {r.status_code} {r.text[:200]}")
@@ -55,10 +60,13 @@ def api_login(session: requests.Session, base_url: str, username: str, password:
 
 
 def api_get_state(session: requests.Session, base_url: str) -> dict | None:
-    r = session.get(
+    r = request_with_retries(
+        session,
+        "get",
         f"{base_url.rstrip('/')}/state",
-        timeout=15,
+        timeout=60,
         headers={"Cache-Control": "no-cache", "Pragma": "no-cache"},
+        log_fn=log,
     )
     if r.status_code != 200:
         log(f"  GET /state failed: {r.status_code}")
@@ -68,10 +76,13 @@ def api_get_state(session: requests.Session, base_url: str) -> dict | None:
 
 
 def api_put_perf_history(session: requests.Session, base_url: str, perf_history: list) -> bool:
-    r = session.put(
+    r = request_with_retries(
+        session,
+        "put",
         f"{base_url.rstrip('/')}/state/perfHistory",
         json=perf_history,
         timeout=15,
+        log_fn=log,
     )
     if r.status_code != 200:
         log(f"  PUT /state/perfHistory failed: {r.status_code} {r.text[:200]}")
@@ -80,10 +91,13 @@ def api_put_perf_history(session: requests.Session, base_url: str, perf_history:
 
 
 def api_set_house_marketing(session: requests.Session, base_url: str, date_key: str, amount: float) -> bool:
-    r = session.post(
+    r = request_with_retries(
+        session,
+        "post",
         f"{base_url.rstrip('/')}/state/house-marketing",
         json={"dateKey": date_key, "amount": round(amount, 2)},
         timeout=10,
+        log_fn=log,
     )
     if r.status_code != 200:
         log(f"  POST /state/house-marketing failed: {r.status_code} {r.text[:200]}")

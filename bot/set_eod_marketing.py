@@ -17,6 +17,8 @@ from zoneinfo import ZoneInfo
 import requests
 from dotenv import load_dotenv
 
+from http_retry import request_with_retries
+
 ZONE = "America/New_York"
 
 
@@ -57,19 +59,25 @@ def main() -> int:
     session = requests.Session()
     session.headers["Content-Type"] = "application/json"
 
-    r = session.post(
+    r = request_with_retries(
+        session,
+        "post",
         f"{api_base.rstrip('/')}/auth/login",
         json={"username": admin_user, "password": admin_pass},
         timeout=15,
+        log_fn=log,
     )
     if r.status_code != 200:
         log(f"Login failed: {r.status_code} {r.text[:200]}")
         return 1
 
-    r = session.get(
+    r = request_with_retries(
+        session,
+        "get",
         f"{api_base.rstrip('/')}/state",
-        timeout=15,
+        timeout=60,
         headers={"Cache-Control": "no-cache", "Pragma": "no-cache"},
+        log_fn=log,
     )
     if r.status_code != 200:
         log(f"GET /state failed: {r.status_code}")
@@ -98,10 +106,13 @@ def main() -> int:
         sales = float(row.get("sales", 0) or 0)
         row["cpa"] = round(row["marketing"] / sales, 4) if sales > 0 else None
 
-    r = session.put(
+    r = request_with_retries(
+        session,
+        "put",
         f"{api_base.rstrip('/')}/state/perfHistory",
         json=perf_history,
         timeout=15,
+        log_fn=log,
     )
     if r.status_code != 200:
         log(f"PUT /state/perfHistory failed: {r.status_code} {r.text[:200]}")

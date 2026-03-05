@@ -21,6 +21,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from auth_login import login_and_save_async
+from http_retry import request_with_retries
 
 # Optional: reduce detection on datacenter IPs
 try:
@@ -465,10 +466,13 @@ async def scrape_wegenerate(
 
 
 def api_login(session, base_url: str, username: str, password: str) -> bool:
-    r = session.post(
+    r = request_with_retries(
+        session,
+        "post",
         f"{base_url.rstrip('/')}/auth/login",
         json={"username": username, "password": password},
         timeout=15,
+        log_fn=log,
     )
     if r.status_code != 200:
         log(f"  Login failed: {r.status_code} {r.text[:200]}")
@@ -477,10 +481,14 @@ def api_login(session, base_url: str, username: str, password: str) -> bool:
 
 
 def api_get_state(session, base_url: str) -> dict | None:
-    r = session.get(
+    r = request_with_retries(
+        session,
+        "get",
         f"{base_url.rstrip('/')}/state",
-        timeout=15,
+        timeout=90,
+        max_retries=5,
         headers={"Cache-Control": "no-cache", "Pragma": "no-cache"},
+        log_fn=log,
     )
     if r.status_code != 200:
         log(f"  GET /state failed: {r.status_code}")
@@ -490,10 +498,13 @@ def api_get_state(session, base_url: str) -> dict | None:
 
 
 def api_put_snapshots(session, base_url: str, snapshots: list) -> bool:
-    r = session.put(
+    r = request_with_retries(
+        session,
+        "put",
         f"{base_url.rstrip('/')}/state/snapshots",
         json=snapshots,
         timeout=15,
+        log_fn=log,
     )
     if r.status_code != 200:
         log(f"  PUT /state/snapshots failed: {r.status_code} {r.text[:200]}")
@@ -502,10 +513,13 @@ def api_put_snapshots(session, base_url: str, snapshots: list) -> bool:
 
 
 def api_set_house_marketing(session, base_url: str, date_key: str, amount: float) -> bool:
-    r = session.post(
+    r = request_with_retries(
+        session,
+        "post",
         f"{base_url.rstrip('/')}/state/house-marketing",
         json={"dateKey": date_key, "amount": round(amount, 2)},
         timeout=10,
+        log_fn=log,
     )
     if r.status_code != 200:
         log(f"  POST /state/house-marketing failed: {r.status_code} {r.text[:200]}")
@@ -659,70 +673,75 @@ async def main_async() -> int:
     session = requests.Session()
     session.headers["Content-Type"] = "application/json"
 
-    if not api_login(session, api_base, admin_user, admin_pass):
-        return 1
-    state = api_get_state(session, api_base)
-    if not state:
-        return 1
+    try:
+        if not api_login(session, api_base, admin_user, admin_pass):
+            return 1
+        state = api_get_state(session, api_base)
+        if not state:
+            return 1
 
-    agents = state.get("agents") or []
-    active_ids = {a["id"] for a in agents if a.get("active")}
-    name_to_id = {a["name"]: a["id"] for a in agents}
+        agents = state.get("agents") or []
+        active_ids = {a["id"] for a in agents if a.get("active")}
+        name_to_id = {a["name"]: a["id"] for a in agents}
 
-    existing_snapshots = state.get("snapshots") or []
-    existing_by_key = {(s["dateKey"], s["slot"], s["agentId"]): s for s in existing_snapshots}
+        existing_snapshots = state.get("snapshots") or []
+        existing_by_key = {(s["dateKey"], s["slot"], s["agentId"]): s for s in existing_snapshots}
 
-    from datetime import datetime, timezone
-    from zoneinfo import ZoneInfo
-    now_utc = datetime.now(ZoneInfo(ZONE)).astimezone(timezone.utc)
-    now_iso = now_utc.strftime("%Y-%m-%dT%H:%M:%S.000Z")
-    new_rows = []
-    for display_name, agent_id in agent_map.items():
-        if agent_id not in active_ids:
-            continue
-        sales = sales_by_agent.get(display_name, 0)
-        calls = calls_by_agent.get(display_name, 0)
-        existing = existing_by_key.get((date_key, slot_key, agent_id))
-        snap_id = existing["id"] if existing else f"snap_{uuid.uuid4()}"
-        # Prefer fresh marketing from WeGenerate; otherwise preserve existing value for this slot if present.
-        raw_marketing = marketing_by_agent.get(display_name)
-        if isinstance(raw_marketing, (int, float)):
-            marketing = float(raw_marketing)
-        elif existing and isinstance(existing.get("marketing"), (int, float)):
-            marketing = float(existing.get("marketing"))  # type: ignore[arg-type]
-        else:
-            marketing = None
-        new_rows.append({
-            "id": snap_id,
-            "dateKey": date_key,
-            "slot": slot_key,
-            "slotLabel": slot_label,
-            "agentId": agent_id,
-            "billableCalls": calls,
-            "sales": sales,
-            "marketing": marketing,
-            "updatedAt": now_iso,
-        })
-        if verbose:
-            log(
-                f"  [verbose] Row: {display_name!r} -> agentId={agent_id[:8]}... "
-                f"sales={sales} calls={calls} marketing={marketing!r}"
-            )
-
-    if not new_rows:
-        log("No snapshot rows to push (check agent_map and active agents).")
-        return 0
-
-    merged = merge_snapshots(existing_snapshots, new_rows, date_key, slot_key)
-    if api_put_snapshots(session, api_base, merged):
-        log(f"Pushed {len(new_rows)} snapshots for {date_key} {slot_key}.")
-        if campaign_marketing is not None:
-            if api_set_house_marketing(session, api_base, date_key, campaign_marketing):
-                log(f"Set house marketing ${campaign_marketing:,.2f} for {date_key}.")
+        from datetime import datetime, timezone
+        from zoneinfo import ZoneInfo
+        now_utc = datetime.now(ZoneInfo(ZONE)).astimezone(timezone.utc)
+        now_iso = now_utc.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        new_rows = []
+        for display_name, agent_id in agent_map.items():
+            if agent_id not in active_ids:
+                continue
+            sales = sales_by_agent.get(display_name, 0)
+            calls = calls_by_agent.get(display_name, 0)
+            existing = existing_by_key.get((date_key, slot_key, agent_id))
+            snap_id = existing["id"] if existing else f"snap_{uuid.uuid4()}"
+            # Prefer fresh marketing from WeGenerate; otherwise preserve existing value for this slot if present.
+            raw_marketing = marketing_by_agent.get(display_name)
+            if isinstance(raw_marketing, (int, float)):
+                marketing = float(raw_marketing)
+            elif existing and isinstance(existing.get("marketing"), (int, float)):
+                marketing = float(existing.get("marketing"))  # type: ignore[arg-type]
             else:
-                log("  Failed to set house marketing; skipping houseMarketing update for this run.")
-        return 0
-    return 1
+                marketing = None
+            new_rows.append({
+                "id": snap_id,
+                "dateKey": date_key,
+                "slot": slot_key,
+                "slotLabel": slot_label,
+                "agentId": agent_id,
+                "billableCalls": calls,
+                "sales": sales,
+                "marketing": marketing,
+                "updatedAt": now_iso,
+            })
+            if verbose:
+                log(
+                    f"  [verbose] Row: {display_name!r} -> agentId={agent_id[:8]}... "
+                    f"sales={sales} calls={calls} marketing={marketing!r}"
+                )
+
+        if not new_rows:
+            log("No snapshot rows to push (check agent_map and active agents).")
+            return 0
+
+        merged = merge_snapshots(existing_snapshots, new_rows, date_key, slot_key)
+        if api_put_snapshots(session, api_base, merged):
+            log(f"Pushed {len(new_rows)} snapshots for {date_key} {slot_key}.")
+            if campaign_marketing is not None:
+                if api_set_house_marketing(session, api_base, date_key, campaign_marketing):
+                    log(f"Set house marketing ${campaign_marketing:,.2f} for {date_key}.")
+                else:
+                    log("  Failed to set house marketing; skipping houseMarketing update for this run.")
+            return 0
+        return 1
+    except (requests.exceptions.ChunkedEncodingError, requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+        log(f"  API connection failed after retries: {e}")
+        send_telegram("VC Dash bot: API connection failed after retries (GET state). Dashboard may not update.")
+        return 1
 
 
 if __name__ == "__main__":
