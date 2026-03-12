@@ -82,6 +82,7 @@ function App() {
     effectiveMetricsAgentId,
     metricsScopeData,
     rankRows,
+    rankRowsTransferAdjusted,
     rankMetric,
     setRankMetric,
     rankPeriod,
@@ -670,11 +671,9 @@ function App() {
             activeAgents={activeAgents}
             metricsScopeData={metricsScopeData}
             metricsScopeDataCustom={metricsScopeData.custom}
-            qaPassRate={qaPassRate}
-            auditRecoveryHours={auditRecoveryHours}
             activeAuditCount={activeAuditCount}
             rankRows={rankRows}
-            rankRowsTransferAdjusted={data.rankRowsTransferAdjusted}
+            rankRowsTransferAdjusted={rankRowsTransferAdjusted}
             rankMetric={rankMetric}
             setRankMetric={setRankMetric}
             rankPeriod={rankPeriod}

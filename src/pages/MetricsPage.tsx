@@ -14,8 +14,6 @@ type Props = {
     weekly: { sales: number; cpa: number | null; cvr: number | null }
     monthly: { sales: number; cpa: number | null; cvr: number | null }
   }
-  qaPassRate: number | null
-  auditRecoveryHours: number | null
   activeAuditCount: number
   rankRows: Array<{ agentId: string; agentName: string; sales: number; cpa: number | null; cvr: number | null }>
   rankRowsTransferAdjusted: Array<{ agentId: string; agentName: string; sales: number; cpa: number | null; cvr: number | null }>
@@ -39,8 +37,6 @@ export function MetricsPage({
   effectiveMetricsAgentId,
   activeAgents,
   metricsScopeData,
-  qaPassRate: _qaPassRate,
-  auditRecoveryHours: _auditRecoveryHours,
   activeAuditCount,
   rankRows,
   rankRowsTransferAdjusted,

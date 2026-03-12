@@ -380,46 +380,49 @@ export function useAppData(store: DataStore) {
     return result
   }, [metricsScope, effectiveMetricsAgentId, perfHistory, snapshots, todayKey, liveByAgent, activeAgents, effectiveMetricsDateKey, metricsDateStart, metricsDateEnd])
 
-  const buildRankBaseByAgent = (
-    metricRankPeriod: RankPeriod,
-    dateStart: string | null,
-    dateEnd: string | null,
-  ): { byAgent: Map<string, { calls: number; sales: number; marketing: number }>; periodDates: Set<string> } => {
-    const activeIds = new Set(activeAgents.map((agent) => agent.id))
-    const byAgent = new Map<string, { calls: number; sales: number; marketing: number }>()
-    let periodDates: Set<string>
-    if (dateStart && dateEnd && dateStart !== dateEnd) {
-      periodDates = new Set(dateKeysBetween(dateStart, dateEnd))
-    } else {
-      periodDates = new Set([effectiveMetricsDateKey])
-      if (metricRankPeriod === 'week') {
-        periodDates = new Set(monFriDatesForWeek(weekKeyFromDateKey(effectiveMetricsDateKey)))
-      } else if (metricRankPeriod === 'month') {
-        const prefix = effectiveMetricsDateKey.slice(0, 7)
-        periodDates = new Set(perfHistory.filter((x) => x.dateKey.startsWith(prefix)).map((x) => x.dateKey))
-        if (effectiveMetricsDateKey.startsWith(prefix)) periodDates.add(effectiveMetricsDateKey)
+  const buildRankBaseByAgent = useCallback(
+    (
+      metricRankPeriod: RankPeriod,
+      dateStart: string | null,
+      dateEnd: string | null,
+    ): { byAgent: Map<string, { calls: number; sales: number; marketing: number }>; periodDates: Set<string> } => {
+      const activeIds = new Set(activeAgents.map((agent) => agent.id))
+      const byAgent = new Map<string, { calls: number; sales: number; marketing: number }>()
+      let periodDates: Set<string>
+      if (dateStart && dateEnd && dateStart !== dateEnd) {
+        periodDates = new Set(dateKeysBetween(dateStart, dateEnd))
+      } else {
+        periodDates = new Set([effectiveMetricsDateKey])
+        if (metricRankPeriod === 'week') {
+          periodDates = new Set(monFriDatesForWeek(weekKeyFromDateKey(effectiveMetricsDateKey)))
+        } else if (metricRankPeriod === 'month') {
+          const prefix = effectiveMetricsDateKey.slice(0, 7)
+          periodDates = new Set(perfHistory.filter((x) => x.dateKey.startsWith(prefix)).map((x) => x.dateKey))
+          if (effectiveMetricsDateKey.startsWith(prefix)) periodDates.add(effectiveMetricsDateKey)
+        }
       }
-    }
-    for (const row of perfHistory.filter((x) => periodDates.has(x.dateKey) && activeIds.has(x.agentId))) {
-      if (row.dateKey === todayKey && liveByAgent.has(row.agentId)) continue
-      const existing = byAgent.get(row.agentId) ?? { calls: 0, sales: 0, marketing: 0 }
-      existing.calls += row.billableCalls
-      existing.sales += row.sales
-      existing.marketing += row.marketing
-      byAgent.set(row.agentId, existing)
-    }
-    if (periodDates.has(todayKey)) {
-      for (const [agentId, snap] of liveByAgent.entries()) {
-        if (!activeIds.has(agentId)) continue
-        const existing = byAgent.get(agentId) ?? { calls: 0, sales: 0, marketing: 0 }
-        existing.calls += snap.billableCalls
-        existing.sales += snap.sales
-        existing.marketing += snap.marketing ?? snap.billableCalls * 15
-        byAgent.set(agentId, existing)
+      for (const row of perfHistory.filter((x) => periodDates.has(x.dateKey) && activeIds.has(x.agentId))) {
+        if (row.dateKey === todayKey && liveByAgent.has(row.agentId)) continue
+        const existing = byAgent.get(row.agentId) ?? { calls: 0, sales: 0, marketing: 0 }
+        existing.calls += row.billableCalls
+        existing.sales += row.sales
+        existing.marketing += row.marketing
+        byAgent.set(row.agentId, existing)
       }
-    }
-    return { byAgent, periodDates }
-  }
+      if (periodDates.has(todayKey)) {
+        for (const [agentId, snap] of liveByAgent.entries()) {
+          if (!activeIds.has(agentId)) continue
+          const existing = byAgent.get(agentId) ?? { calls: 0, sales: 0, marketing: 0 }
+          existing.calls += snap.billableCalls
+          existing.sales += snap.sales
+          existing.marketing += snap.marketing ?? snap.billableCalls * 15
+          byAgent.set(agentId, existing)
+        }
+      }
+      return { byAgent, periodDates }
+    },
+    [activeAgents, effectiveMetricsDateKey, liveByAgent, perfHistory, todayKey],
+  )
 
   const rankRows = useMemo(() => {
     const { byAgent } = buildRankBaseByAgent(rankPeriod, metricsDateStart, metricsDateEnd)
@@ -439,7 +442,7 @@ export function useAppData(store: DataStore) {
       return (a.cpa ?? Number.POSITIVE_INFINITY) - (b.cpa ?? Number.POSITIVE_INFINITY)
     })
     return rows
-  }, [activeAgents, liveByAgent, perfHistory, rankMetric, rankPeriod, todayKey, effectiveMetricsDateKey, metricsDateStart, metricsDateEnd])
+  }, [activeAgents, buildRankBaseByAgent, rankMetric, rankPeriod, metricsDateStart, metricsDateEnd])
 
   const rankRowsTransferAdjusted = useMemo(() => {
     const { byAgent, periodDates } = buildRankBaseByAgent(rankPeriod, metricsDateStart, metricsDateEnd)
@@ -478,7 +481,7 @@ export function useAppData(store: DataStore) {
     })
 
     return rows
-  }, [activeAgents, liveByAgent, perfHistory, rankPeriod, todayKey, effectiveMetricsDateKey, metricsDateStart, metricsDateEnd, transfers])
+  }, [activeAgents, buildRankBaseByAgent, metricsDateEnd, metricsDateStart, rankPeriod, transfers])
 
   const activeIds = useMemo(() => new Set(activeAgents.map((agent) => agent.id)), [activeAgents])
   const metricsMonthPrefix = effectiveMetricsDateKey.slice(0, 7)
