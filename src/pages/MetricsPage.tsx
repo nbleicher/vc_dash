@@ -221,7 +221,7 @@ export function MetricsPage({
                 <thead>
                   <tr>
                     <th className="px-2 py-1 text-left">Rank</th>
-                    <th className="px-2 py-1 text-left w-1/3">Agent</th>
+                    <th className="px-2 py-1 text-left">Agent</th>
                     <th className="px-2 py-1 text-right">Sales</th>
                     <th className="px-2 py-1 text-right">CPA</th>
                     <th className="px-2 py-1 text-right">CVR</th>
@@ -257,7 +257,7 @@ export function MetricsPage({
                 <thead>
                   <tr>
                     <th className="px-2 py-1 text-left">Rank</th>
-                    <th className="px-2 py-1 text-left w-1/3">Agent</th>
+                    <th className="px-2 py-1 text-left">Agent</th>
                     <th className="px-2 py-1 text-right">Sales</th>
                     <th className="px-2 py-1 text-right">CPA</th>
                     <th className="px-2 py-1 text-right">CVR</th>
