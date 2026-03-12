@@ -75,6 +75,7 @@ type Props = {
     meetingId: string,
     patch: Pick<VaultMeeting, 'dateKey' | 'meetingType' | 'notes' | 'actionItems'>,
   ) => void
+  transfers: DataStore['transfers']
 }
 
 const PAGE_SIZE = 50
@@ -109,6 +110,7 @@ export function VaultPage({
   onDeleteAuditRecord,
   onUpdateSnapshot,
   onUpdateMeeting,
+  transfers,
 }: Props) {
   const [fullTableMode, setFullTableMode] = useState<'qa' | 'audit' | null>(null)
   const [popupSearch, setPopupSearch] = useState('')
@@ -130,6 +132,17 @@ export function VaultPage({
   const [editError, setEditError] = useState<string | null>(null)
   const [houseIntraDay, setHouseIntraDay] = useState<string>(() => estDateKey(new Date()))
   const scopeValue = vaultScope === 'house' ? '__house__' : effectiveVaultAgentId
+
+  const { sentTransfersForAgent, receivedTransfersForAgent } = useMemo(() => {
+    if (!effectiveVaultAgentId) return { sentTransfersForAgent: 0, receivedTransfersForAgent: 0 }
+    let sent = 0
+    let received = 0
+    for (const t of transfers) {
+      if (t.fromAgentId === effectiveVaultAgentId) sent += 1
+      if (t.toAgentId === effectiveVaultAgentId) received += 1
+    }
+    return { sentTransfersForAgent: sent, receivedTransfersForAgent: received }
+  }, [effectiveVaultAgentId, transfers])
 
   const agentNameById = useMemo(() => new Map(agents.map((agent) => [agent.id, agent.name])), [agents])
   const agentName = useCallback((agentId: string): string => agentNameById.get(agentId) ?? 'Unknown', [agentNameById])
@@ -864,18 +877,25 @@ export function VaultPage({
           </Select>
         </Field>
         {vaultScope === 'agent' ? (
-          <Field className="min-w-[260px]">
-            <FieldLabel>History Type</FieldLabel>
-            <Select
-              value={vaultHistoryView}
-              onChange={(e) => setVaultHistoryView(e.target.value as VaultHistoryView)}
-            >
-              <option value="attendance">Attendance History</option>
-              <option value="qa">Daily QA History</option>
-              <option value="audit">Action Needed History</option>
-              <option value="targets">Weekly Target History</option>
-            </Select>
-          </Field>
+          <>
+            <Field className="min-w-[260px]">
+              <FieldLabel>History Type</FieldLabel>
+              <Select
+                value={vaultHistoryView}
+                onChange={(e) => setVaultHistoryView(e.target.value as VaultHistoryView)}
+              >
+                <option value="attendance">Attendance History</option>
+                <option value="qa">Daily QA History</option>
+                <option value="audit">Action Needed History</option>
+                <option value="targets">Weekly Target History</option>
+              </Select>
+            </Field>
+            <div className="text-sm text-slate-600">
+              Transfers sent: <span className="font-semibold mr-3">{sentTransfersForAgent}</span>
+              Transfers received:{' '}
+              <span className="font-semibold">{receivedTransfersForAgent}</span>
+            </div>
+          </>
         ) : null}
         {vaultScope === 'house' ? (
           <Field className="min-w-[220px]">

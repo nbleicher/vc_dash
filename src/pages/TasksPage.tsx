@@ -142,13 +142,11 @@ export function TasksPage({
     fromAgentId: string
     toAgentId: string
     clientName: string
-    successClosed: boolean
   }>({
     dateKey: todayKey,
     fromAgentId: '',
     toAgentId: '',
     clientName: '',
-    successClosed: false,
   })
   const cancelAuditEdit = (): void => {
     setEditingAuditId(null)
@@ -694,7 +692,7 @@ export function TasksPage({
                 dateKey: transferForm.dateKey,
                 fromAgentId: transferForm.fromAgentId,
                 toAgentId: transferForm.toAgentId,
-                successClosed: transferForm.successClosed,
+                successClosed: true,
               })
               setTransferForm((prev) => ({
                 ...prev,
@@ -702,7 +700,6 @@ export function TasksPage({
                 fromAgentId: '',
                 toAgentId: '',
                 clientName: '',
-                successClosed: false,
               }))
             }}
           >
@@ -751,18 +748,6 @@ export function TasksPage({
                 ))}
               </Select>
             </Field>
-            <Field className="flex items-center gap-2">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={transferForm.successClosed}
-                  onChange={(e) =>
-                    setTransferForm((prev) => ({ ...prev, successClosed: e.target.checked }))
-                  }
-                />
-                <span className="text-sm text-slate-700">Transfer successfully closed</span>
-              </label>
-            </Field>
             <Button
               type="submit"
               variant="default"
@@ -787,14 +772,13 @@ export function TasksPage({
                     <th>Date</th>
                     <th>From</th>
                     <th>To</th>
-                    <th>Successfully closed</th>
                     <th aria-label="Actions" />
                   </tr>
                 </thead>
                 <tbody>
                   {transfers.length === 0 && (
                     <tr>
-                      <td colSpan={5}>N/A</td>
+                      <td colSpan={4}>N/A</td>
                     </tr>
                   )}
                   {transfers
@@ -805,15 +789,6 @@ export function TasksPage({
                         <td>{formatDateKey(row.dateKey)}</td>
                         <td>{agentName(row.fromAgentId)}</td>
                         <td>{agentName(row.toAgentId)}</td>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={row.successClosed}
-                            onChange={(e) =>
-                              onUpdateTransfer(row.id, { successClosed: e.target.checked })
-                            }
-                          />
-                        </td>
                         <td className="text-right">
                           <Button
                             type="button"

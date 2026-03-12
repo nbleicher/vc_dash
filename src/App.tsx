@@ -722,6 +722,7 @@ function App() {
             onDeleteAuditRecord={handleAuditDelete}
             onUpdateSnapshot={handleSnapshotUpdate}
             onUpdateMeeting={handleMeetingUpdate}
+            transfers={transfers}
           />
         )}
 

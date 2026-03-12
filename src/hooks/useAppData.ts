@@ -444,9 +444,7 @@ export function useAppData(store: DataStore) {
     const salesDeltaByAgent = new Map<string, number>()
     const inPeriod = (dateKey: string): boolean => periodDates.has(dateKey)
 
-    const relevantTransfers: TransferRecord[] = transfers.filter(
-      (t) => t.successClosed && inPeriod(t.dateKey),
-    )
+    const relevantTransfers: TransferRecord[] = transfers.filter((t) => inPeriod(t.dateKey))
 
     for (const t of relevantTransfers) {
       salesDeltaByAgent.set(t.fromAgentId, (salesDeltaByAgent.get(t.fromAgentId) ?? 0) + 1)
