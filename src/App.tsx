@@ -35,7 +35,6 @@ function App() {
     setVaultMeetings,
     vaultDocs,
     setVaultDocs,
-    eodReports,
     setEodReports,
     loggedIn,
     login,
@@ -73,6 +72,7 @@ function App() {
     eodWeeklyRows,
     eodWeeklySummary,
     eodTodayTotals,
+    eodHistoryDays,
     monthLabel,
     metricsScope,
     setMetricsScope,
@@ -624,9 +624,10 @@ function App() {
             onAuditNoActionSubmit={handleAuditNoActionSubmit}
             onUpdateAuditRecord={handleAuditUpdate}
             onDeleteAuditRecord={handleAuditDelete}
-            eodReports={eodReports}
             eodTodayTotals={eodTodayTotals}
+            eodHistoryDays={eodHistoryDays}
             onSaveEodReport={handleSaveEodReport}
+            setPerfHistory={setPerfHistory}
             agentPerformanceRows={agentPerformanceRows}
             lastSnapshotLabel={lastSnapshotLabel}
           />

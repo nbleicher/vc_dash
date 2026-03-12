@@ -9,6 +9,12 @@ Cron (9:15 PM EST Mon–Fri; set CRON_TZ=America/New_York or use TZ in the job):
 Backfill a past date (creates or replaces perf_history rows from snapshots for that date):
   ./venv/bin/python freeze_eod.py --date 2025-03-02
 
+Backfill all past dates that have snapshots but no perf_history:
+  ./venv/bin/python freeze_eod.py --backfill-all
+
+Backfill a date range (START and END inclusive, YYYY-MM-DD):
+  ./venv/bin/python freeze_eod.py --backfill-range 2025-03-01 2025-03-07
+
 Uses same .env as bot: API_BASE_URL, ADMIN_USERNAME, ADMIN_PASSWORD.
 """
 
@@ -105,59 +111,15 @@ def api_set_house_marketing(session: requests.Session, base_url: str, date_key: 
     return True
 
 
-def main() -> int:
-    load_dotenv()
-    parser = argparse.ArgumentParser(description="Freeze snapshots into perfHistory for EOD.")
-    parser.add_argument("--date", default=None, help="Backfill date YYYY-MM-DD (default: today; skips time check)")
-    args = parser.parse_args()
-
-    api_base = os.environ.get("API_BASE_URL", "").strip()
-    if not api_base:
-        log("Set API_BASE_URL in .env")
-        return 1
-    if not api_base.startswith("http"):
-        api_base = "https://" + api_base
-    admin_user = os.environ.get("ADMIN_USERNAME", "").strip()
-    admin_pass = os.environ.get("ADMIN_PASSWORD", "").strip()
-    if not admin_user or not admin_pass:
-        log("Set ADMIN_USERNAME, ADMIN_PASSWORD in .env")
-        return 1
-
-    backfill_date = args.date.strip() if args.date else None
-    if backfill_date:
-        date_key = backfill_date
-        log(f"Backfilling perf_history for {date_key}.")
-    else:
-        now = datetime.now(ZoneInfo(ZONE))
-        if now.hour < 21 or (now.hour == 21 and now.minute < 15):
-            log("Before 9:15 PM EST; skipping (run at 9:15 PM or later).")
-            return 0
-        date_key = get_date_key_est()
-
-    session = requests.Session()
-    session.headers["Content-Type"] = "application/json"
-
-    if not api_login(session, api_base, admin_user, admin_pass):
-        return 1
-    state = api_get_state(session, api_base)
-    if not state:
-        return 1
-
-    agents = state.get("agents") or []
-    active_ids = {a["id"] for a in agents if a.get("active")}
-    snapshots = state.get("snapshots") or []
-    perf_history = list(state.get("perfHistory") or [])
-
-    if not backfill_date and any(p.get("dateKey") == date_key for p in perf_history):
-        log(f"perfHistory already has rows for {date_key}; skipping.")
-        return 0
-
-    if backfill_date:
-        perf_history = [p for p in perf_history if p.get("dateKey") != date_key]
-
+def freeze_date(
+    date_key: str,
+    agents: list,
+    active_ids: set,
+    snapshots: list,
+    slot_priority: dict,
+) -> list:
+    """Build frozen perf_history rows for one date from snapshots. Does not mutate state."""
     today_snapshots = [s for s in snapshots if s.get("dateKey") == date_key]
-    slot_priority = {k: i for i, k in enumerate(SLOT_ORDER)}
-
     frozen_rows = []
     for agent in agents:
         if agent["id"] not in active_ids:
@@ -189,6 +151,126 @@ def main() -> int:
             "cvr": m["cvr"],
             "frozenAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
         })
+    return frozen_rows
+
+
+def main() -> int:
+    load_dotenv()
+    parser = argparse.ArgumentParser(description="Freeze snapshots into perfHistory for EOD.")
+    parser.add_argument("--date", default=None, help="Backfill date YYYY-MM-DD (default: today; skips time check)")
+    parser.add_argument("--backfill-all", action="store_true", help="Backfill all past dates that have snapshots but no perf_history")
+    parser.add_argument("--backfill-range", nargs=2, metavar=("START", "END"), default=None, help="Backfill date range START END (YYYY-MM-DD inclusive)")
+    args = parser.parse_args()
+
+    api_base = os.environ.get("API_BASE_URL", "").strip()
+    if not api_base:
+        log("Set API_BASE_URL in .env")
+        return 1
+    if not api_base.startswith("http"):
+        api_base = "https://" + api_base
+    admin_user = os.environ.get("ADMIN_USERNAME", "").strip()
+    admin_pass = os.environ.get("ADMIN_PASSWORD", "").strip()
+    if not admin_user or not admin_pass:
+        log("Set ADMIN_USERNAME, ADMIN_PASSWORD in .env")
+        return 1
+
+    backfill_all = args.backfill_all
+    backfill_range = args.backfill_range  # (start, end) or None
+    single_date = args.date.strip() if args.date else None
+
+    if sum([bool(backfill_all), bool(backfill_range), bool(single_date)]) > 1:
+        log("Use only one of: --date, --backfill-all, --backfill-range")
+        return 1
+
+    session = requests.Session()
+    session.headers["Content-Type"] = "application/json"
+
+    if not api_login(session, api_base, admin_user, admin_pass):
+        return 1
+    state = api_get_state(session, api_base)
+    if not state:
+        return 1
+
+    agents = state.get("agents") or []
+    active_ids = {a["id"] for a in agents if a.get("active")}
+    snapshots = state.get("snapshots") or []
+    perf_history = list(state.get("perfHistory") or [])
+    slot_priority = {k: i for i, k in enumerate(SLOT_ORDER)}
+    today_key = get_date_key_est()
+
+    if backfill_all:
+        snapshot_dates = sorted(set(s.get("dateKey") for s in snapshots if s.get("dateKey")))
+        dates_to_backfill = [
+            d for d in snapshot_dates
+            if d < today_key and not any(p.get("dateKey") == d for p in perf_history)
+        ]
+        if not dates_to_backfill:
+            log("No past dates with snapshots missing perf_history.")
+            return 0
+        log(f"Backfilling {len(dates_to_backfill)} dates: {dates_to_backfill[0]} .. {dates_to_backfill[-1]}")
+        for date_key in dates_to_backfill:
+            frozen_rows = freeze_date(date_key, agents, active_ids, snapshots, slot_priority)
+            if not frozen_rows:
+                log(f"  {date_key}: no snapshots for active agents, skip")
+                continue
+            perf_history = [p for p in perf_history if p.get("dateKey") != date_key] + frozen_rows
+            total_marketing = sum(r["marketing"] for r in frozen_rows)
+            log(f"  {date_key}: froze {len(frozen_rows)} rows, marketing=${total_marketing:,.2f}")
+            if not api_set_house_marketing(session, api_base, date_key, total_marketing):
+                log(f"    Failed to set house marketing for {date_key}")
+        if api_put_perf_history(session, api_base, perf_history):
+            log("Backfill complete.")
+            return 0
+        log("PUT perfHistory failed after backfill.")
+        return 1
+
+    if backfill_range:
+        start_key, end_key = backfill_range[0].strip(), backfill_range[1].strip()
+        if start_key > end_key:
+            log("--backfill-range START must be <= END")
+            return 1
+        snapshot_dates = sorted(set(s.get("dateKey") for s in snapshots if s.get("dateKey")))
+        dates_to_backfill = [
+            d for d in snapshot_dates
+            if start_key <= d <= end_key and not any(p.get("dateKey") == d for p in perf_history)
+        ]
+        if not dates_to_backfill:
+            log(f"No dates in [{start_key}, {end_key}] with snapshots missing perf_history.")
+            return 0
+        log(f"Backfilling {len(dates_to_backfill)} dates in range.")
+        for date_key in dates_to_backfill:
+            frozen_rows = freeze_date(date_key, agents, active_ids, snapshots, slot_priority)
+            if not frozen_rows:
+                continue
+            perf_history = [p for p in perf_history if p.get("dateKey") != date_key] + frozen_rows
+            total_marketing = sum(r["marketing"] for r in frozen_rows)
+            if not api_set_house_marketing(session, api_base, date_key, total_marketing):
+                log(f"  Failed house marketing for {date_key}")
+        if api_put_perf_history(session, api_base, perf_history):
+            log("Backfill range complete.")
+            return 0
+        return 1
+
+    # Single date (today or --date)
+    backfill_date = single_date
+    if backfill_date:
+        date_key = backfill_date
+        log(f"Backfilling perf_history for {date_key}.")
+    else:
+        now = datetime.now(ZoneInfo(ZONE))
+        if now.hour < 21 or (now.hour == 21 and now.minute < 15):
+            log("Before 9:15 PM EST; skipping (run at 9:15 PM or later).")
+            return 0
+        date_key = today_key
+
+    if not backfill_date and any(p.get("dateKey") == date_key for p in perf_history):
+        log(f"perfHistory already has rows for {date_key}; skipping.")
+        return 0
+
+    if backfill_date:
+        perf_history = [p for p in perf_history if p.get("dateKey") != date_key]
+
+    frozen_rows = freeze_date(date_key, agents, active_ids, snapshots, slot_priority)
 
     if not frozen_rows:
         log(f"No snapshots to freeze for {date_key} (no data for active agents).")

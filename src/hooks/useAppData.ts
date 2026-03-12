@@ -32,6 +32,7 @@ export function useAppData(store: DataStore) {
     agents,
     snapshots,
     perfHistory,
+    eodReports,
     qaRecords,
     auditRecords,
     attendance,
@@ -539,6 +540,48 @@ export function useAppData(store: DataStore) {
     return { sales, marketing, cpa }
   }, [activeAgents, houseMarketing, liveByAgent, perfHistory, snapshots, todayKey])
 
+  const eodHistoryDays = useMemo(() => {
+    const dateKeys = new Set<string>()
+    for (const r of eodReports) dateKeys.add(r.dateKey)
+    for (const p of perfHistory) dateKeys.add(p.dateKey)
+    const days = Array.from(dateKeys).sort((a, b) => b.localeCompare(a))
+    return days.map((dateKey) => {
+      const reportsForDay = eodReports.filter((r) => r.dateKey === dateKey)
+      const latestReport = reportsForDay.length > 0
+        ? reportsForDay.sort((a, b) => (b.submittedAt > a.submittedAt ? 1 : -1))[0]
+        : null
+      const perfForDay = perfHistory.filter((p) => p.dateKey === dateKey)
+      let houseSales = latestReport?.houseSales ?? 0
+      let houseCpa = latestReport?.houseCpa ?? null
+      if (!latestReport && perfForDay.length > 0) {
+        const totalSales = perfForDay.reduce((acc, p) => acc + p.sales, 0)
+        const totalMarketing = perfForDay.reduce((acc, p) => acc + p.marketing, 0)
+        houseSales = totalSales
+        houseCpa = totalSales > 0 ? totalMarketing / totalSales : null
+      }
+      const agentRows = perfForDay.map((p) => {
+        const agent = agents.find((a) => a.id === p.agentId)
+        return {
+          agentId: p.agentId,
+          agentName: agent?.name ?? p.agentId,
+          calls: p.billableCalls,
+          sales: p.sales,
+          marketing: p.marketing,
+          cpa: p.cpa,
+          cvr: p.cvr,
+        }
+      })
+      return {
+        dateKey,
+        houseSales,
+        houseCpa,
+        reportText: latestReport?.reportText?.trim() ?? undefined,
+        submittedAt: latestReport?.submittedAt,
+        agentRows,
+      }
+    })
+  }, [agents, eodReports, perfHistory])
+
   const eodWeeklyRows = useMemo(() => {
     const dates = monFriDatesForWeek(effectiveEodWeekKey)
     return dates.map((dateKey, idx) => {
@@ -720,6 +763,7 @@ export function useAppData(store: DataStore) {
     eodWeeklyRows,
     eodWeeklySummary,
     eodTodayTotals,
+    eodHistoryDays,
     monthLabel,
     metricsScope,
     setMetricsScope,

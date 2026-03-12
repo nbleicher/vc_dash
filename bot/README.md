@@ -113,6 +113,17 @@ The bot also exits without scraping if run before 9 AM EST, after 9 PM EST, or o
 ```
 If you already have other cron jobs, add only the `15 21` line and ensure `CRON_TZ=America/New_York` is set once at the top of the crontab if you want EST/EDT. Ensure `run_eod_freeze.sh` is executable (`chmod +x run_eod_freeze.sh`). Monitor: `tail -f ~/bot/freeze.log`
 
+**EOD backfill (perf_history for past dates):** If you have snapshots for past days but no perf_history (e.g. before the freeze cron was set up), run once to backfill as far as possible:
+```bash
+cd ~/bot
+./venv/bin/python freeze_eod.py --backfill-all
+```
+To backfill only a date range (START and END inclusive, YYYY-MM-DD):
+```bash
+./venv/bin/python freeze_eod.py --backfill-range 2025-03-01 2025-03-07
+```
+Single-date backfill (same as before): `./venv/bin/python freeze_eod.py --date 2025-03-02`
+
 **Monitor:** `tail -f ~/bot/bot.log`
 
 ---

@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
+import React from 'react'
 import { WeeklyTargetEditor } from '../components'
 import { Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, MetricCard, Select, TableWrap, Tabs, Textarea } from '../components'
 import { POLICY_STATUSES } from '../constants'
 import type { AuditRecord } from '../types'
-import type { SpiffRecord, TaskPage } from '../types'
+import type { PerfHistory, SpiffRecord, TaskPage } from '../types'
 import type { DataStore } from '../data'
-import { formatDateKey, formatLastParsedDate, formatNum, formatTimestamp, csvEscape } from '../utils'
+import { formatDateKey, formatLastParsedDate, formatNum, formatTimestamp, csvEscape, uid } from '../utils'
 
 const AUDIT_HISTORY_PREVIEW_ROWS = 5
 const CPA_HIGHLIGHT_THRESHOLD = 130
@@ -49,16 +50,24 @@ type Props = {
   ) => void
   onDeleteAuditRecord: (id: string) => void
   eodTodayTotals: { sales: number; marketing: number; cpa: number | null }
-  eodReports: Array<{
-    id: string
-    weekKey: string
+  eodHistoryDays: Array<{
     dateKey: string
     houseSales: number
     houseCpa: number | null
-    reportText: string
-    submittedAt: string
+    reportText?: string
+    submittedAt?: string
+    agentRows: Array<{
+      agentId: string
+      agentName: string
+      calls: number
+      sales: number
+      marketing: number
+      cpa: number | null
+      cvr: number | null
+    }>
   }>
   onSaveEodReport: (weekKey: string, reportText: string, houseSales: number, houseCpa: number | null) => void
+  setPerfHistory: React.Dispatch<React.SetStateAction<PerfHistory[]>>
   agentPerformanceRows: Array<{
     agentId: string
     agentName: string
@@ -98,14 +107,19 @@ export function TasksPage({
   onUpdateAuditRecord,
   onDeleteAuditRecord,
   eodTodayTotals,
-  eodReports,
+  eodHistoryDays,
   onSaveEodReport,
+  setPerfHistory,
   agentPerformanceRows,
   lastSnapshotLabel,
 }: Props) {
   const [eodReportText, setEodReportText] = useState('')
   const [eodAgentSortBy, setEodAgentSortBy] = useState<'cpa' | 'sales'>('cpa')
   const [eodAgentSortDir, setEodAgentSortDir] = useState<'asc' | 'desc'>('desc')
+  const [expandedEodDateKey, setExpandedEodDateKey] = useState<string | null>(null)
+  const [showAddPastDayForm, setShowAddPastDayForm] = useState(false)
+  const [addPastDayDateKey, setAddPastDayDateKey] = useState('')
+  const [addPastDayRows, setAddPastDayRows] = useState<Record<string, { calls: string; sales: string; marketing: string }>>({})
   const [auditHistoryExpanded, setAuditHistoryExpanded] = useState(false)
   const [editingAuditId, setEditingAuditId] = useState<string | null>(null)
   const [auditDraft, setAuditDraft] = useState<{
@@ -753,23 +767,259 @@ export function TasksPage({
               >
                 Submit & Save to Vault
               </Button>
-              {eodReports.length > 0 && (
-                <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-sm font-medium text-slate-700">EOD Report History (Vault)</h3>
-                  <ul className="max-h-48 space-y-1 overflow-y-auto text-sm text-slate-600">
-                    {[...eodReports]
-                      .sort((a, b) => (b.submittedAt > a.submittedAt ? 1 : -1))
-                      .slice(0, 10)
-                      .map((r) => (
-                        <li key={r.id}>
-                          {formatDateKey(r.dateKey)} — Sales: {r.houseSales}, CPA:{' '}
-                          {r.houseCpa === null ? 'N/A' : `$${formatNum(r.houseCpa)}`}
-                          {r.reportText.trim() ? ` — ${r.reportText.trim().slice(0, 60)}${r.reportText.trim().length > 60 ? '…' : ''}` : ''}
-                        </li>
-                      ))}
-                  </ul>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      setShowAddPastDayForm((v) => !v)
+                      if (!showAddPastDayForm) {
+                        setAddPastDayDateKey('')
+                        setAddPastDayRows(
+                          Object.fromEntries(
+                            activeAgents.map((a) => [a.id, { calls: '', sales: '', marketing: '' }])
+                          )
+                        )
+                      }
+                    }}
+                  >
+                    {showAddPastDayForm ? 'Cancel' : 'Add performance for past day'}
+                  </Button>
                 </div>
-              )}
+                {showAddPastDayForm && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                    <Field>
+                      <FieldLabel>Date</FieldLabel>
+                      <Input
+                        type="date"
+                        value={addPastDayDateKey}
+                        onChange={(e) => setAddPastDayDateKey(e.target.value)}
+                        className="w-full max-w-xs"
+                      />
+                    </Field>
+                    <div className="overflow-x-auto rounded border border-slate-200 bg-white">
+                      <table className="w-full text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-slate-200 bg-slate-50">
+                            <th className="p-2 font-medium text-slate-700">Agent</th>
+                            <th className="p-2 font-medium text-slate-700">Calls</th>
+                            <th className="p-2 font-medium text-slate-700">Sales</th>
+                            <th className="p-2 font-medium text-slate-700">Marketing</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {activeAgents.map((agent) => {
+                            const row = addPastDayRows[agent.id] ?? { calls: '', sales: '', marketing: '' }
+                            return (
+                              <tr key={agent.id} className="border-b border-slate-100">
+                                <td className="p-2 font-medium">{agent.name}</td>
+                                <td className="p-2">
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    value={row.calls}
+                                    onChange={(e) =>
+                                      setAddPastDayRows((prev) => ({
+                                        ...prev,
+                                        [agent.id]: { ...(prev[agent.id] ?? { calls: '', sales: '', marketing: '' }), calls: e.target.value },
+                                      }))
+                                    }
+                                    placeholder="0"
+                                    className="w-20"
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    value={row.sales}
+                                    onChange={(e) =>
+                                      setAddPastDayRows((prev) => ({
+                                        ...prev,
+                                        [agent.id]: { ...(prev[agent.id] ?? { calls: '', sales: '', marketing: '' }), sales: e.target.value },
+                                      }))
+                                    }
+                                    placeholder="0"
+                                    className="w-20"
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    step={0.01}
+                                    value={row.marketing}
+                                    onChange={(e) =>
+                                      setAddPastDayRows((prev) => ({
+                                        ...prev,
+                                        [agent.id]: { ...(prev[agent.id] ?? { calls: '', sales: '', marketing: '' }), marketing: e.target.value },
+                                      }))
+                                    }
+                                    placeholder="0"
+                                    className="w-24"
+                                  />
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={() => {
+                          if (!addPastDayDateKey.trim()) return
+                          const newRows: PerfHistory[] = []
+                          for (const agent of activeAgents) {
+                            const row = addPastDayRows[agent.id]
+                            if (!row) continue
+                            const calls = Math.max(0, Math.floor(Number(row.calls) || 0))
+                            const sales = Math.max(0, Number(row.sales) || 0)
+                            const marketing = Math.max(0, Number(row.marketing) || 0)
+                            if (calls === 0 && sales === 0 && marketing === 0) continue
+                            const cpa = sales > 0 ? marketing / sales : null
+                            const cvr = calls > 0 ? sales / calls : null
+                            newRows.push({
+                              id: uid('perf'),
+                              dateKey: addPastDayDateKey,
+                              agentId: agent.id,
+                              billableCalls: calls,
+                              sales,
+                              marketing,
+                              cpa,
+                              cvr,
+                              frozenAt: new Date().toISOString(),
+                            })
+                          }
+                          if (newRows.length === 0) return
+                          setPerfHistory((prev) => [...prev, ...newRows])
+                          setShowAddPastDayForm(false)
+                          setAddPastDayDateKey('')
+                          setAddPastDayRows({})
+                        }}
+                      >
+                        Save
+                      </Button>
+                      <Button type="button" variant="secondary" onClick={() => setShowAddPastDayForm(false)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {eodHistoryDays.length > 0 ? (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
+                    <div className="max-h-64 overflow-y-auto">
+                      <table className="w-full text-left text-sm">
+                        <thead className="sticky top-0 z-10 bg-slate-100">
+                          <tr className="border-b border-slate-200">
+                            <th className="p-2 w-8" aria-label="Expand" />
+                            <th className="p-2 font-medium text-slate-700">Date</th>
+                            <th className="p-2 font-medium text-slate-700 text-right">Sales</th>
+                            <th className="p-2 font-medium text-slate-700 text-right">CPA</th>
+                            <th className="p-2 font-medium text-slate-700">Preview</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {eodHistoryDays.map((day) => {
+                            const isExpanded = expandedEodDateKey === day.dateKey
+                            return (
+                              <React.Fragment key={day.dateKey}>
+                                <tr
+                                  key={day.dateKey}
+                                  className={`border-b border-slate-200 cursor-pointer hover:bg-slate-100/80 ${isExpanded ? 'bg-slate-100' : ''}`}
+                                  onClick={() => setExpandedEodDateKey((k) => (k === day.dateKey ? null : day.dateKey))}
+                                >
+                                  <td className="p-2 text-slate-500">
+                                    {isExpanded ? '▼' : '▶'}
+                                  </td>
+                                  <td className="p-2 font-medium">{formatDateKey(day.dateKey)}</td>
+                                  <td className="p-2 text-right tabular-nums">{day.houseSales}</td>
+                                  <td className="p-2 text-right tabular-nums">
+                                    {day.houseCpa === null ? 'N/A' : `$${formatNum(day.houseCpa)}`}
+                                  </td>
+                                  <td className="p-2 text-slate-600 truncate max-w-[200px]">
+                                    {day.reportText ? `${day.reportText.slice(0, 50)}${day.reportText.length > 50 ? '…' : ''}` : '—'}
+                                  </td>
+                                </tr>
+                                {isExpanded && (
+                                  <tr key={`${day.dateKey}-exp`}>
+                                    <td colSpan={5} className="p-0 bg-white">
+                                      <div className="border-t border-slate-200 p-4 space-y-4">
+                                        <div className="grid gap-3 sm:grid-cols-2 max-w-md">
+                                          <MetricCard title="House Sales" value={day.houseSales} />
+                                          <MetricCard
+                                            title="House CPA"
+                                            value={day.houseCpa === null ? 'N/A' : `$${formatNum(day.houseCpa)}`}
+                                          />
+                                        </div>
+                                        {day.reportText ? (
+                                          <div>
+                                            <p className="text-xs font-medium text-slate-500 mb-1">Report</p>
+                                            <p className="text-sm text-slate-700 whitespace-pre-wrap">{day.reportText}</p>
+                                          </div>
+                                        ) : null}
+                                        <div>
+                                          <p className="text-xs font-medium text-slate-500 mb-2">Agent performance</p>
+                                          {day.agentRows.length === 0 ? (
+                                            <p className="text-sm text-slate-500">No performance data for this day.</p>
+                                          ) : (
+                                            <div className="overflow-x-auto rounded border border-slate-200">
+                                              <table className="w-full text-left text-sm">
+                                                <thead>
+                                                  <tr className="border-b border-slate-200 bg-slate-50">
+                                                    <th className="p-2 font-medium text-slate-700">Agent</th>
+                                                    <th className="p-2 font-medium text-slate-700 text-right">CPA</th>
+                                                    <th className="p-2 font-medium text-slate-700 text-right">Sales</th>
+                                                    <th className="p-2 font-medium text-slate-700 text-right">Calls</th>
+                                                    <th className="p-2 font-medium text-slate-700 text-right">Marketing</th>
+                                                    <th className="p-2 font-medium text-slate-700 text-right">CVR</th>
+                                                  </tr>
+                                                </thead>
+                                                <tbody>
+                                                  {day.agentRows.map((row) => {
+                                                    const cpaOverThreshold = row.cpa !== null && row.cpa > CPA_HIGHLIGHT_THRESHOLD
+                                                    return (
+                                                      <tr
+                                                        key={row.agentId}
+                                                        className={`border-b border-slate-100 ${cpaOverThreshold ? 'bg-red-500/10' : ''}`}
+                                                      >
+                                                        <td className="p-2 font-medium">{row.agentName}</td>
+                                                        <td className="p-2 text-right tabular-nums">
+                                                          {row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}
+                                                        </td>
+                                                        <td className="p-2 text-right tabular-nums">{row.sales}</td>
+                                                        <td className="p-2 text-right tabular-nums">{row.calls}</td>
+                                                        <td className="p-2 text-right tabular-nums">${formatNum(row.marketing, 0)}</td>
+                                                        <td className="p-2 text-right tabular-nums">
+                                                          {row.cvr === null ? 'N/A' : `${formatNum(row.cvr * 100)}%`}
+                                                        </td>
+                                                      </tr>
+                                                    )
+                                                  })}
+                                                </tbody>
+                                              </table>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">No EOD history yet. Submit a report or add performance for a past day.</p>
+                )}
+              </div>
             </div>
           </div>
         </Card>

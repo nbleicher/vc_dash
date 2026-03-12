@@ -33,8 +33,9 @@ function baseProps() {
     onUpdateAuditRecord: vi.fn(),
     onDeleteAuditRecord: vi.fn(),
     eodTodayTotals: { sales: 0, marketing: 0, cpa: null as number | null },
-    eodReports: [],
+    eodHistoryDays: [],
     onSaveEodReport: vi.fn(),
+    setPerfHistory: vi.fn(),
     agentPerformanceRows: [] as Array<{ agentId: string; agentName: string; calls: number; sales: number; marketing: number; cpa: number | null; cvr: number | null }>,
     lastSnapshotLabel: 'N/A',
   }
