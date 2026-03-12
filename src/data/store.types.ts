@@ -8,6 +8,7 @@ import type {
   IntraSubmission,
   PerfHistory,
   QaRecord,
+  TransferRecord,
   Snapshot,
   SpiffRecord,
   VaultDoc,
@@ -52,6 +53,9 @@ export interface DataStore {
 
   attendance: AttendanceRecord[]
   setAttendance: Dispatch<SetStateAction<AttendanceRecord[]>>
+
+  transfers: TransferRecord[]
+  setTransfers: Dispatch<SetStateAction<TransferRecord[]>>
 
   spiffRecords: SpiffRecord[]
   setSpiffRecords: Dispatch<SetStateAction<SpiffRecord[]>>

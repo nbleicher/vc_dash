@@ -21,6 +21,7 @@ const resourceConfigs: Array<Config<EntityKey>> = [
   { path: 'weekly-targets', key: 'weeklyTargets', idField: 'weekKey' },
   { path: 'vault-meetings', key: 'vaultMeetings', idField: 'id' },
   { path: 'vault-docs', key: 'vaultDocs', idField: 'id' },
+  { path: 'transfers', key: 'transfers', idField: 'id' },
 ]
 
 export async function resourceRoutes(app: FastifyInstance): Promise<void> {

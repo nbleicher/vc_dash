@@ -9,6 +9,7 @@ import type {
   RankPeriod,
   Snapshot,
   TaskPage,
+  TransferRecord,
   VaultHistoryView,
   VaultScope,
 } from '../types'
@@ -41,6 +42,7 @@ export function useAppData(store: DataStore) {
     attendanceSubmissions,
     intraSubmissions,
     weeklyTargets,
+    transfers,
     setPerfHistory,
     setSnapshots,
     houseMarketing,
@@ -378,17 +380,21 @@ export function useAppData(store: DataStore) {
     return result
   }, [metricsScope, effectiveMetricsAgentId, perfHistory, snapshots, todayKey, liveByAgent, activeAgents, effectiveMetricsDateKey, metricsDateStart, metricsDateEnd])
 
-  const rankRows = useMemo(() => {
+  const buildRankBaseByAgent = (
+    metricRankPeriod: RankPeriod,
+    dateStart: string | null,
+    dateEnd: string | null,
+  ): { byAgent: Map<string, { calls: number; sales: number; marketing: number }>; periodDates: Set<string> } => {
     const activeIds = new Set(activeAgents.map((agent) => agent.id))
     const byAgent = new Map<string, { calls: number; sales: number; marketing: number }>()
     let periodDates: Set<string>
-    if (metricsDateStart && metricsDateEnd && metricsDateStart !== metricsDateEnd) {
-      periodDates = new Set(dateKeysBetween(metricsDateStart, metricsDateEnd))
+    if (dateStart && dateEnd && dateStart !== dateEnd) {
+      periodDates = new Set(dateKeysBetween(dateStart, dateEnd))
     } else {
       periodDates = new Set([effectiveMetricsDateKey])
-      if (rankPeriod === 'week') {
+      if (metricRankPeriod === 'week') {
         periodDates = new Set(monFriDatesForWeek(weekKeyFromDateKey(effectiveMetricsDateKey)))
-      } else if (rankPeriod === 'month') {
+      } else if (metricRankPeriod === 'month') {
         const prefix = effectiveMetricsDateKey.slice(0, 7)
         periodDates = new Set(perfHistory.filter((x) => x.dateKey.startsWith(prefix)).map((x) => x.dateKey))
         if (effectiveMetricsDateKey.startsWith(prefix)) periodDates.add(effectiveMetricsDateKey)
@@ -412,9 +418,20 @@ export function useAppData(store: DataStore) {
         byAgent.set(agentId, existing)
       }
     }
+    return { byAgent, periodDates }
+  }
+
+  const rankRows = useMemo(() => {
+    const { byAgent } = buildRankBaseByAgent(rankPeriod, metricsDateStart, metricsDateEnd)
     const rows = activeAgents.map((agent) => {
       const t = byAgent.get(agent.id) ?? { calls: 0, sales: 0, marketing: 0 }
-      return { agentName: agent.name, sales: t.sales, cpa: t.sales > 0 ? t.marketing / t.sales : t.marketing, cvr: t.calls > 0 ? t.sales / t.calls : null }
+      return {
+        agentId: agent.id,
+        agentName: agent.name,
+        sales: t.sales,
+        cpa: t.sales > 0 ? t.marketing / t.sales : t.marketing,
+        cvr: t.calls > 0 ? t.sales / t.calls : null,
+      }
     })
     rows.sort((a, b) => {
       if (rankMetric === 'Sales') return b.sales - a.sales
@@ -423,6 +440,45 @@ export function useAppData(store: DataStore) {
     })
     return rows
   }, [activeAgents, liveByAgent, perfHistory, rankMetric, rankPeriod, todayKey, effectiveMetricsDateKey, metricsDateStart, metricsDateEnd])
+
+  const rankRowsTransferAdjusted = useMemo(() => {
+    const { byAgent, periodDates } = buildRankBaseByAgent(rankPeriod, metricsDateStart, metricsDateEnd)
+
+    const salesDeltaByAgent = new Map<string, number>()
+    const inPeriod = (dateKey: string): boolean => periodDates.has(dateKey)
+
+    const relevantTransfers: TransferRecord[] = transfers.filter(
+      (t) => t.successClosed && inPeriod(t.dateKey),
+    )
+
+    for (const t of relevantTransfers) {
+      salesDeltaByAgent.set(t.fromAgentId, (salesDeltaByAgent.get(t.fromAgentId) ?? 0) + 1)
+      salesDeltaByAgent.set(t.toAgentId, (salesDeltaByAgent.get(t.toAgentId) ?? 0) - 1)
+    }
+
+    const rows = activeAgents.map((agent) => {
+      const base = byAgent.get(agent.id) ?? { calls: 0, sales: 0, marketing: 0 }
+      const delta = salesDeltaByAgent.get(agent.id) ?? 0
+      const adjustedSalesForCpa = base.sales + delta
+      const adjustedCpa = adjustedSalesForCpa > 0 ? base.marketing / adjustedSalesForCpa : null
+      const cvr = base.calls > 0 ? base.sales / base.calls : null
+      return {
+        agentId: agent.id,
+        agentName: agent.name,
+        sales: base.sales,
+        cpa: adjustedCpa,
+        cvr,
+      }
+    })
+
+    rows.sort((a, b) => {
+      const aCpa = a.cpa ?? Number.POSITIVE_INFINITY
+      const bCpa = b.cpa ?? Number.POSITIVE_INFINITY
+      return aCpa - bCpa
+    })
+
+    return rows
+  }, [activeAgents, liveByAgent, perfHistory, rankPeriod, todayKey, effectiveMetricsDateKey, metricsDateStart, metricsDateEnd, transfers])
 
   const activeIds = useMemo(() => new Set(activeAgents.map((agent) => agent.id)), [activeAgents])
   const metricsMonthPrefix = effectiveMetricsDateKey.slice(0, 7)
@@ -813,6 +869,7 @@ export function useAppData(store: DataStore) {
     effectiveMetricsAgentId,
     metricsScopeData,
     rankRows,
+    rankRowsTransferAdjusted,
     rankMetric,
     setRankMetric,
     rankPeriod,

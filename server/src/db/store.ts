@@ -8,6 +8,7 @@ import type {
   IntraSubmission,
   PerfHistory,
   QaRecord,
+  TransferRecord,
   Snapshot,
   SpiffRecord,
   StoreState,
@@ -48,6 +49,7 @@ export class SqliteStore implements StoreAdapter {
       vaultMeetings: this.getVaultMeetings(),
       vaultDocs: this.getVaultDocs(),
       eodReports: this.getEodReports(),
+      transfers: this.getTransfers(),
       lastPoliciesBotRun: await this.getLastPoliciesBotRun(),
       houseMarketing: await this.getHouseMarketing(),
     }
@@ -184,6 +186,19 @@ export class SqliteStore implements StoreAdapter {
               .run(row)
           }
           break
+        case 'transfers':
+          this.db.prepare('DELETE FROM transfers').run()
+          for (const row of rows as TransferRecord[]) {
+            this.db
+              .prepare(
+                'INSERT INTO transfers (id,dateKey,fromAgentId,toAgentId,successClosed) VALUES (@id,@dateKey,@fromAgentId,@toAgentId,@successClosed)',
+              )
+              .run({
+                ...row,
+                successClosed: row.successClosed ? 1 : 0,
+              })
+          }
+          break
         case 'eodReports':
           this.db.prepare('DELETE FROM eod_reports').run()
           for (const row of rows as EodReport[]) {
@@ -296,6 +311,23 @@ export class SqliteStore implements StoreAdapter {
     return this.db
       .prepare('SELECT id,agentId,fileName,fileSize,uploadedAt FROM vault_docs')
       .all() as VaultDoc[]
+  }
+
+  private getTransfers(): TransferRecord[] {
+    const rows = this.db
+      .prepare('SELECT id,dateKey,fromAgentId,toAgentId,successClosed FROM transfers')
+      .all() as Array<{
+        id: string
+        dateKey: string
+        fromAgentId: string
+        toAgentId: string
+        successClosed: number
+      }>
+
+    return rows.map((row) => ({
+      ...row,
+      successClosed: Boolean(row.successClosed),
+    }))
   }
 
   private getEodReports(): EodReport[] {

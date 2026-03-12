@@ -34,9 +34,14 @@ Authenticated endpoints:
     - `qaRecords`
     - `auditRecords`
     - `attendance`
+    - `spiffRecords`
+    - `attendanceSubmissions`
+    - `intraSubmissions`
     - `weeklyTargets`
+    - `transfers`
     - `vaultMeetings`
     - `vaultDocs`
+    - `eodReports`
 
 - `GET /state/:key`
   - `:key` one of:
@@ -46,9 +51,14 @@ Authenticated endpoints:
     - `qaRecords`
     - `auditRecords`
     - `attendance`
+    - `spiffRecords`
+    - `attendanceSubmissions`
+    - `intraSubmissions`
     - `weeklyTargets`
+    - `transfers`
     - `vaultMeetings`
     - `vaultDocs`
+    - `eodReports`
 
 - `PUT /state/:key`
   - Replaces the entire collection at `:key` with array payload.

@@ -9,6 +9,7 @@ import type {
   IntraSubmission,
   PerfHistory,
   QaRecord,
+  TransferRecord,
   Snapshot,
   SpiffRecord,
   VaultDoc,
@@ -42,6 +43,7 @@ export function useDataStore(): DataStore {
   const [attendanceSubmissionsState, setAttendanceSubmissionsState] = useState<AttendanceSubmission[]>([])
   const [intraSubmissionsState, setIntraSubmissionsState] = useState<IntraSubmission[]>([])
   const [weeklyTargetsState, setWeeklyTargetsState] = useState<WeeklyTarget[]>([])
+  const [transfersState, setTransfersState] = useState<TransferRecord[]>([])
   const [vaultMeetingsState, setVaultMeetingsState] = useState<VaultMeeting[]>([])
   const [vaultDocsState, setVaultDocsState] = useState<VaultDoc[]>([])
   const [eodReportsState, setEodReportsState] = useState<EodReport[]>([])
@@ -77,6 +79,7 @@ export function useDataStore(): DataStore {
       setAttendanceSubmissionsState(state.attendanceSubmissions ?? [])
       setIntraSubmissionsState(state.intraSubmissions ?? [])
       setWeeklyTargetsState(state.weeklyTargets)
+      setTransfersState(state.transfers ?? [])
       setVaultMeetingsState(state.vaultMeetings)
       setVaultDocsState(state.vaultDocs)
       setEodReportsState(state.eodReports ?? [])
@@ -116,6 +119,7 @@ export function useDataStore(): DataStore {
   const setAttendanceSubmissions = wrapSetter(setAttendanceSubmissionsState)
   const setIntraSubmissions = wrapSetter(setIntraSubmissionsState)
   const setWeeklyTargets = wrapSetter(setWeeklyTargetsState)
+  const setTransfers = wrapSetter(setTransfersState)
   const setVaultMeetings = wrapSetter(setVaultMeetingsState)
   const setVaultDocs = wrapSetter(setVaultDocsState)
   const setEodReports = wrapSetter(setEodReportsState)
@@ -232,6 +236,9 @@ export function useDataStore(): DataStore {
   useEffect(() => {
     void syncCollection('eodReports', eodReportsState)
   }, [eodReportsState, syncCollection])
+  useEffect(() => {
+    void syncCollection('transfers', transfersState)
+  }, [transfersState, syncCollection])
 
   return {
     loggedIn,
@@ -265,6 +272,8 @@ export function useDataStore(): DataStore {
     setAuditRecords,
     attendance: attendanceState,
     setAttendance,
+    transfers: transfersState,
+    setTransfers,
     spiffRecords: spiffRecordsState,
     setSpiffRecords,
     attendanceSubmissions: attendanceSubmissionsState,

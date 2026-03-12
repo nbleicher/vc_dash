@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Button, Card, LoginForm, TopNav } from './components'
 import { useDataStore } from './data'
 import { useAppData } from './hooks'
-import type { ExportFlags, QaRecord, TopPage, VaultMeeting } from './types'
+import type { ExportFlags, QaRecord, TopPage, VaultMeeting, TransferRecord } from './types'
 import { csvEscape, estDateKey, uid } from './utils'
 import { DashboardPage } from './pages/DashboardPage'
 import { MetricsPage } from './pages/MetricsPage'
@@ -36,6 +36,8 @@ function App() {
     vaultDocs,
     setVaultDocs,
     setEodReports,
+    transfers,
+    setTransfers,
     loggedIn,
     login,
     logout,
@@ -365,6 +367,24 @@ function App() {
     })
   }
 
+  const handleAddTransfer = (transfer: Omit<TransferRecord, 'id'>): void => {
+    setTransfers((prev) => [
+      ...prev,
+      {
+        ...transfer,
+        id: uid('transfer'),
+      },
+    ])
+  }
+
+  const handleUpdateTransfer = (id: string, patch: Partial<TransferRecord>): void => {
+    setTransfers((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)))
+  }
+
+  const handleDeleteTransfer = (id: string): void => {
+    setTransfers((prev) => prev.filter((row) => row.id !== id))
+  }
+
   const saveWeeklyTarget = (sales: number, cpa: number): void => {
     setWeeklyTargets((prev) => {
       const existing = prev.find((w) => w.weekKey === currentWeekKey)
@@ -634,6 +654,10 @@ function App() {
             setPerfHistory={setPerfHistory}
             agentPerformanceRows={agentPerformanceRows}
             lastSnapshotLabel={lastSnapshotLabel}
+            transfers={transfers}
+            onAddTransfer={handleAddTransfer}
+            onUpdateTransfer={handleUpdateTransfer}
+            onDeleteTransfer={handleDeleteTransfer}
           />
         )}
 
@@ -650,6 +674,7 @@ function App() {
             auditRecoveryHours={auditRecoveryHours}
             activeAuditCount={activeAuditCount}
             rankRows={rankRows}
+            rankRowsTransferAdjusted={data.rankRowsTransferAdjusted}
             rankMetric={rankMetric}
             setRankMetric={setRankMetric}
             rankPeriod={rankPeriod}

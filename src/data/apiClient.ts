@@ -7,6 +7,7 @@ import type {
   IntraSubmission,
   PerfHistory,
   QaRecord,
+  TransferRecord,
   Snapshot,
   SpiffRecord,
   VaultDoc,
@@ -25,6 +26,7 @@ export type StoreCollections = {
   attendanceSubmissions: AttendanceSubmission[]
   intraSubmissions: IntraSubmission[]
   weeklyTargets: WeeklyTarget[]
+  transfers: TransferRecord[]
   vaultMeetings: VaultMeeting[]
   vaultDocs: VaultDoc[]
   eodReports: EodReport[]

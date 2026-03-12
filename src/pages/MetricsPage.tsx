@@ -17,7 +17,8 @@ type Props = {
   qaPassRate: number | null
   auditRecoveryHours: number | null
   activeAuditCount: number
-  rankRows: Array<{ agentName: string; sales: number; cpa: number | null; cvr: number | null }>
+  rankRows: Array<{ agentId: string; agentName: string; sales: number; cpa: number | null; cvr: number | null }>
+  rankRowsTransferAdjusted: Array<{ agentId: string; agentName: string; sales: number; cpa: number | null; cvr: number | null }>
   rankMetric: RankMetric
   setRankMetric: (m: RankMetric) => void
   rankPeriod: RankPeriod
@@ -42,6 +43,7 @@ export function MetricsPage({
   auditRecoveryHours: _auditRecoveryHours,
   activeAuditCount,
   rankRows,
+  rankRowsTransferAdjusted,
   rankMetric,
   setRankMetric,
   rankPeriod,
@@ -233,35 +235,79 @@ export function MetricsPage({
           </Select>
         </Field>
       </div>
-      <TableWrap>
-        <DataTable>
-          <thead>
-            <tr>
-              <th>Rank</th>
-              <th>Agent</th>
-              <th className="text-right">Sales</th>
-              <th className="text-right">CPA</th>
-              <th className="text-right">CVR</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rankRows.length === 0 && (
-              <tr>
-                <td colSpan={5}>N/A</td>
-              </tr>
-            )}
-            {rankRows.map((row, idx) => (
-              <tr key={row.agentName}>
-                <td>{idx + 1}</td>
-                <td>{row.agentName}</td>
-                <td className="text-right tabular-nums">{row.sales}</td>
-                <td className="text-right tabular-nums">{row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}</td>
-                <td className="text-right tabular-nums">{row.cvr === null ? 'N/A' : `${formatNum(row.cvr * 100)}%`}</td>
-              </tr>
-            ))}
-          </tbody>
-        </DataTable>
-      </TableWrap>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <div>
+          <TableWrap>
+            <DataTable>
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Agent</th>
+                  <th className="text-right">Sales</th>
+                  <th className="text-right">CPA</th>
+                  <th className="text-right">CVR</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rankRows.length === 0 && (
+                  <tr>
+                    <td colSpan={5}>N/A</td>
+                  </tr>
+                )}
+                {rankRows.map((row, idx) => (
+                  <tr key={row.agentId}>
+                    <td>{idx + 1}</td>
+                    <td>{row.agentName}</td>
+                    <td className="text-right tabular-nums">{row.sales}</td>
+                    <td className="text-right tabular-nums">
+                      {row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}
+                    </td>
+                    <td className="text-right tabular-nums">
+                      {row.cvr === null ? 'N/A' : `${formatNum(row.cvr * 100)}%`}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTable>
+          </TableWrap>
+        </div>
+        <div>
+          <h3 className="mb-2 text-base font-medium">Agent Ranking (transfer adjusted)</h3>
+          <TableWrap>
+            <DataTable>
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Agent</th>
+                  <th className="text-right">Sales</th>
+                  <th className="text-right">CPA</th>
+                  <th className="text-right">CVR</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rankRowsTransferAdjusted.length === 0 && (
+                  <tr>
+                    <td colSpan={5}>N/A</td>
+                  </tr>
+                )}
+                {rankRowsTransferAdjusted.map((row, idx) => (
+                  <tr key={row.agentId}>
+                    <td>{idx + 1}</td>
+                    <td>{row.agentName}</td>
+                    <td className="text-right tabular-nums">{row.sales}</td>
+                    <td className="text-right tabular-nums">
+                      {row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}
+                    </td>
+                    <td className="text-right tabular-nums">
+                      {row.cvr === null ? 'N/A' : `${formatNum(row.cvr * 100)}%`}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTable>
+          </TableWrap>
+        </div>
+      </div>
     </Card>
   )
 }

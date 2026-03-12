@@ -8,6 +8,7 @@ import type {
   IntraSubmission,
   PerfHistory,
   QaRecord,
+  TransferRecord,
   Snapshot,
   SpiffRecord,
   VaultDoc,
@@ -52,6 +53,7 @@ export function useDataStore(): DataStore {
   const [vaultMeetings, setVaultMeetings] = useStoredState<VaultMeeting[]>('vc_vault_meetings', [])
   const [vaultDocs, setVaultDocs] = useStoredState<VaultDoc[]>('vc_vault_docs', [])
   const [eodReports, setEodReports] = useStoredState<EodReport[]>('vc_eod_reports', [])
+  const [transfers, setTransfers] = useStoredState<TransferRecord[]>('vc_transfers', [])
 
   return {
     loggedIn,
@@ -92,6 +94,8 @@ export function useDataStore(): DataStore {
     setIntraSubmissions,
     weeklyTargets,
     setWeeklyTargets,
+    transfers,
+    setTransfers,
     vaultMeetings,
     setVaultMeetings,
     vaultDocs,

@@ -136,6 +136,14 @@ export type EodReport = {
   submittedAt: string
 }
 
+export type TransferRecord = {
+  id: string
+  dateKey: string
+  fromAgentId: string
+  toAgentId: string
+  successClosed: boolean
+}
+
 export type ExportFlags = {
   agents: boolean
   performanceHistory: boolean

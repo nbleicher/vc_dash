@@ -4,7 +4,7 @@ import { WeeklyTargetEditor } from '../components'
 import { Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, MetricCard, Select, TableWrap, Tabs, Textarea } from '../components'
 import { POLICY_STATUSES } from '../constants'
 import type { AuditRecord } from '../types'
-import type { PerfHistory, SpiffRecord, TaskPage } from '../types'
+import type { PerfHistory, SpiffRecord, TaskPage, TransferRecord } from '../types'
 import type { DataStore } from '../data'
 import { formatDateKey, formatLastParsedDate, formatNum, formatTimestamp, csvEscape, uid } from '../utils'
 
@@ -78,6 +78,10 @@ type Props = {
     cvr: number | null
   }>
   lastSnapshotLabel: string
+  transfers: TransferRecord[]
+  onAddTransfer: (transfer: Omit<TransferRecord, 'id'>) => void
+  onUpdateTransfer: (id: string, patch: Partial<TransferRecord>) => void
+  onDeleteTransfer: (id: string) => void
 }
 
 export function TasksPage({
@@ -112,6 +116,10 @@ export function TasksPage({
   setPerfHistory,
   agentPerformanceRows,
   lastSnapshotLabel,
+  transfers,
+  onAddTransfer,
+  onUpdateTransfer,
+  onDeleteTransfer,
 }: Props) {
   const [eodReportText, setEodReportText] = useState('')
   const [eodAgentSortBy, setEodAgentSortBy] = useState<'cpa' | 'sales'>('cpa')
@@ -129,6 +137,17 @@ export function TasksPage({
     resolutionTs: string | null
     notes: string
   } | null>(null)
+  const [transferForm, setTransferForm] = useState<{
+    dateKey: string
+    fromAgentId: string
+    toAgentId: string
+    successClosed: boolean
+  }>({
+    dateKey: todayKey,
+    fromAgentId: '',
+    toAgentId: '',
+    successClosed: false,
+  })
   const cancelAuditEdit = (): void => {
     setEditingAuditId(null)
     setAuditDraft(null)
@@ -232,6 +251,7 @@ export function TasksPage({
     { key: 'spiff' as const, label: 'Spiff' },
     { key: 'qa' as const, label: 'Daily QA' },
     { key: 'audit' as const, label: 'Action Needed Audit' },
+    { key: 'transfers' as const, label: 'Transfers' },
     { key: 'targets' as const, label: 'Weekly Targets' },
     { key: 'eodReport' as const, label: 'EOD Report' },
   ]
@@ -647,6 +667,145 @@ export function TasksPage({
                 )}
               </>
             )}
+          </div>
+        </Card>
+      )}
+
+      {taskPage === 'transfers' && (
+        <Card className="space-y-4">
+          <CardTitle>Transfers</CardTitle>
+          <p className="text-sm text-slate-500">
+            Track internal transfers between agents. These records are used to compute transfer-adjusted CPA on the Metrics page.
+          </p>
+          <form
+            className="form-grid"
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (!transferForm.fromAgentId || !transferForm.toAgentId) return
+              onAddTransfer({
+                dateKey: transferForm.dateKey,
+                fromAgentId: transferForm.fromAgentId,
+                toAgentId: transferForm.toAgentId,
+                successClosed: transferForm.successClosed,
+              })
+              setTransferForm((prev) => ({
+                ...prev,
+                dateKey: todayKey,
+                fromAgentId: '',
+                toAgentId: '',
+                successClosed: false,
+              }))
+            }}
+          >
+            <Field>
+              <FieldLabel>Date</FieldLabel>
+              <Input
+                type="date"
+                value={transferForm.dateKey}
+                max={todayKey}
+                onChange={(e) => setTransferForm((prev) => ({ ...prev, dateKey: e.target.value }))}
+              />
+            </Field>
+            <Field>
+              <FieldLabel>Agent who sent transfer</FieldLabel>
+              <Select
+                value={transferForm.fromAgentId}
+                onChange={(e) => setTransferForm((prev) => ({ ...prev, fromAgentId: e.target.value }))}
+              >
+                <option value="">Select agent</option>
+                {activeAgents.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel>Agent who received transfer</FieldLabel>
+              <Select
+                value={transferForm.toAgentId}
+                onChange={(e) => setTransferForm((prev) => ({ ...prev, toAgentId: e.target.value }))}
+              >
+                <option value="">Select agent</option>
+                {activeAgents.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field className="flex items-center gap-2">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={transferForm.successClosed}
+                  onChange={(e) =>
+                    setTransferForm((prev) => ({ ...prev, successClosed: e.target.checked }))
+                  }
+                />
+                <span className="text-sm text-slate-700">Transfer successfully closed</span>
+              </label>
+            </Field>
+            <Button
+              type="submit"
+              variant="default"
+              className="w-fit"
+              disabled={!transferForm.fromAgentId || !transferForm.toAgentId || !transferForm.dateKey}
+            >
+              Add transfer
+            </Button>
+          </form>
+
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-slate-700">Transfer History</h3>
+            <TableWrap>
+              <DataTable>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Successfully closed</th>
+                    <th aria-label="Actions" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {transfers.length === 0 && (
+                    <tr>
+                      <td colSpan={5}>N/A</td>
+                    </tr>
+                  )}
+                  {transfers
+                    .slice()
+                    .sort((a, b) => b.dateKey.localeCompare(a.dateKey))
+                    .map((row) => (
+                      <tr key={row.id}>
+                        <td>{formatDateKey(row.dateKey)}</td>
+                        <td>{agentName(row.fromAgentId)}</td>
+                        <td>{agentName(row.toAgentId)}</td>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={row.successClosed}
+                            onChange={(e) =>
+                              onUpdateTransfer(row.id, { successClosed: e.target.checked })
+                            }
+                          />
+                        </td>
+                        <td className="text-right">
+                          <Button
+                            type="button"
+                            variant="danger"
+                            onClick={() => onDeleteTransfer(row.id)}
+                          >
+                            Delete
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </DataTable>
+            </TableWrap>
           </div>
         </Card>
       )}

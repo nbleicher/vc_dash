@@ -125,6 +125,14 @@ export type EodReport = {
   submittedAt: string
 }
 
+export type TransferRecord = {
+  id: string
+  dateKey: string
+  fromAgentId: string
+  toAgentId: string
+  successClosed: boolean
+}
+
 export type StoreState = {
   agents: Agent[]
   snapshots: Snapshot[]
@@ -136,6 +144,7 @@ export type StoreState = {
   attendanceSubmissions: AttendanceSubmission[]
   intraSubmissions: IntraSubmission[]
   weeklyTargets: WeeklyTarget[]
+  transfers: TransferRecord[]
   vaultMeetings: VaultMeeting[]
   vaultDocs: VaultDoc[]
   eodReports: EodReport[]
