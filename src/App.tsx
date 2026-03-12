@@ -93,8 +93,6 @@ function App() {
     metricsDateEnd,
     setMetricsDateStart,
     setMetricsDateEnd,
-    qaPassRate,
-    auditRecoveryHours,
     activeAuditCount,
     setVaultAgentId,
     vaultHistoryView,
