@@ -698,15 +698,6 @@ export function TasksPage({
             }}
           >
             <Field>
-              <FieldLabel>Date</FieldLabel>
-              <Input
-                type="date"
-                value={transferForm.dateKey}
-                max={todayKey}
-                onChange={(e) => setTransferForm((prev) => ({ ...prev, dateKey: e.target.value }))}
-              />
-            </Field>
-            <Field>
               <FieldLabel>Agent who sent transfer</FieldLabel>
               <Select
                 value={transferForm.fromAgentId}
@@ -719,6 +710,15 @@ export function TasksPage({
                   </option>
                 ))}
               </Select>
+            </Field>
+            <Field>
+              <FieldLabel>Date</FieldLabel>
+              <Input
+                type="date"
+                value={transferForm.dateKey}
+                max={todayKey}
+                onChange={(e) => setTransferForm((prev) => ({ ...prev, dateKey: e.target.value }))}
+              />
             </Field>
             <Field>
               <FieldLabel>Agent who received transfer</FieldLabel>
