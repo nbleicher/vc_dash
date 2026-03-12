@@ -38,6 +38,10 @@ function baseProps() {
     setPerfHistory: vi.fn(),
     agentPerformanceRows: [] as Array<{ agentId: string; agentName: string; calls: number; sales: number; marketing: number; cpa: number | null; cvr: number | null }>,
     lastSnapshotLabel: 'N/A',
+    transfers: [],
+    onAddTransfer: vi.fn(),
+    onUpdateTransfer: vi.fn(),
+    onDeleteTransfer: vi.fn(),
   }
 }
 

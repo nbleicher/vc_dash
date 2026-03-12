@@ -1,5 +1,5 @@
 export type TopPage = 'dashboard' | 'tasks' | 'metrics' | 'eod' | 'vault' | 'settings'
-export type TaskPage = 'spiff' | 'qa' | 'audit' | 'targets' | 'eodReport'
+export type TaskPage = 'spiff' | 'qa' | 'audit' | 'transfers' | 'targets' | 'eodReport'
 export type VaultHistoryView = 'attendance' | 'qa' | 'audit' | 'targets'
 export type VaultScope = 'agent' | 'house'
 export type MetricsScope = 'house' | 'agent'
