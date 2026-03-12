@@ -120,6 +120,8 @@ export function TasksPage({
   const [showAddPastDayForm, setShowAddPastDayForm] = useState(false)
   const [addPastDayDateKey, setAddPastDayDateKey] = useState('')
   const [addPastDayRows, setAddPastDayRows] = useState<Record<string, { calls: string; sales: string; marketing: string }>>({})
+  const [editingEodDateKey, setEditingEodDateKey] = useState<string | null>(null)
+  const [editEodRows, setEditEodRows] = useState<Record<string, { calls: string; sales: string; marketing: string }>>({})
   const [auditHistoryExpanded, setAuditHistoryExpanded] = useState(false)
   const [editingAuditId, setEditingAuditId] = useState<string | null>(null)
   const [auditDraft, setAuditDraft] = useState<{
@@ -920,7 +922,9 @@ export function TasksPage({
                             <th className="p-2 font-medium text-slate-700 text-right">Sales</th>
                             <th className="p-2 font-medium text-slate-700 text-right">CPA</th>
                             <th className="p-2 font-medium text-slate-700">Preview</th>
-                            <th className="p-2 w-24" aria-label="Open" />
+                            <th className="p-2 text-right" aria-label="Actions">
+                              Open / Edit
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
@@ -938,13 +942,30 @@ export function TasksPage({
                               <td className="p-2 text-slate-600 truncate max-w-[200px]">
                                 {day.reportText ? `${day.reportText.slice(0, 50)}${day.reportText.length > 50 ? '…' : ''}` : '—'}
                               </td>
-                              <td className="p-2" onClick={(e) => e.stopPropagation()}>
+                              <td className="p-2 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
                                 <Button
                                   type="button"
                                   variant="secondary"
                                   onClick={() => setExpandedEodDateKey(day.dateKey)}
                                 >
                                   Open
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  onClick={() => {
+                                    setEditingEodDateKey(day.dateKey)
+                                    const initial: Record<string, { calls: string; sales: string; marketing: string }> = {}
+                                    for (const a of activeAgents) {
+                                      const row = day.agentRows.find((r) => r.agentId === a.id)
+                                      initial[a.id] = row
+                                        ? { calls: String(row.calls), sales: String(row.sales), marketing: String(row.marketing) }
+                                        : { calls: '', sales: '', marketing: '' }
+                                    }
+                                    setEditEodRows(initial)
+                                  }}
+                                >
+                                  Edit
                                 </Button>
                               </td>
                             </tr>
@@ -1041,6 +1062,147 @@ export function TasksPage({
                           >
                             Close
                           </Button>
+                        </div>
+                      </Card>
+                    </div>
+                  )
+                })()}
+                {editingEodDateKey && (() => {
+                  const day = eodHistoryDays.find((d) => d.dateKey === editingEodDateKey)
+                  if (!day) return null
+                  return (
+                    <div
+                      className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 overflow-y-auto"
+                      role="dialog"
+                      aria-modal="true"
+                      aria-labelledby="eod-edit-title"
+                      onClick={() => setEditingEodDateKey(null)}
+                    >
+                      <Card
+                        className="my-4 w-full max-w-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <CardTitle id="eod-edit-title" className="border-b border-slate-200 pb-3">
+                          Edit performance — {formatDateKey(editingEodDateKey)}
+                        </CardTitle>
+                        <div className="p-4 space-y-4">
+                          <p className="text-sm text-slate-500">
+                            Update calls, sales, and marketing per agent. Save replaces all performance data for this day.
+                          </p>
+                          <div className="overflow-x-auto rounded border border-slate-200 bg-white">
+                            <table className="w-full text-left text-sm">
+                              <thead>
+                                <tr className="border-b border-slate-200 bg-slate-50">
+                                  <th className="p-2 font-medium text-slate-700">Agent</th>
+                                  <th className="p-2 font-medium text-slate-700">Calls</th>
+                                  <th className="p-2 font-medium text-slate-700">Sales</th>
+                                  <th className="p-2 font-medium text-slate-700">Marketing</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {activeAgents.map((agent) => {
+                                  const row = editEodRows[agent.id] ?? { calls: '', sales: '', marketing: '' }
+                                  return (
+                                    <tr key={agent.id} className="border-b border-slate-100">
+                                      <td className="p-2 font-medium">{agent.name}</td>
+                                      <td className="p-2">
+                                        <Input
+                                          type="number"
+                                          min={0}
+                                          value={row.calls}
+                                          onChange={(e) =>
+                                            setEditEodRows((prev) => ({
+                                              ...prev,
+                                              [agent.id]: { ...(prev[agent.id] ?? { calls: '', sales: '', marketing: '' }), calls: e.target.value },
+                                            }))
+                                          }
+                                          placeholder="0"
+                                          className="w-20"
+                                        />
+                                      </td>
+                                      <td className="p-2">
+                                        <Input
+                                          type="number"
+                                          min={0}
+                                          value={row.sales}
+                                          onChange={(e) =>
+                                            setEditEodRows((prev) => ({
+                                              ...prev,
+                                              [agent.id]: { ...(prev[agent.id] ?? { calls: '', sales: '', marketing: '' }), sales: e.target.value },
+                                            }))
+                                          }
+                                          placeholder="0"
+                                          className="w-20"
+                                        />
+                                      </td>
+                                      <td className="p-2">
+                                        <Input
+                                          type="number"
+                                          min={0}
+                                          step={0.01}
+                                          value={row.marketing}
+                                          onChange={(e) =>
+                                            setEditEodRows((prev) => ({
+                                              ...prev,
+                                              [agent.id]: { ...(prev[agent.id] ?? { calls: '', sales: '', marketing: '' }), marketing: e.target.value },
+                                            }))
+                                          }
+                                          placeholder="0"
+                                          className="w-24"
+                                        />
+                                      </td>
+                                    </tr>
+                                  )
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant="default"
+                              onClick={() => {
+                                if (!editingEodDateKey) return
+                                const newRows: PerfHistory[] = []
+                                for (const agent of activeAgents) {
+                                  const row = editEodRows[agent.id]
+                                  if (!row) continue
+                                  const calls = Math.max(0, Math.floor(Number(row.calls) || 0))
+                                  const sales = Math.max(0, Number(row.sales) || 0)
+                                  const marketing = Math.max(0, Number(row.marketing) || 0)
+                                  if (calls === 0 && sales === 0 && marketing === 0) continue
+                                  const cpa = sales > 0 ? marketing / sales : null
+                                  const cvr = calls > 0 ? sales / calls : null
+                                  newRows.push({
+                                    id: uid('perf'),
+                                    dateKey: editingEodDateKey,
+                                    agentId: agent.id,
+                                    billableCalls: calls,
+                                    sales,
+                                    marketing,
+                                    cpa,
+                                    cvr,
+                                    frozenAt: new Date().toISOString(),
+                                  })
+                                }
+                                setPerfHistory((prev) => [...prev.filter((p) => p.dateKey !== editingEodDateKey), ...newRows])
+                                setEditingEodDateKey(null)
+                                setEditEodRows({})
+                              }}
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={() => {
+                                setEditingEodDateKey(null)
+                                setEditEodRows({})
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
                         </div>
                       </Card>
                     </div>

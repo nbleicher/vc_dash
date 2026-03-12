@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS snapshots (
   agentId TEXT NOT NULL,
   billableCalls INTEGER NOT NULL,
   sales INTEGER NOT NULL,
+  marketing REAL,
   updatedAt TEXT NOT NULL
 );
 
@@ -123,13 +124,6 @@ CREATE TABLE IF NOT EXISTS eod_reports (
   houseCpa REAL,
   reportText TEXT NOT NULL,
   submittedAt TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS house_6pm_snapshots (
-  dateKey TEXT PRIMARY KEY,
-  houseSales INTEGER NOT NULL,
-  houseCpa REAL,
-  capturedAt TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS app_meta (

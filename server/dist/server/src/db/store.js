@@ -3,6 +3,12 @@ export class SqliteStore {
     db;
     constructor(dbPath) {
         this.db = new Database(dbPath);
+        try {
+            this.db.exec('ALTER TABLE snapshots ADD COLUMN marketing REAL');
+        }
+        catch {
+            // ignore if column already exists or table is missing
+        }
     }
     close() {
         this.db.close();
@@ -22,7 +28,6 @@ export class SqliteStore {
             vaultMeetings: this.getVaultMeetings(),
             vaultDocs: this.getVaultDocs(),
             eodReports: this.getEodReports(),
-            house6pmSnapshots: this.getHouse6pmSnapshots(),
             lastPoliciesBotRun: await this.getLastPoliciesBotRun(),
             houseMarketing: await this.getHouseMarketing(),
         };
@@ -46,7 +51,7 @@ export class SqliteStore {
                     this.db.prepare('DELETE FROM snapshots').run();
                     for (const row of rows) {
                         this.db
-                            .prepare('INSERT INTO snapshots (id,dateKey,slot,slotLabel,agentId,billableCalls,sales,updatedAt) VALUES (@id,@dateKey,@slot,@slotLabel,@agentId,@billableCalls,@sales,@updatedAt)')
+                            .prepare('INSERT INTO snapshots (id,dateKey,slot,slotLabel,agentId,billableCalls,sales,marketing,updatedAt) VALUES (@id,@dateKey,@slot,@slotLabel,@agentId,@billableCalls,@sales,@marketing,@updatedAt)')
                             .run(row);
                     }
                     break;
@@ -143,14 +148,6 @@ export class SqliteStore {
                             .run(row);
                     }
                     break;
-                case 'house6pmSnapshots':
-                    this.db.prepare('DELETE FROM house_6pm_snapshots').run();
-                    for (const row of rows) {
-                        this.db
-                            .prepare('INSERT INTO house_6pm_snapshots (dateKey,houseSales,houseCpa,capturedAt) VALUES (@dateKey,@houseSales,@houseCpa,@capturedAt)')
-                            .run(row);
-                    }
-                    break;
             }
         });
         tx();
@@ -162,7 +159,7 @@ export class SqliteStore {
     }
     getSnapshots() {
         return this.db
-            .prepare('SELECT id,dateKey,slot,slotLabel,agentId,billableCalls,sales,updatedAt FROM snapshots')
+            .prepare('SELECT id,dateKey,slot,slotLabel,agentId,billableCalls,sales,marketing,updatedAt FROM snapshots')
             .all();
     }
     getPerfHistory() {
@@ -224,11 +221,6 @@ export class SqliteStore {
     getEodReports() {
         return this.db
             .prepare('SELECT id,weekKey,dateKey,houseSales,houseCpa,reportText,submittedAt FROM eod_reports')
-            .all();
-    }
-    getHouse6pmSnapshots() {
-        return this.db
-            .prepare('SELECT dateKey,houseSales,houseCpa,capturedAt FROM house_6pm_snapshots')
             .all();
     }
     readLastPoliciesBotRun() {

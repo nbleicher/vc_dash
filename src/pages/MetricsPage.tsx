@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { Card, CardTitle, DataTable, Field, FieldLabel, MetricCard, Select, TableWrap } from '../components'
+import { useMemo, useState } from 'react'
+import { Button, Card, CardTitle, DataTable, Field, FieldLabel, MetricCard, Select, TableWrap } from '../components'
 import type { MetricsScope, RankMetric, RankPeriod } from '../types'
 import { formatNum } from '../utils'
 
@@ -24,6 +24,11 @@ type Props = {
   setRankPeriod: (p: RankPeriod) => void
   kpiPeriod: RankPeriod
   setKpiPeriod: (p: RankPeriod) => void
+  metricsDateStart: string | null
+  metricsDateEnd: string | null
+  setMetricsDateStart: (s: string | null) => void
+  setMetricsDateEnd: (s: string | null) => void
+  metricsScopeDataCustom?: { sales: number; cpa: number | null; cvr: number | null }
 }
 
 export function MetricsPage({
@@ -33,8 +38,8 @@ export function MetricsPage({
   effectiveMetricsAgentId,
   activeAgents,
   metricsScopeData,
-  qaPassRate,
-  auditRecoveryHours,
+  qaPassRate: _qaPassRate,
+  auditRecoveryHours: _auditRecoveryHours,
   activeAuditCount,
   rankRows,
   rankMetric,
@@ -43,14 +48,30 @@ export function MetricsPage({
   setRankPeriod,
   kpiPeriod,
   setKpiPeriod,
+  metricsDateStart,
+  metricsDateEnd,
+  setMetricsDateStart,
+  setMetricsDateEnd,
+  metricsScopeDataCustom,
 }: Props) {
+  const [calendarOpen, setCalendarOpen] = useState(false)
+  const [calendarStart, setCalendarStart] = useState(metricsDateStart ?? '')
+  const [calendarEnd, setCalendarEnd] = useState(metricsDateEnd ?? '')
   const scopeValue = metricsScope === 'house' ? '__house__' : effectiveMetricsAgentId
+  const hasCustomRange = Boolean(metricsDateStart && metricsDateEnd && metricsDateStart !== metricsDateEnd)
   const selectedPeriodMetrics = useMemo(() => {
+    if (hasCustomRange && metricsScopeDataCustom) return metricsScopeDataCustom
     if (kpiPeriod === 'day') return metricsScopeData.daily
     if (kpiPeriod === 'week') return metricsScopeData.weekly
     return metricsScopeData.monthly
-  }, [kpiPeriod, metricsScopeData.daily, metricsScopeData.monthly, metricsScopeData.weekly])
-  const periodLabel = kpiPeriod === 'day' ? 'Daily' : kpiPeriod === 'week' ? 'Weekly' : 'Monthly'
+  }, [hasCustomRange, metricsScopeDataCustom, kpiPeriod, metricsScopeData.daily, metricsScopeData.monthly, metricsScopeData.weekly])
+  const periodLabel = hasCustomRange
+    ? 'Custom range'
+    : kpiPeriod === 'day'
+      ? 'Daily'
+      : kpiPeriod === 'week'
+        ? 'Weekly'
+        : 'Monthly'
 
   return (
     <Card className="space-y-4">
@@ -80,11 +101,95 @@ export function MetricsPage({
         </Field>
         <Field className="min-w-[180px]">
           <FieldLabel>KPI Period</FieldLabel>
-          <Select value={kpiPeriod} onChange={(e) => setKpiPeriod(e.target.value as 'day' | 'week' | 'month')}>
+          <Select
+            value={hasCustomRange ? 'custom' : kpiPeriod}
+            onChange={(e) => {
+              const v = e.target.value
+              if (v === 'custom') return
+              setKpiPeriod(v as 'day' | 'week' | 'month')
+            }}
+          >
             <option value="day">Day</option>
             <option value="week">Week</option>
             <option value="month">Month</option>
+            {hasCustomRange && <option value="custom">Custom range</option>}
           </Select>
+        </Field>
+        <Field className="relative">
+          <FieldLabel>Date / Range</FieldLabel>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setCalendarOpen((o) => !o)
+                if (!calendarOpen) {
+                  setCalendarStart(metricsDateStart ?? '')
+                  setCalendarEnd(metricsDateEnd ?? '')
+                }
+              }}
+            >
+              Calendar
+            </Button>
+            {(metricsDateStart || metricsDateEnd) && (
+              <span className="text-sm text-slate-600">
+                {metricsDateStart}
+                {hasCustomRange ? ` – ${metricsDateEnd}` : ''}
+              </span>
+            )}
+          </div>
+          {calendarOpen && (
+            <div className="absolute left-0 top-full z-10 mt-1 min-w-[280px] rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
+              <div className="space-y-2">
+                <Field>
+                  <FieldLabel>Start date</FieldLabel>
+                  <input
+                    type="date"
+                    value={calendarStart}
+                    onChange={(e) => setCalendarStart(e.target.value)}
+                    className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel>End date (optional, for range)</FieldLabel>
+                  <input
+                    type="date"
+                    value={calendarEnd}
+                    onChange={(e) => setCalendarEnd(e.target.value)}
+                    className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+                  />
+                </Field>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="default"
+                    onClick={() => {
+                      if (calendarStart) {
+                        setMetricsDateStart(calendarStart)
+                        setMetricsDateEnd(calendarEnd && calendarEnd !== calendarStart ? calendarEnd : null)
+                        setCalendarOpen(false)
+                      }
+                    }}
+                  >
+                    Apply
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      setMetricsDateStart(null)
+                      setMetricsDateEnd(null)
+                      setCalendarStart('')
+                      setCalendarEnd('')
+                      setCalendarOpen(false)
+                    }}
+                  >
+                    Clear
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </Field>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -94,14 +199,18 @@ export function MetricsPage({
           value={selectedPeriodMetrics.cpa === null ? 'N/A' : `$${formatNum(selectedPeriodMetrics.cpa)}`}
         />
         <MetricCard title={`${periodLabel} CVR`} value={selectedPeriodMetrics.cvr === null ? 'N/A' : `${formatNum(selectedPeriodMetrics.cvr * 100)}%`} />
+        {/* QA Pass Rate – uncomment to show
         <MetricCard
           title="QA Pass Rate"
           value={qaPassRate === null ? 'N/A' : `${formatNum(qaPassRate * 100)}%`}
         />
+        */}
+        {/* Audit Recovery – uncomment to show
         <MetricCard
           title="Audit Recovery (hrs)"
           value={auditRecoveryHours === null ? 'N/A' : formatNum(auditRecoveryHours)}
         />
+        */}
         <MetricCard title="Active Action Needed" value={activeAuditCount} />
       </div>
 

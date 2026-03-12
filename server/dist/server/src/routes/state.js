@@ -13,7 +13,6 @@ const keySchema = z.enum([
     'vaultMeetings',
     'vaultDocs',
     'eodReports',
-    'house6pmSnapshots',
 ]);
 export async function stateRoutes(app) {
     app.get('/state', { preHandler: [app.authenticate] }, async (_request, reply) => {

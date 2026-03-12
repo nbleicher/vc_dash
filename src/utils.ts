@@ -127,6 +127,23 @@ export function monFriDatesForWeek(weekKey: string): string[] {
   return out
 }
 
+/** All dateKeys (YYYY-MM-DD) between start and end inclusive. */
+export function dateKeysBetween(startKey: string, endKey: string): string[] {
+  const [sy, sm, sd] = startKey.split('-').map(Number)
+  const [ey, em, ed] = endKey.split('-').map(Number)
+  const cur = new Date(Date.UTC(sy, sm - 1, sd, 12, 0, 0))
+  const endDate = new Date(Date.UTC(ey, em - 1, ed, 12, 0, 0))
+  const out: string[] = []
+  while (cur <= endDate) {
+    const y = cur.getUTCFullYear()
+    const m = String(cur.getUTCMonth() + 1).padStart(2, '0')
+    const d = String(cur.getUTCDate()).padStart(2, '0')
+    out.push(`${y}-${m}-${d}`)
+    cur.setUTCDate(cur.getUTCDate() + 1)
+  }
+  return out
+}
+
 export function computeMetrics(
   calls: number,
   sales: number

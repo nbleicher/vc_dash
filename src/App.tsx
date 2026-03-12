@@ -86,6 +86,10 @@ function App() {
     setRankPeriod,
     kpiPeriod,
     setKpiPeriod,
+    metricsDateStart,
+    metricsDateEnd,
+    setMetricsDateStart,
+    setMetricsDateEnd,
     qaPassRate,
     auditRecoveryHours,
     activeAuditCount,
@@ -641,6 +645,7 @@ function App() {
             effectiveMetricsAgentId={effectiveMetricsAgentId}
             activeAgents={activeAgents}
             metricsScopeData={metricsScopeData}
+            metricsScopeDataCustom={metricsScopeData.custom}
             qaPassRate={qaPassRate}
             auditRecoveryHours={auditRecoveryHours}
             activeAuditCount={activeAuditCount}
@@ -651,6 +656,10 @@ function App() {
             setRankPeriod={setRankPeriod}
             kpiPeriod={kpiPeriod}
             setKpiPeriod={setKpiPeriod}
+            metricsDateStart={metricsDateStart}
+            metricsDateEnd={metricsDateEnd}
+            setMetricsDateStart={setMetricsDateStart}
+            setMetricsDateEnd={setMetricsDateEnd}
           />
         )}
 

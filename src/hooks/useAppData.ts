@@ -23,6 +23,7 @@ import {
   uid,
   weekKeyFromDateKey,
   weekKeyMonFri,
+  dateKeysBetween,
 } from '../utils'
 
 type SlotConfig = (typeof SLOT_CONFIG)[number]
@@ -56,6 +57,8 @@ export function useAppData(store: DataStore) {
   const [rankMetric, setRankMetric] = useState<RankMetric>('Sales')
   const [rankPeriod, setRankPeriod] = useState<RankPeriod>('day')
   const [kpiPeriod, setKpiPeriod] = useState<RankPeriod>('day')
+  const [metricsDateStart, setMetricsDateStart] = useState<string | null>(null)
+  const [metricsDateEnd, setMetricsDateEnd] = useState<string | null>(null)
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 30_000)
@@ -271,6 +274,7 @@ export function useAppData(store: DataStore) {
     () => (activeAgents.some((a) => a.id === metricsAgentId) ? metricsAgentId : activeAgents[0]?.id ?? ''),
     [activeAgents, metricsAgentId],
   )
+  const effectiveMetricsDateKey = metricsDateStart ?? todayKey
   const metricsScopeData = useMemo(() => {
     const activeIds = new Set(activeAgents.map((agent) => agent.id))
     const inScope = (agentId: string): boolean =>
@@ -310,21 +314,22 @@ export function useAppData(store: DataStore) {
 
     const dailyRows: PerfHistory[] = []
     for (const agent of scopeAgents) {
-      const row = rowForDayAgent(todayKey, agent.id)
+      const row = rowForDayAgent(effectiveMetricsDateKey, agent.id)
       if (row) dailyRows.push(row)
     }
 
+    const metricsWeekDates = monFriDatesForWeek(weekKeyFromDateKey(effectiveMetricsDateKey))
     const weeklyRows: PerfHistory[] = []
-    for (const dateKey of weekDates) {
+    for (const dateKey of metricsWeekDates) {
       for (const agent of scopeAgents) {
         const row = rowForDayAgent(dateKey, agent.id)
         if (row) weeklyRows.push(row)
       }
     }
 
-    const monthPrefix = todayKey.slice(0, 7)
-    const year = Number(todayKey.slice(0, 4))
-    const month = Number(todayKey.slice(5, 7))
+    const monthPrefix = effectiveMetricsDateKey.slice(0, 7)
+    const year = Number(effectiveMetricsDateKey.slice(0, 4))
+    const month = Number(effectiveMetricsDateKey.slice(5, 7))
     const daysInMonth = new Date(year, month, 0).getDate()
     const monthDates = Array.from(
       { length: daysInMonth },
@@ -346,19 +351,48 @@ export function useAppData(store: DataStore) {
       const cvr = calls > 0 ? sales / calls : null
       return { calls, sales, marketing, cpa, cvr }
     }
-    return { daily: aggregate(dailyRows), weekly: aggregate(weeklyRows), monthly: aggregate(monthlyRows) }
-  }, [metricsScope, effectiveMetricsAgentId, perfHistory, snapshots, todayKey, weekDates, liveByAgent, activeAgents])
+
+    const result: {
+      daily: { sales: number; cpa: number | null; cvr: number | null }
+      weekly: { sales: number; cpa: number | null; cvr: number | null }
+      monthly: { sales: number; cpa: number | null; cvr: number | null }
+      custom?: { sales: number; cpa: number | null; cvr: number | null }
+    } = {
+      daily: aggregate(dailyRows),
+      weekly: aggregate(weeklyRows),
+      monthly: aggregate(monthlyRows),
+    }
+
+    if (metricsDateStart && metricsDateEnd && metricsDateStart !== metricsDateEnd) {
+      const rangeDates = dateKeysBetween(metricsDateStart, metricsDateEnd)
+      const customRows: PerfHistory[] = []
+      for (const dateKey of rangeDates) {
+        for (const agent of scopeAgents) {
+          const row = rowForDayAgent(dateKey, agent.id)
+          if (row) customRows.push(row)
+        }
+      }
+      result.custom = aggregate(customRows)
+    }
+
+    return result
+  }, [metricsScope, effectiveMetricsAgentId, perfHistory, snapshots, todayKey, liveByAgent, activeAgents, effectiveMetricsDateKey, metricsDateStart, metricsDateEnd])
 
   const rankRows = useMemo(() => {
     const activeIds = new Set(activeAgents.map((agent) => agent.id))
     const byAgent = new Map<string, { calls: number; sales: number; marketing: number }>()
-    let periodDates: Set<string> = new Set([todayKey])
-    if (rankPeriod === 'week') {
-      periodDates = new Set(monFriDatesForWeek(weekKeyMonFri(now)))
-    } else if (rankPeriod === 'month') {
-      const prefix = `${est.year}-${String(est.month).padStart(2, '0')}-`
-      periodDates = new Set(perfHistory.filter((x) => x.dateKey.startsWith(prefix)).map((x) => x.dateKey))
-      if (todayKey.startsWith(prefix)) periodDates.add(todayKey)
+    let periodDates: Set<string>
+    if (metricsDateStart && metricsDateEnd && metricsDateStart !== metricsDateEnd) {
+      periodDates = new Set(dateKeysBetween(metricsDateStart, metricsDateEnd))
+    } else {
+      periodDates = new Set([effectiveMetricsDateKey])
+      if (rankPeriod === 'week') {
+        periodDates = new Set(monFriDatesForWeek(weekKeyFromDateKey(effectiveMetricsDateKey)))
+      } else if (rankPeriod === 'month') {
+        const prefix = effectiveMetricsDateKey.slice(0, 7)
+        periodDates = new Set(perfHistory.filter((x) => x.dateKey.startsWith(prefix)).map((x) => x.dateKey))
+        if (effectiveMetricsDateKey.startsWith(prefix)) periodDates.add(effectiveMetricsDateKey)
+      }
     }
     for (const row of perfHistory.filter((x) => periodDates.has(x.dateKey) && activeIds.has(x.agentId))) {
       if (row.dateKey === todayKey && liveByAgent.has(row.agentId)) continue
@@ -388,17 +422,24 @@ export function useAppData(store: DataStore) {
       return (a.cpa ?? Number.POSITIVE_INFINITY) - (b.cpa ?? Number.POSITIVE_INFINITY)
     })
     return rows
-  }, [activeAgents, est.month, est.year, liveByAgent, now, perfHistory, rankMetric, rankPeriod, todayKey])
+  }, [activeAgents, liveByAgent, perfHistory, rankMetric, rankPeriod, todayKey, effectiveMetricsDateKey, metricsDateStart, metricsDateEnd])
 
   const activeIds = useMemo(() => new Set(activeAgents.map((agent) => agent.id)), [activeAgents])
-  const currentMonthPrefix = todayKey.slice(0, 7)
+  const metricsMonthPrefix = effectiveMetricsDateKey.slice(0, 7)
+  const metricsWeekDatesForPeriod = useMemo(
+    () => monFriDatesForWeek(weekKeyFromDateKey(effectiveMetricsDateKey)),
+    [effectiveMetricsDateKey],
+  )
   const isInKpiPeriod = useCallback(
     (dateKey: string): boolean => {
-      if (kpiPeriod === 'day') return dateKey === todayKey
-      if (kpiPeriod === 'week') return weekDates.includes(dateKey)
-      return dateKey.startsWith(currentMonthPrefix)
+      if (metricsDateStart && metricsDateEnd && metricsDateStart !== metricsDateEnd) {
+        return dateKey >= metricsDateStart && dateKey <= metricsDateEnd
+      }
+      if (kpiPeriod === 'day') return dateKey === effectiveMetricsDateKey
+      if (kpiPeriod === 'week') return metricsWeekDatesForPeriod.includes(dateKey)
+      return dateKey.startsWith(metricsMonthPrefix)
     },
-    [kpiPeriod, todayKey, weekDates, currentMonthPrefix],
+    [kpiPeriod, effectiveMetricsDateKey, metricsWeekDatesForPeriod, metricsMonthPrefix, metricsDateStart, metricsDateEnd],
   )
 
   const qaPassRate = useMemo(() => {
@@ -778,6 +819,10 @@ export function useAppData(store: DataStore) {
     setRankPeriod,
     kpiPeriod,
     setKpiPeriod,
+    metricsDateStart,
+    metricsDateEnd,
+    setMetricsDateStart,
+    setMetricsDateEnd,
     qaPassRate,
     auditRecoveryHours,
     activeAuditCount,
