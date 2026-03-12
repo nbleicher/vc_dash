@@ -213,21 +213,21 @@ export function MetricsPage({
             Rankings use the same date or range selected in the Metrics calendar above.
           </p>
         </div>
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="grid gap-6 xl:grid-cols-2">
           <div>
-            <h3 className="mb-2 text-sm font-medium">Standard</h3>
+            <h3 className="mb-3 text-sm font-semibold text-slate-800">Standard</h3>
             <TableWrap>
-              <DataTable className="w-auto min-w-0">
+              <DataTable className="w-full max-w-[900px] mx-auto">
                 <thead>
                   <tr>
-                    <th className="px-2 py-1 text-left">Rank</th>
-                    <th className="px-2 py-1 text-left">Agent</th>
-                    <th className="px-2 py-1 text-right">Sales</th>
-                    <th className="px-2 py-1 text-right">CPA</th>
-                    <th className="px-2 py-1 text-right">CVR</th>
+                    <th className="px-2 py-1 text-left border-b border-slate-200">Rank</th>
+                    <th className="px-2 py-1 text-left border-b border-slate-200">Agent</th>
+                    <th className="px-2 py-1 text-right border-b border-slate-200">Sales</th>
+                    <th className="px-2 py-1 text-right border-b border-slate-200">CPA</th>
+                    <th className="px-2 py-1 text-right border-b border-slate-200">CVR</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="[&_tr:nth-child(even)]:bg-transparent">
                   {rankRows.length === 0 && (
                     <tr>
                       <td colSpan={5}>N/A</td>
@@ -251,19 +251,19 @@ export function MetricsPage({
             </TableWrap>
           </div>
           <div>
-            <h3 className="mb-2 text-sm font-medium">Agent Ranking (transfer adjusted)</h3>
+            <h3 className="mb-3 text-sm font-semibold text-slate-800">Agent Ranking (transfer adjusted)</h3>
             <TableWrap>
-              <DataTable className="w-auto min-w-0">
+              <DataTable className="w-full max-w-[900px] mx-auto">
                 <thead>
                   <tr>
-                    <th className="px-2 py-1 text-left">Rank</th>
-                    <th className="px-2 py-1 text-left">Agent</th>
-                    <th className="px-2 py-1 text-right">Sales</th>
-                    <th className="px-2 py-1 text-right">CPA</th>
-                    <th className="px-2 py-1 text-right">CVR</th>
+                    <th className="px-2 py-1 text-left border-b border-slate-200">Rank</th>
+                    <th className="px-2 py-1 text-left border-b border-slate-200">Agent</th>
+                    <th className="px-2 py-1 text-right border-b border-slate-200">Sales</th>
+                    <th className="px-2 py-1 text-right border-b border-slate-200">CPA</th>
+                    <th className="px-2 py-1 text-right border-b border-slate-200">CVR</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="[&_tr:nth-child(even)]:bg-transparent">
                   {rankRowsTransferAdjusted.length === 0 && (
                     <tr>
                       <td colSpan={5}>N/A</td>
