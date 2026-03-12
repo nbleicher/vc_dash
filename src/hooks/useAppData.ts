@@ -382,7 +382,6 @@ export function useAppData(store: DataStore) {
 
   const buildRankBaseByAgent = useCallback(
     (
-      metricRankPeriod: RankPeriod,
       dateStart: string | null,
       dateEnd: string | null,
     ): { byAgent: Map<string, { calls: number; sales: number; marketing: number }>; periodDates: Set<string> } => {
@@ -391,15 +390,10 @@ export function useAppData(store: DataStore) {
       let periodDates: Set<string>
       if (dateStart && dateEnd && dateStart !== dateEnd) {
         periodDates = new Set(dateKeysBetween(dateStart, dateEnd))
+      } else if (dateStart) {
+        periodDates = new Set([dateStart])
       } else {
         periodDates = new Set([effectiveMetricsDateKey])
-        if (metricRankPeriod === 'week') {
-          periodDates = new Set(monFriDatesForWeek(weekKeyFromDateKey(effectiveMetricsDateKey)))
-        } else if (metricRankPeriod === 'month') {
-          const prefix = effectiveMetricsDateKey.slice(0, 7)
-          periodDates = new Set(perfHistory.filter((x) => x.dateKey.startsWith(prefix)).map((x) => x.dateKey))
-          if (effectiveMetricsDateKey.startsWith(prefix)) periodDates.add(effectiveMetricsDateKey)
-        }
       }
       for (const row of perfHistory.filter((x) => periodDates.has(x.dateKey) && activeIds.has(x.agentId))) {
         if (row.dateKey === todayKey && liveByAgent.has(row.agentId)) continue
@@ -425,7 +419,7 @@ export function useAppData(store: DataStore) {
   )
 
   const rankRows = useMemo(() => {
-    const { byAgent } = buildRankBaseByAgent(rankPeriod, metricsDateStart, metricsDateEnd)
+    const { byAgent } = buildRankBaseByAgent(metricsDateStart, metricsDateEnd)
     const rows = activeAgents.map((agent) => {
       const t = byAgent.get(agent.id) ?? { calls: 0, sales: 0, marketing: 0 }
       return {
@@ -442,10 +436,10 @@ export function useAppData(store: DataStore) {
       return (a.cpa ?? Number.POSITIVE_INFINITY) - (b.cpa ?? Number.POSITIVE_INFINITY)
     })
     return rows
-  }, [activeAgents, buildRankBaseByAgent, rankMetric, rankPeriod, metricsDateStart, metricsDateEnd])
+  }, [activeAgents, buildRankBaseByAgent, rankMetric, metricsDateStart, metricsDateEnd])
 
   const rankRowsTransferAdjusted = useMemo(() => {
-    const { byAgent, periodDates } = buildRankBaseByAgent(rankPeriod, metricsDateStart, metricsDateEnd)
+    const { byAgent, periodDates } = buildRankBaseByAgent(metricsDateStart, metricsDateEnd)
 
     const salesDeltaByAgent = new Map<string, number>()
     const inPeriod = (dateKey: string): boolean => periodDates.has(dateKey)
@@ -481,7 +475,7 @@ export function useAppData(store: DataStore) {
     })
 
     return rows
-  }, [activeAgents, buildRankBaseByAgent, metricsDateEnd, metricsDateStart, rankPeriod, transfers])
+  }, [activeAgents, buildRankBaseByAgent, metricsDateEnd, metricsDateStart, transfers])
 
   const activeIds = useMemo(() => new Set(activeAgents.map((agent) => agent.id)), [activeAgents])
   const metricsMonthPrefix = effectiveMetricsDateKey.slice(0, 7)

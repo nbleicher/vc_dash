@@ -85,8 +85,6 @@ function App() {
     rankRowsTransferAdjusted,
     rankMetric,
     setRankMetric,
-    rankPeriod,
-    setRankPeriod,
     kpiPeriod,
     setKpiPeriod,
     metricsDateStart,
@@ -674,8 +672,6 @@ function App() {
             rankRowsTransferAdjusted={rankRowsTransferAdjusted}
             rankMetric={rankMetric}
             setRankMetric={setRankMetric}
-            rankPeriod={rankPeriod}
-            setRankPeriod={setRankPeriod}
             kpiPeriod={kpiPeriod}
             setKpiPeriod={setKpiPeriod}
             metricsDateStart={metricsDateStart}
