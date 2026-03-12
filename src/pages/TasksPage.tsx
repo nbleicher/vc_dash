@@ -916,102 +916,39 @@ export function TasksPage({
                       <table className="w-full text-left text-sm">
                         <thead className="sticky top-0 z-10 bg-slate-100">
                           <tr className="border-b border-slate-200">
-                            <th className="p-2 w-8" aria-label="Expand" />
                             <th className="p-2 font-medium text-slate-700">Date</th>
                             <th className="p-2 font-medium text-slate-700 text-right">Sales</th>
                             <th className="p-2 font-medium text-slate-700 text-right">CPA</th>
                             <th className="p-2 font-medium text-slate-700">Preview</th>
+                            <th className="p-2 w-24" aria-label="Open" />
                           </tr>
                         </thead>
                         <tbody>
-                          {eodHistoryDays.map((day) => {
-                            const isExpanded = expandedEodDateKey === day.dateKey
-                            return (
-                              <React.Fragment key={day.dateKey}>
-                                <tr
-                                  key={day.dateKey}
-                                  className={`border-b border-slate-200 cursor-pointer hover:bg-slate-100/80 ${isExpanded ? 'bg-slate-100' : ''}`}
-                                  onClick={() => setExpandedEodDateKey((k) => (k === day.dateKey ? null : day.dateKey))}
+                          {eodHistoryDays.map((day) => (
+                            <tr
+                              key={day.dateKey}
+                              className="border-b border-slate-200 cursor-pointer hover:bg-slate-100/80"
+                              onClick={() => setExpandedEodDateKey(day.dateKey)}
+                            >
+                              <td className="p-2 font-medium">{formatDateKey(day.dateKey)}</td>
+                              <td className="p-2 text-right tabular-nums">{day.houseSales}</td>
+                              <td className="p-2 text-right tabular-nums">
+                                {day.houseCpa === null ? 'N/A' : `$${formatNum(day.houseCpa)}`}
+                              </td>
+                              <td className="p-2 text-slate-600 truncate max-w-[200px]">
+                                {day.reportText ? `${day.reportText.slice(0, 50)}${day.reportText.length > 50 ? '…' : ''}` : '—'}
+                              </td>
+                              <td className="p-2" onClick={(e) => e.stopPropagation()}>
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  onClick={() => setExpandedEodDateKey(day.dateKey)}
                                 >
-                                  <td className="p-2 text-slate-500">
-                                    {isExpanded ? '▼' : '▶'}
-                                  </td>
-                                  <td className="p-2 font-medium">{formatDateKey(day.dateKey)}</td>
-                                  <td className="p-2 text-right tabular-nums">{day.houseSales}</td>
-                                  <td className="p-2 text-right tabular-nums">
-                                    {day.houseCpa === null ? 'N/A' : `$${formatNum(day.houseCpa)}`}
-                                  </td>
-                                  <td className="p-2 text-slate-600 truncate max-w-[200px]">
-                                    {day.reportText ? `${day.reportText.slice(0, 50)}${day.reportText.length > 50 ? '…' : ''}` : '—'}
-                                  </td>
-                                </tr>
-                                {isExpanded && (
-                                  <tr key={`${day.dateKey}-exp`}>
-                                    <td colSpan={5} className="p-0 bg-white">
-                                      <div className="border-t border-slate-200 p-4 space-y-4">
-                                        <div className="grid gap-3 sm:grid-cols-2 max-w-md">
-                                          <MetricCard title="House Sales" value={day.houseSales} />
-                                          <MetricCard
-                                            title="House CPA"
-                                            value={day.houseCpa === null ? 'N/A' : `$${formatNum(day.houseCpa)}`}
-                                          />
-                                        </div>
-                                        {day.reportText ? (
-                                          <div>
-                                            <p className="text-xs font-medium text-slate-500 mb-1">Report</p>
-                                            <p className="text-sm text-slate-700 whitespace-pre-wrap">{day.reportText}</p>
-                                          </div>
-                                        ) : null}
-                                        <div>
-                                          <p className="text-xs font-medium text-slate-500 mb-2">Agent performance</p>
-                                          {day.agentRows.length === 0 ? (
-                                            <p className="text-sm text-slate-500">No performance data for this day.</p>
-                                          ) : (
-                                            <div className="overflow-x-auto rounded border border-slate-200">
-                                              <table className="w-full text-left text-sm">
-                                                <thead>
-                                                  <tr className="border-b border-slate-200 bg-slate-50">
-                                                    <th className="p-2 font-medium text-slate-700">Agent</th>
-                                                    <th className="p-2 font-medium text-slate-700 text-right">CPA</th>
-                                                    <th className="p-2 font-medium text-slate-700 text-right">Sales</th>
-                                                    <th className="p-2 font-medium text-slate-700 text-right">Calls</th>
-                                                    <th className="p-2 font-medium text-slate-700 text-right">Marketing</th>
-                                                    <th className="p-2 font-medium text-slate-700 text-right">CVR</th>
-                                                  </tr>
-                                                </thead>
-                                                <tbody>
-                                                  {day.agentRows.map((row) => {
-                                                    const cpaOverThreshold = row.cpa !== null && row.cpa > CPA_HIGHLIGHT_THRESHOLD
-                                                    return (
-                                                      <tr
-                                                        key={row.agentId}
-                                                        className={`border-b border-slate-100 ${cpaOverThreshold ? 'bg-red-500/10' : ''}`}
-                                                      >
-                                                        <td className="p-2 font-medium">{row.agentName}</td>
-                                                        <td className="p-2 text-right tabular-nums">
-                                                          {row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}
-                                                        </td>
-                                                        <td className="p-2 text-right tabular-nums">{row.sales}</td>
-                                                        <td className="p-2 text-right tabular-nums">{row.calls}</td>
-                                                        <td className="p-2 text-right tabular-nums">${formatNum(row.marketing, 0)}</td>
-                                                        <td className="p-2 text-right tabular-nums">
-                                                          {row.cvr === null ? 'N/A' : `${formatNum(row.cvr * 100)}%`}
-                                                        </td>
-                                                      </tr>
-                                                    )
-                                                  })}
-                                                </tbody>
-                                              </table>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                )}
-                              </React.Fragment>
-                            )
-                          })}
+                                  Open
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
@@ -1019,6 +956,96 @@ export function TasksPage({
                 ) : (
                   <p className="text-sm text-slate-500">No EOD history yet. Submit a report or add performance for a past day.</p>
                 )}
+                {expandedEodDateKey && (() => {
+                  const day = eodHistoryDays.find((d) => d.dateKey === expandedEodDateKey)
+                  if (!day) return null
+                  return (
+                    <div
+                      className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 overflow-y-auto"
+                      role="dialog"
+                      aria-modal="true"
+                      aria-labelledby="eod-detail-title"
+                      onClick={() => setExpandedEodDateKey(null)}
+                    >
+                      <Card
+                        className="my-4 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <CardTitle id="eod-detail-title" className="border-b border-slate-200 pb-3">
+                          EOD Report — {formatDateKey(day.dateKey)}
+                        </CardTitle>
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                          <div className="grid gap-3 sm:grid-cols-2 max-w-md">
+                            <MetricCard title="House Sales" value={day.houseSales} />
+                            <MetricCard
+                              title="House CPA"
+                              value={day.houseCpa === null ? 'N/A' : `$${formatNum(day.houseCpa)}`}
+                            />
+                          </div>
+                          {day.reportText ? (
+                            <div>
+                              <p className="text-xs font-medium text-slate-500 mb-1">Report</p>
+                              <p className="text-sm text-slate-700 whitespace-pre-wrap">{day.reportText}</p>
+                            </div>
+                          ) : null}
+                          <div>
+                            <p className="text-xs font-medium text-slate-500 mb-2">Agent performance</p>
+                            {day.agentRows.length === 0 ? (
+                              <p className="text-sm text-slate-500">No performance data for this day.</p>
+                            ) : (
+                              <div className="overflow-x-auto rounded border border-slate-200">
+                                <table className="w-full text-left text-sm">
+                                  <thead>
+                                    <tr className="border-b border-slate-200 bg-slate-50">
+                                      <th className="p-2 font-medium text-slate-700">Agent</th>
+                                      <th className="p-2 font-medium text-slate-700 text-right">CPA</th>
+                                      <th className="p-2 font-medium text-slate-700 text-right">Sales</th>
+                                      <th className="p-2 font-medium text-slate-700 text-right">Calls</th>
+                                      <th className="p-2 font-medium text-slate-700 text-right">Marketing</th>
+                                      <th className="p-2 font-medium text-slate-700 text-right">CVR</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {day.agentRows.map((row) => {
+                                      const cpaOverThreshold = row.cpa !== null && row.cpa > CPA_HIGHLIGHT_THRESHOLD
+                                      return (
+                                        <tr
+                                          key={row.agentId}
+                                          className={`border-b border-slate-100 ${cpaOverThreshold ? 'bg-red-500/10' : ''}`}
+                                        >
+                                          <td className="p-2 font-medium">{row.agentName}</td>
+                                          <td className="p-2 text-right tabular-nums">
+                                            {row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}
+                                          </td>
+                                          <td className="p-2 text-right tabular-nums">{row.sales}</td>
+                                          <td className="p-2 text-right tabular-nums">{row.calls}</td>
+                                          <td className="p-2 text-right tabular-nums">${formatNum(row.marketing, 0)}</td>
+                                          <td className="p-2 text-right tabular-nums">
+                                            {row.cvr === null ? 'N/A' : `${formatNum(row.cvr * 100)}%`}
+                                          </td>
+                                        </tr>
+                                      )
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="border-t border-slate-200 p-4 bg-slate-50">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="w-full sm:w-auto"
+                            onClick={() => setExpandedEodDateKey(null)}
+                          >
+                            Close
+                          </Button>
+                        </div>
+                      </Card>
+                    </div>
+                  )
+                })()}
               </div>
             </div>
           </div>

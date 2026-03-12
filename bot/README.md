@@ -118,6 +118,7 @@ If you already have other cron jobs, add only the `15 21` line and ensure `CRON_
 cd ~/bot
 ./venv/bin/python freeze_eod.py --backfill-all
 ```
+**Update bot on VPS then backfill:** If the bot code lives in a git clone on the VPS (e.g. `~/vc_dash`), from the repo root run `./scripts/vps-update-and-backfill.sh` to pull and run backfill. If you only copy the `bot/` folder to the VPS, after copying updated files run `cd ~/bot && ./run_backfill_all.sh`.
 To backfill only a date range (START and END inclusive, YYYY-MM-DD):
 ```bash
 ./venv/bin/python freeze_eod.py --backfill-range 2025-03-01 2025-03-07
