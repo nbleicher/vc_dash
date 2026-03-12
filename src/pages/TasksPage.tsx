@@ -141,11 +141,13 @@ export function TasksPage({
     dateKey: string
     fromAgentId: string
     toAgentId: string
+    clientName: string
     successClosed: boolean
   }>({
     dateKey: todayKey,
     fromAgentId: '',
     toAgentId: '',
+    clientName: '',
     successClosed: false,
   })
   const cancelAuditEdit = (): void => {
@@ -681,7 +683,13 @@ export function TasksPage({
             className="form-grid"
             onSubmit={(e) => {
               e.preventDefault()
-              if (!transferForm.fromAgentId || !transferForm.toAgentId) return
+              if (
+                !transferForm.fromAgentId ||
+                !transferForm.toAgentId ||
+                !transferForm.dateKey ||
+                !transferForm.clientName.trim()
+              )
+                return
               onAddTransfer({
                 dateKey: transferForm.dateKey,
                 fromAgentId: transferForm.fromAgentId,
@@ -693,6 +701,7 @@ export function TasksPage({
                 dateKey: todayKey,
                 fromAgentId: '',
                 toAgentId: '',
+                clientName: '',
                 successClosed: false,
               }))
             }}
@@ -718,6 +727,14 @@ export function TasksPage({
                 value={transferForm.dateKey}
                 max={todayKey}
                 onChange={(e) => setTransferForm((prev) => ({ ...prev, dateKey: e.target.value }))}
+              />
+            </Field>
+            <Field>
+              <FieldLabel>Client name</FieldLabel>
+              <Input
+                value={transferForm.clientName}
+                onChange={(e) => setTransferForm((prev) => ({ ...prev, clientName: e.target.value }))}
+                required
               />
             </Field>
             <Field>
@@ -750,7 +767,12 @@ export function TasksPage({
               type="submit"
               variant="default"
               className="w-fit"
-              disabled={!transferForm.fromAgentId || !transferForm.toAgentId || !transferForm.dateKey}
+              disabled={
+                !transferForm.fromAgentId ||
+                !transferForm.toAgentId ||
+                !transferForm.dateKey ||
+                !transferForm.clientName.trim()
+              }
             >
               Add transfer
             </Button>
