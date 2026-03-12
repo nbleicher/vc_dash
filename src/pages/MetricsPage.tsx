@@ -217,7 +217,7 @@ export function MetricsPage({
           <div>
             <h3 className="mb-2 text-sm font-medium">Standard</h3>
             <TableWrap>
-              <DataTable>
+              <DataTable className="w-auto min-w-0">
                 <thead>
                   <tr>
                     <th className="px-2 py-1 text-left">Rank</th>
@@ -253,7 +253,7 @@ export function MetricsPage({
           <div>
             <h3 className="mb-2 text-sm font-medium">Agent Ranking (transfer adjusted)</h3>
             <TableWrap>
-              <DataTable>
+              <DataTable className="w-auto min-w-0">
                 <thead>
                   <tr>
                     <th className="px-2 py-1 text-left">Rank</th>
