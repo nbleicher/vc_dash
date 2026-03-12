@@ -80,7 +80,6 @@ type Props = {
   lastSnapshotLabel: string
   transfers: TransferRecord[]
   onAddTransfer: (transfer: Omit<TransferRecord, 'id'>) => void
-  onUpdateTransfer: (id: string, patch: Partial<TransferRecord>) => void
   onDeleteTransfer: (id: string) => void
 }
 
@@ -118,7 +117,6 @@ export function TasksPage({
   lastSnapshotLabel,
   transfers,
   onAddTransfer,
-  onUpdateTransfer,
   onDeleteTransfer,
 }: Props) {
   const [eodReportText, setEodReportText] = useState('')

@@ -374,10 +374,6 @@ function App() {
     ])
   }
 
-  const handleUpdateTransfer = (id: string, patch: Partial<TransferRecord>): void => {
-    setTransfers((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)))
-  }
-
   const handleDeleteTransfer = (id: string): void => {
     setTransfers((prev) => prev.filter((row) => row.id !== id))
   }
@@ -653,7 +649,6 @@ function App() {
             lastSnapshotLabel={lastSnapshotLabel}
             transfers={transfers}
             onAddTransfer={handleAddTransfer}
-            onUpdateTransfer={handleUpdateTransfer}
             onDeleteTransfer={handleDeleteTransfer}
           />
         )}
