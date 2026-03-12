@@ -467,13 +467,15 @@ export function useAppData(store: DataStore) {
     })
 
     rows.sort((a, b) => {
+      if (rankMetric === 'Sales') return b.sales - a.sales
+      if (rankMetric === 'CVR') return (b.cvr ?? -1) - (a.cvr ?? -1)
       const aCpa = a.cpa ?? Number.POSITIVE_INFINITY
       const bCpa = b.cpa ?? Number.POSITIVE_INFINITY
       return aCpa - bCpa
     })
 
     return rows
-  }, [activeAgents, buildRankBaseByAgent, metricsDateEnd, metricsDateStart, transfers])
+  }, [activeAgents, buildRankBaseByAgent, metricsDateEnd, metricsDateStart, transfers, rankMetric])
 
   const activeIds = useMemo(() => new Set(activeAgents.map((agent) => agent.id)), [activeAgents])
   const metricsMonthPrefix = effectiveMetricsDateKey.slice(0, 7)
