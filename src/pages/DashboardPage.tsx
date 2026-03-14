@@ -5,6 +5,7 @@ import { formatNum, formatTimestamp } from '../utils'
 
 const CPA_HIGHLIGHT_THRESHOLD = 130
 const ACTION_CENTER_PAGE_SIZE = 10
+const ACTION_CENTER_AUDIT_PAGE_SIZE = 3
 
 type AgentPerformanceRow = {
   agentId: string
@@ -286,7 +287,7 @@ export function DashboardPage({
             </div>
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto max-h-[55rem] space-y-3">
               {actionAudit.length === 0 && <p className="text-sm text-slate-500">N/A - no active Action Needed items.</p>}
-              {(showAllActionAudit ? actionAudit : actionAudit.slice(0, ACTION_CENTER_PAGE_SIZE)).map((a) => {
+              {(showAllActionAudit ? actionAudit : actionAudit.slice(0, ACTION_CENTER_AUDIT_PAGE_SIZE)).map((a) => {
                 const ageHrs = (now.getTime() - new Date(a.discoveryTs).getTime()) / 3_600_000
                 return (
                   <div key={a.id} className={`alert-card ${ageHrs > 4 ? 'stale-alert' : ''}`}>
@@ -316,7 +317,7 @@ export function DashboardPage({
                   </div>
                 )
               })}
-              {actionAudit.length > ACTION_CENTER_PAGE_SIZE && (
+              {actionAudit.length > ACTION_CENTER_AUDIT_PAGE_SIZE && (
                 <div className="pt-2">
                   <Button
                     type="button"
@@ -326,7 +327,7 @@ export function DashboardPage({
                   >
                     {showAllActionAudit
                       ? 'Show less'
-                      : `Show more (${actionAudit.length - ACTION_CENTER_PAGE_SIZE} more)`}
+                      : `Show more (${actionAudit.length - ACTION_CENTER_AUDIT_PAGE_SIZE} more)`}
                   </Button>
                 </div>
               )}
