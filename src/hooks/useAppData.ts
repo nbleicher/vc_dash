@@ -551,7 +551,7 @@ export function useAppData(store: DataStore) {
     const startWeekKey = weekKeyFromDateKey(EOD_VIEWS_START_DATE_KEY)
     const weekKeys: string[] = []
     const [y, m, d] = startWeekKey.split('-').map(Number)
-    let monday = new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
+    const monday = new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
     while (true) {
       const key = weekKeyMonFri(monday)
       if (key > currentWeekKey) break
