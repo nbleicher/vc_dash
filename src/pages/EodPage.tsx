@@ -1,4 +1,5 @@
-import { Card, CardTitle, DataTable, Field, FieldLabel, Select, TableWrap } from '../components'
+import { Card, CardTitle, DataTable, EodReportSection, type EodHistoryDay, Field, FieldLabel, Select, TableWrap } from '../components'
+import type { PerfHistory } from '../types'
 import { formatDateKey, formatNum, formatTimestamp, formatWeekRangeLabel } from '../utils'
 
 type EodRow = {
@@ -23,6 +24,23 @@ type Props = {
     finalized: boolean
   }
   monthLabel: string
+  currentWeekKey: string
+  todayKey: string
+  eodTodayTotals: { sales: number; marketing: number; cpa: number | null }
+  eodHistoryDays: EodHistoryDay[]
+  onSaveEodReport: (weekKey: string, reportText: string, houseSales: number, houseCpa: number | null) => void
+  agentPerformanceRows: Array<{
+    agentId: string
+    agentName: string
+    calls: number
+    sales: number
+    marketing: number
+    cpa: number | null
+    cvr: number | null
+  }>
+  lastSnapshotLabel: string
+  activeAgents: Array<{ id: string; name: string }>
+  setPerfHistory: React.Dispatch<React.SetStateAction<PerfHistory[]>>
 }
 
 export function EodPage({
@@ -32,13 +50,22 @@ export function EodPage({
   eodWeeklyRows,
   eodWeeklySummary,
   monthLabel,
+  currentWeekKey,
+  todayKey,
+  eodTodayTotals,
+  eodHistoryDays,
+  onSaveEodReport,
+  agentPerformanceRows,
+  lastSnapshotLabel,
+  activeAgents,
+  setPerfHistory,
 }: Props) {
   return (
     <div className="page-grid">
       <Card className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <CardTitle>Week of {formatWeekRangeLabel(selectedEodWeekKey)}</CardTitle>
-          <Field className="min-w-[220px]">
+          <Field className="w-full min-w-0 sm:min-w-[220px]">
             <FieldLabel>Week</FieldLabel>
             <Select value={selectedEodWeekKey} onChange={(e) => setSelectedEodWeekKey(e.target.value)}>
               {eodWeekOptions.map((option) => (
@@ -117,6 +144,18 @@ export function EodPage({
           </DataTable>
         </TableWrap>
       </Card>
+
+      <EodReportSection
+        currentWeekKey={currentWeekKey}
+        todayKey={todayKey}
+        eodTodayTotals={eodTodayTotals}
+        eodHistoryDays={eodHistoryDays}
+        onSaveEodReport={onSaveEodReport}
+        agentPerformanceRows={agentPerformanceRows}
+        lastSnapshotLabel={lastSnapshotLabel}
+        activeAgents={activeAgents}
+        setPerfHistory={setPerfHistory}
+      />
     </div>
   )
 }

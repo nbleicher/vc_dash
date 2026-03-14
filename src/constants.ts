@@ -5,7 +5,9 @@ export const SLOT_CONFIG = [
   { key: '17:00', label: '5:00 PM', minuteOfDay: 17 * 60 },
 ] as const
 
-export const CARRIERS = ['Aetna', 'UHC', 'Humana'] as const
+/** Carrier options (Aetna, UHC, Humana); use for filters/dropdowns if needed. Not exported to avoid dead code until used. */
+// @ts-expect-error kept for future use
+const CARRIERS = ['Aetna', 'UHC', 'Humana'] as const
 export const POLICY_STATUSES = [
   'pending_cms',
   'flagged',

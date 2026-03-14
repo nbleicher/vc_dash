@@ -8,8 +8,6 @@ import { PostgresStore } from './db/postgres-store.js';
 import { SqliteStore } from './db/store.js';
 import { authRoutes } from './routes/auth.js';
 import { healthRoutes } from './routes/health.js';
-import { metricsRoutes } from './routes/metrics.js';
-import { resourceRoutes } from './routes/resources.js';
 import { stateRoutes } from './routes/state.js';
 export async function buildApp(config) {
     const normalizeOrigin = (value) => value.trim().replace(/\/+$/, '');
@@ -66,8 +64,6 @@ export async function buildApp(config) {
     });
     await healthRoutes(app);
     await authRoutes(app, { adminUsername: config.adminUsername, adminPassword: config.adminPassword });
-    await metricsRoutes(app);
-    await resourceRoutes(app);
     await stateRoutes(app);
     app.addHook('onClose', async () => {
         await store.close();

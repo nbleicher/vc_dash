@@ -72,7 +72,7 @@ export function MetricsPage({
       <Card className="space-y-4">
         <CardTitle>Metrics</CardTitle>
         <div className="row-wrap control-bar">
-          <Field className="min-w-[260px]">
+          <Field className="w-full min-w-0 sm:min-w-[260px]">
             <FieldLabel>Scope</FieldLabel>
             <Select
               value={scopeValue}
@@ -94,7 +94,7 @@ export function MetricsPage({
               ))}
             </Select>
           </Field>
-          <Field className="min-w-[180px]">
+          <Field className="w-full min-w-0 sm:min-w-[180px]">
             <FieldLabel>KPI Period</FieldLabel>
             <Select
               value={hasCustomRange ? 'custom' : kpiPeriod}
@@ -134,7 +134,7 @@ export function MetricsPage({
               )}
             </div>
             {calendarOpen && (
-              <div className="absolute left-0 top-full z-10 mt-1 min-w-[280px] rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
+              <div className="absolute left-0 top-full z-10 mt-1 w-full min-w-0 sm:min-w-[280px] rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
                 <div className="space-y-2">
                   <Field>
                     <FieldLabel>Start date</FieldLabel>
@@ -201,7 +201,7 @@ export function MetricsPage({
       <Card className="space-y-4">
         <CardTitle>Agent Ranking</CardTitle>
         <div className="row-wrap control-bar">
-          <Field className="min-w-[180px]">
+          <Field className="w-full min-w-0 sm:min-w-[180px]">
             <FieldLabel>Metric</FieldLabel>
             <Select value={rankMetric} onChange={(e) => setRankMetric(e.target.value as RankMetric)}>
               <option>Sales</option>
@@ -217,7 +217,7 @@ export function MetricsPage({
           <div>
             <h3 className="mb-3 text-sm font-semibold text-slate-800">Standard</h3>
             <TableWrap>
-              <DataTable className="w-auto min-w-[640px] max-w-[900px] mx-auto">
+              <DataTable className="w-full min-w-0 sm:min-w-[640px] max-w-[900px] mx-auto">
                 <thead>
                   <tr>
                     <th className="px-2 py-1 text-left border-b border-slate-200">Rank</th>
@@ -253,7 +253,7 @@ export function MetricsPage({
           <div>
             <h3 className="mb-3 text-sm font-semibold text-slate-800">Agent Ranking (transfer adjusted)</h3>
             <TableWrap>
-              <DataTable className="w-auto min-w-[640px] max-w-[900px] mx-auto">
+              <DataTable className="w-full min-w-0 sm:min-w-[640px] max-w-[900px] mx-auto">
                 <thead>
                   <tr>
                     <th className="px-2 py-1 text-left border-b border-slate-200">Rank</th>

@@ -31,7 +31,7 @@ export function SettingsPage({
       <Card className="space-y-4">
         <CardTitle>Settings - Agent Management</CardTitle>
         <form className="row-wrap" onSubmit={onAddAgent}>
-          <Field className="min-w-[280px]">
+          <Field className="w-full min-w-0 sm:min-w-[280px]">
             <FieldLabel>Add Agent</FieldLabel>
             <Input
             value={newAgent}

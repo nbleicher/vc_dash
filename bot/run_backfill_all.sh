@@ -4,5 +4,5 @@
 set -e
 cd "$(dirname "$0")"
 echo "[$(date -Iseconds)] Running backfill-all..."
-./venv/bin/python freeze_eod.py --backfill-all
+./venv/bin/python eod.py --backfill-all
 echo "[$(date -Iseconds)] Done."

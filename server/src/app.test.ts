@@ -80,7 +80,7 @@ describe('state resources', () => {
     expect(res.headers['access-control-allow-origin']).toBe('http://localhost:5173')
   })
 
-  it('writes and reads agents collection', async () => {
+  it('writes and reads agents collection via state API', async () => {
     const putRes = await app.inject({
       method: 'PUT',
       url: '/state/agents',
@@ -91,12 +91,12 @@ describe('state resources', () => {
 
     const getRes = await app.inject({
       method: 'GET',
-      url: '/agents',
+      url: '/state',
       headers: { cookie: authCookie },
     })
     expect(getRes.statusCode).toBe(200)
-    const parsed = getRes.json() as { data: Array<{ id: string; name: string }> }
-    expect(parsed.data).toHaveLength(1)
-    expect(parsed.data[0].id).toBe('a1')
+    const parsed = getRes.json() as { data: { agents: Array<{ id: string; name: string }> } }
+    expect(parsed.data.agents).toHaveLength(1)
+    expect(parsed.data.agents[0].id).toBe('a1')
   })
 })

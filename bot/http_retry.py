@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Shared HTTP request helper with retries for ChunkedEncodingError and connection/read failures.
-Used by bot.py, freeze_eod.py, set_eod_marketing.py, policies_bot.py when calling the API.
+Used by main.py, eod.py, policies_bot.py when calling the API.
 """
 
 import time

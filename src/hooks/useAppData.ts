@@ -403,7 +403,7 @@ export function useAppData(store: DataStore) {
         existing.marketing += row.marketing
         byAgent.set(row.agentId, existing)
       }
-      // Fallback: use 17:00 snapshots for dates in range when perfHistory is missing (e.g. before freeze_eod)
+      // Fallback: use 17:00 snapshots for dates in range when perfHistory is missing (e.g. before eod.py freeze)
       for (const dateKey of periodDates) {
         if (dateKey === todayKey) continue
         for (const snap of snapshots) {
@@ -562,7 +562,7 @@ export function useAppData(store: DataStore) {
         options.push({ weekKey: key, label: key })
       }
     }
-    // Include weeks that have snapshots (e.g. backfilled) so EOD page can show history before freeze_eod runs
+    // Include weeks that have snapshots (e.g. backfilled) so EOD page can show history before eod.py runs
     for (const snap of snapshots) {
       if (snap.slot !== '17:00') continue
       const key = weekKeyFromDateKey(snap.dateKey)

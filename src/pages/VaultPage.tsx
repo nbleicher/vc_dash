@@ -854,7 +854,7 @@ export function VaultPage({
     <Card className="space-y-4">
       <CardTitle>Vault</CardTitle>
       <div className="row-wrap control-bar">
-        <Field className="min-w-[260px]">
+        <Field className="w-full min-w-0 sm:min-w-[260px]">
           <FieldLabel>Scope</FieldLabel>
           <Select
             value={scopeValue}
@@ -878,7 +878,7 @@ export function VaultPage({
         </Field>
         {vaultScope === 'agent' ? (
           <>
-            <Field className="min-w-[260px]">
+            <Field className="w-full min-w-0 sm:min-w-[260px]">
               <FieldLabel>History Type</FieldLabel>
               <Select
                 value={vaultHistoryView}
@@ -898,7 +898,7 @@ export function VaultPage({
           </>
         ) : null}
         {vaultScope === 'house' ? (
-          <Field className="min-w-[220px]">
+          <Field className="w-full min-w-0 sm:min-w-[220px]">
             <FieldLabel>Day</FieldLabel>
             <Select value={houseIntraDay} onChange={(e) => setHouseIntraDay(e.target.value)}>
               {recentHouseDayOptions.map((dateKey) => (
@@ -909,7 +909,7 @@ export function VaultPage({
             </Select>
           </Field>
         ) : null}
-        <Field className="min-w-[180px]">
+        <Field className="w-full min-w-0 sm:min-w-[180px]">
           <FieldLabel>Sort</FieldLabel>
           <Select value={historySort} onChange={(e) => setHistorySort(e.target.value as 'newest' | 'oldest')}>
             <option value="newest">Newest first</option>
@@ -1120,7 +1120,7 @@ export function VaultPage({
 
       {fullTableMode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
-          <Card className="max-h-[88vh] w-full max-w-7xl overflow-hidden">
+          <Card className="max-h-[88vh] w-full min-w-0 max-w-[calc(100vw-2rem)] sm:max-w-7xl overflow-hidden">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <h3>{fullTableMode === 'qa' ? 'Daily QA History' : 'Action Needed History'} - Full Table</h3>
               <Button
@@ -1135,7 +1135,7 @@ export function VaultPage({
               </Button>
             </div>
             <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-              <Field className="min-w-[320px]">
+              <Field className="w-full min-w-0 sm:min-w-[320px]">
                 <FieldLabel>Search</FieldLabel>
                 <Input
                   placeholder="Search by agent, date, client, status, notes..."

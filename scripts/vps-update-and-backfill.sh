@@ -9,5 +9,5 @@ echo "[$(date -Iseconds)] Pulling latest..."
 git pull origin main
 echo "[$(date -Iseconds)] Running backfill-all..."
 cd bot
-./venv/bin/python freeze_eod.py --backfill-all
+./venv/bin/python eod.py --backfill-all
 echo "[$(date -Iseconds)] Done."

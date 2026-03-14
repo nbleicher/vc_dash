@@ -2,6 +2,16 @@
 
 This bot scrapes PolicyDen (sales) and WeGenerate (calls + per-agent marketing), merges by agent, and pushes snapshots to the VC Dash API. The dashboard **Agent Performance** card shows data from the latest snapshot per agent (no manual intra-day entry; the intra-performance alert has been removed). When WeGenerate per-agent marketing is unavailable for a run, existing marketing values for that slot are preserved and the dashboard falls back to a fixed cost-per-call assumption only where marketing is missing.
 
+### Cron summary
+
+- **Intra-day:** `main.py` every 5 minutes (9 AM–9 PM EST, Mon–Fri). **EOD:** `eod.py` at 9:15 PM EST (runs main then freezes today). **Daily:** `policies_bot.py` once at 9 AM EST (optional; audit sync).
+
+### Script reference (quick reference)
+
+- **eod.py** — EOD script: with no arguments, runs `main.py` (with one retry on failure) then freezes today’s snapshots into `perf_history`. Run daily at 9:15 PM via cron. Also supports `--date YYYY-MM-DD`, `--backfill-all`, `--backfill-range START END`, and `--set-marketing [--date YYYY-MM-DD] [--amount N]` to correct house marketing by scaling existing `perf_history`.
+- **http_retry.py** — Shared helper: HTTP requests with retries on `ChunkedEncodingError` / connection / timeout. Used by main.py, eod.py, and policies_bot.py when calling the API.
+- **run_backfill_all.sh** — On the VPS, runs `eod.py --backfill-all` only (no git pull). Use after copying updated bot files to backfill all past dates that have snapshots but no `perf_history`.
+
 ## 1. capture.py (run locally on your Mac)
 
 Captures your browser session for PolicyDen and WeGenerate so the VPS can reuse it.
@@ -47,10 +57,9 @@ mkdir -p ~/bot && cd ~/bot
 - `auth_policyden.json` (from capture.py)
 - `auth_wegenerate.json` (from capture.py)
 - `auth_login.py` (from this repo; used for auto re-login when sessions expire)
-- `bot.py` (from this repo)
+- `main.py` (from this repo)
+- `eod.py` (from this repo; for 9:15 PM EOD: runs main then freezes today)
 - `policies_bot.py` (from this repo; optional — see below)
-- `freeze_eod.py` (from this repo; for 9:15 PM EOD freeze cron)
-- `run_eod_freeze.sh` (from this repo; wrapper that runs bot then freeze at 9:15 PM)
 - `requirements.txt` (from this repo)
 
 **Create `.env`:**
@@ -83,7 +92,7 @@ Copy `agent_map.example.json` to `agent_map.json` and fill in the mapping from a
 ```
 
 **Configure selectors (required for scraping):**  
-Edit `bot.py` and set the selector constants near the top. If a site is redesigned, selectors can break (e.g. "Date picker failed" or empty scraped data). Then:
+Edit `main.py` and set the selector constants near the top. If a site is redesigned, selectors can break (e.g. "Date picker failed" or empty scraped data). Then:
 
 - **WeGenerate:** The date control may no longer be `button#date`. In Chrome DevTools on the WeGenerate dashboard, inspect the date picker button and note its selector (id, data-testid, aria-label, or class). Set `SELECTORS_WEGENERATE["date_trigger"]` to that selector. The bot also tries fallback selectors; add more in `date_trigger_fallbacks` if needed.
 - **PolicyDen:** Ensure `open_live_view`, `table_rows`, `col_agent`, `col_sales` match the live view table.
@@ -93,7 +102,7 @@ Use browser DevTools on PolicyDen and WeGenerate to find the right selectors and
 **Test run:**
 ```bash
 cd ~/bot
-./venv/bin/python bot.py
+./venv/bin/python main.py
 ```
 
 **Cron (every 5 minutes, Mon–Fri):** Use the venv Python so all dependencies are available. The bot skips scraping outside 9 AM–9 PM EST and on weekends (exits immediately to save memory); it only runs the browser 9 AM–9 PM EST Monday–Friday.
@@ -103,27 +112,29 @@ crontab -e
 Add (replace `ubuntu` with your username if different):
 ```
 CRON_TZ=America/New_York
-*/5 9-21 * * 1-5 cd /home/ubuntu/bot && /home/ubuntu/bot/venv/bin/python bot.py >> /home/ubuntu/bot/bot.log 2>&1
+*/5 9-21 * * 1-5 cd /home/ubuntu/bot && /home/ubuntu/bot/venv/bin/python main.py >> /home/ubuntu/bot/bot.log 2>&1
 ```
 The bot also exits without scraping if run before 9 AM EST, after 9 PM EST, or on Saturday/Sunday.
 
-**Cron (EOD freeze at 9:15 PM EST, Mon–Fri):** At 9:15 PM the main bot runs once more to pull marketing (and sales/calls) one last time for the day, then the freeze runs so EOD and weekly totals use that final data. Uses the same `.env` as the bot. Add this line in `crontab -e`:
+**Cron (EOD at 9:15 PM EST, Mon–Fri):** At 9:15 PM, `eod.py` runs `main.py` (with one retry on failure) then freezes today’s snapshots so EOD and weekly totals use that final data. Uses the same `.env` as the bot. Add this line in `crontab -e`:
 ```
-15 21 * * 1-5 cd /home/ubuntu/bot && ./run_eod_freeze.sh >> /home/ubuntu/bot/freeze.log 2>&1
+15 21 * * 1-5 cd /home/ubuntu/bot && /home/ubuntu/bot/venv/bin/python eod.py >> /home/ubuntu/bot/freeze.log 2>&1
 ```
-If you already have other cron jobs, add only the `15 21` line and ensure `CRON_TZ=America/New_York` is set once at the top of the crontab if you want EST/EDT. Ensure `run_eod_freeze.sh` is executable (`chmod +x run_eod_freeze.sh`). Monitor: `tail -f ~/bot/freeze.log`
+If you already have other cron jobs, add only the `15 21` line and ensure `CRON_TZ=America/New_York` is set once at the top of the crontab if you want EST/EDT. Monitor: `tail -f ~/bot/freeze.log`
 
-**EOD backfill (perf_history for past dates):** If you have snapshots for past days but no perf_history (e.g. before the freeze cron was set up), run once to backfill as far as possible:
+**EOD backfill (perf_history for past dates):** If you have snapshots for past days but no perf_history (e.g. before the EOD cron was set up), run once to backfill as far as possible:
 ```bash
 cd ~/bot
-./venv/bin/python freeze_eod.py --backfill-all
+./venv/bin/python eod.py --backfill-all
 ```
 **Update bot on VPS then backfill:** If the bot code lives in a git clone on the VPS (e.g. `~/vc_dash`), from the repo root run `./scripts/vps-update-and-backfill.sh` to pull and run backfill. If you only copy the `bot/` folder to the VPS, after copying updated files run `cd ~/bot && ./run_backfill_all.sh`.
 To backfill only a date range (START and END inclusive, YYYY-MM-DD):
 ```bash
-./venv/bin/python freeze_eod.py --backfill-range 2025-03-01 2025-03-07
+./venv/bin/python eod.py --backfill-range 2025-03-01 2025-03-07
 ```
-Single-date backfill (same as before): `./venv/bin/python freeze_eod.py --date 2025-03-02`
+Single-date backfill: `./venv/bin/python eod.py --date 2025-03-02`
+
+**Set EOD marketing total (corrective):** If a freeze used the wrong house marketing number, scale existing `perf_history` for a date to the correct total: `./venv/bin/python eod.py --set-marketing [--date YYYY-MM-DD] [--amount 4354]` (default date: yesterday EST).
 
 **Monitor:** `tail -f ~/bot/bot.log`
 
@@ -131,12 +142,14 @@ Single-date backfill (same as before): `./venv/bin/python freeze_eod.py --date 2
 
 ## 3. Backfill EOD from PolicyDen/WeGenerate (historical performance)
 
-If you want to backfill **daily performance (EOD)** for past dates using real scraped data (PolicyDen sales + WeGenerate calls/marketing), use `backfill_eod_from_sources.py`. This script:
+**Primary backfill:** `backfill.py` — uses the same scrapers as `main.py`, runs headless, supports `--freeze`. For a headed run where you can watch the browser, use `backfill_headed.py` (self-contained, same date range and `--freeze` options).
+
+If you want to backfill **daily performance (EOD)** for past dates using real scraped data (PolicyDen sales + WeGenerate calls/marketing), use `backfill.py`. This script:
 
 - Loops a date range (start..end).
-- For each date, re-runs the same scrapers as `bot.py` (PolicyDen + WeGenerate) for that date.
+- For each date, re-runs the same scrapers as `main.py` (PolicyDen + WeGenerate) for that date.
 - Writes/overwrites `snapshots` for that `(dateKey, slot)` and sets `houseMarketing` from WeGenerate campaign marketing (when available).
-- Optionally calls `freeze_eod.py --backfill-range` so `perf_history` and house EOD metrics are populated for that range.
+- Optionally calls `eod.py --backfill-range` so `perf_history` and house EOD metrics are populated for that range.
 
 > Note: PolicyDen scraping uses **Open Live View** (today) and currently does not change the date in the UI. For dates where PolicyDen’s live view does not show the historical day you care about, sales may not backfill perfectly. WeGenerate supports date selection via the date picker and will backfill calls/marketing for the chosen date.
 
@@ -146,24 +159,24 @@ If you want to backfill **daily performance (EOD)** for past dates using real sc
 cd ~/bot
 
 # Backfill from START up to yesterday (EST), default slot=17:00 (5 PM EOD)
-./venv/bin/python backfill_eod_from_sources.py --start 2025-03-01
+./venv/bin/python backfill.py --start 2025-03-01
 
 # Backfill an explicit date range (inclusive)
-./venv/bin/python backfill_eod_from_sources.py --start 2025-03-01 --end 2025-03-07
+./venv/bin/python backfill.py --start 2025-03-01 --end 2025-03-07
 
 # Backfill and immediately freeze perf_history for that range
-./venv/bin/python backfill_eod_from_sources.py --start 2025-03-01 --end 2025-03-07 --slot 17:00 --freeze
+./venv/bin/python backfill.py --start 2025-03-01 --end 2025-03-07 --slot 17:00 --freeze
 
 # Dry run (scrape + log only, no writes)
-./venv/bin/python backfill_eod_from_sources.py --start 2025-03-01 --end 2025-03-07 --dry-run
+./venv/bin/python backfill.py --start 2025-03-01 --end 2025-03-07 --dry-run
 ```
 
 Flags:
 
 - `--start YYYY-MM-DD` (required): first date to backfill.
 - `--end YYYY-MM-DD` (optional): last date to backfill (inclusive). Defaults to **yesterday in EST** if omitted.
-- `--slot HH:MM` (optional): slot key used when writing snapshots (must match a `SLOT_CONFIG` key in `bot.py`; default `17:00`).
-- `--freeze` (optional): after writing snapshots for the range, runs `freeze_eod.py --backfill-range START END` so `perf_history` and house marketing totals are populated. This drives the EOD “Vault” history and weekly views in the Tasks page.
+- `--slot HH:MM` (optional): slot key used when writing snapshots (must match a `SLOT_CONFIG` key in `main.py`; default `17:00`).
+- `--freeze` (optional): after writing snapshots for the range, runs `eod.py --backfill-range START END` so `perf_history` and house marketing totals are populated. This drives the EOD “Vault” history and weekly views in the Tasks page.
 - `--dry-run` (optional): do everything except the actual `PUT /state/snapshots` and `POST /state/house-marketing` calls.
 
 Once the script runs (with `--freeze`), you’ll see:
@@ -211,12 +224,12 @@ If the PolicyDen Policies table layout changes (column order or selectors), edit
 - **See exactly what the bot scraped and pushed**  
   Run with verbose logging and compare names/numbers to the dashboard and source tools:
   ```bash
-  BOT_VERBOSE=1 ./venv/bin/python bot.py
+  BOT_VERBOSE=1 ./venv/bin/python main.py
   ```
   The log will show: PolicyDen name→sales, WeGenerate name→calls, your `agent_map` keys, and each row pushed (display name, sales, calls). If a name in `agent_map` doesn’t appear in the scraped lists or has 0 there, fix the name in `agent_map` (or the selectors) so it matches exactly what appears in the table.
 
 - **"Date picker failed" or both scrapers return 0**  
-  The site’s UI likely changed. Open the dashboard in a browser, use DevTools to find the date control and table selectors, and update `SELECTORS_WEGENERATE` (and `SELECTORS_POLICYDEN` if needed) in `bot.py` (see **Configure selectors** above).
+  The site’s UI likely changed. Open the dashboard in a browser, use DevTools to find the date control and table selectors, and update `SELECTORS_WEGENERATE` (and `SELECTORS_POLICYDEN` if needed) in `main.py` (see **Configure selectors** above).
 
 - **Both PolicyDen and WeGenerate return {}**  
   Saved sessions often expire. If you have set `POLICYDEN_USERNAME`/`POLICYDEN_PASSWORD` and `WEGENERATE_USERNAME`/`WEGENERATE_PASSWORD` in `.env` on the VPS, the bot will automatically re-login when it detects an expired session and retry the scrape. Otherwise, re-run `capture.py` for both sites (on your Mac), then re-upload the new `auth_policyden.json` and `auth_wegenerate.json` to the VPS with `scp`. Without valid auth, the dashboards show a login page and the bot sees no table rows. If you set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env`, the bot will send you a Telegram message when it detects expired sessions (either or both sites).

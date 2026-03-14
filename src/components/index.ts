@@ -1,3 +1,4 @@
+export { EodReportSection, type EodHistoryDay } from './EodReportSection'
 export { LoginForm } from './LoginForm'
 export { MetricCard } from './MetricCard'
 export { TopNav } from './TopNav'

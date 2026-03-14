@@ -1,15 +1,29 @@
 import { useMemo, useState } from 'react'
+import { Navigate, useLocation } from 'react-router-dom'
 import { Button, Card, LoginForm, TopNav } from './components'
 import { useDataStore } from './data'
-import { useAppData } from './hooks'
-import type { ExportFlags, QaRecord, TopPage, VaultMeeting, TransferRecord } from './types'
-import { csvEscape, estDateKey, uid } from './utils'
-import { DashboardPage } from './pages/DashboardPage'
-import { MetricsPage } from './pages/MetricsPage'
-import { EodPage } from './pages/EodPage'
-import { SettingsPage } from './pages/SettingsPage'
-import { TasksPage } from './pages/TasksPage'
-import { VaultPage } from './pages/VaultPage'
+import { useAppData, useSettingsActions, useTaskActions, useVaultActions } from './hooks'
+import type { QaFormState } from './hooks'
+import type { ExportFlags, TopPage, VaultMeeting } from './types'
+import { estDateKey, uid } from './utils'
+import {
+  DashboardPage,
+  EodPage,
+  MetricsPage,
+  SettingsPage,
+  TasksPage,
+  VaultPage,
+} from './pages'
+
+function pathToTopPage(path: string): TopPage | null {
+  if (path === '/' || path === '/dashboard') return 'dashboard'
+  if (path === '/tasks') return 'tasks'
+  if (path === '/metrics') return 'metrics'
+  if (path === '/eod') return 'eod'
+  if (path === '/vault') return 'vault'
+  if (path === '/settings') return 'settings'
+  return null
+}
 
 function App() {
   const store = useDataStore()
@@ -18,26 +32,12 @@ function App() {
     agents,
     setAgents,
     qaRecords,
-    setQaRecords,
     auditRecords,
-    setAuditRecords,
-    attendance,
-    setAttendance,
     spiffRecords,
-    setSpiffRecords,
-    setSnapshots,
-    pushSnapshotsToApi,
     setPerfHistory,
-    setAttendanceSubmissions,
-    setIntraSubmissions,
-    setWeeklyTargets,
     vaultMeetings,
-    setVaultMeetings,
     vaultDocs,
-    setVaultDocs,
-    setEodReports,
     transfers,
-    setTransfers,
     loggedIn,
     login,
     logout,
@@ -108,9 +108,11 @@ function App() {
     snapshots,
   } = data
 
-  const [topPage, setTopPage] = useState<TopPage>('dashboard')
+  const location = useLocation()
+  const topPage = pathToTopPage(location.pathname)
+
   const [newAgent, setNewAgent] = useState('')
-  const [qaForm, setQaForm] = useState({
+  const [qaForm, setQaForm] = useState<QaFormState>({
     dateKey: estDateKey(new Date()),
     agentId: '',
     clientName: '',
@@ -133,9 +135,25 @@ function App() {
     attendance: true,
   })
 
-  const ensureAgentDefault = (agentId: string): string => (agentId ? agentId : activeAgents[0]?.id ?? '')
-
   const [uiError, setUiError] = useState<string | null>(null)
+
+  const { runExport, clearHistory } = useSettingsActions(store, exportFlags, todayKey, setUiError)
+  const taskActions = useTaskActions(
+    store,
+    { todayKey, currentWeekKey, selectedAttendanceWeekKey, activeAgents },
+    qaForm,
+    setQaForm,
+    auditForm,
+    setAuditForm,
+    setUiError,
+  )
+  const vaultActions = useVaultActions(
+    store,
+    { selectedVaultAgent, snapshots },
+    meetingForm,
+    setMeetingForm,
+    setUiError,
+  )
   const pageMeta: Record<TopPage, { title: string; subtitle: string }> = {
     dashboard: { title: 'Dashboard', subtitle: 'Monitor floor performance, alerts, and intra-day activity.' },
     tasks: { title: 'Tasks', subtitle: 'Manage attendance, QA, audits, and weekly targets.' },
@@ -174,362 +192,6 @@ function App() {
     setNewAgent('')
   }
 
-  const handleQaSubmit = (e: React.FormEvent): void => {
-    e.preventDefault()
-    const agentId = ensureAgentDefault(qaForm.agentId)
-    if (!agentId || !qaForm.clientName.trim()) return
-    if (qaForm.decision === 'Check Recording' && !qaForm.callId.trim()) {
-      setUiError('Call ID is required when decision is Check Recording.')
-      return
-    }
-    const duplicate = qaRecords.some((r) => r.dateKey === qaForm.dateKey && r.agentId === agentId)
-    if (duplicate) {
-      const agentName = agents.find((a) => a.id === agentId)?.name ?? 'Agent'
-      const proceed = window.confirm(`QA for ${agentName} has already been done.`)
-      if (!proceed) return
-    }
-    const trimmedNotes = qaForm.notes.trim()
-    const callIdNote = qaForm.callId.trim() ? `Call ID: ${qaForm.callId.trim()}` : ''
-    const qaNotes =
-      qaForm.decision === 'Check Recording' && callIdNote
-        ? `${trimmedNotes ? `${trimmedNotes}\n` : ''}${callIdNote}`
-        : trimmedNotes
-    setQaRecords((prev) => [
-      ...prev,
-      {
-        id: uid('qa'),
-        dateKey: qaForm.dateKey,
-        agentId,
-        clientName: qaForm.clientName.trim(),
-        decision: qaForm.decision as QaRecord['decision'],
-        status: qaForm.decision === 'Good Sale' ? 'Good' : 'Check Recording',
-        notes: qaNotes,
-        createdAt: new Date().toISOString(),
-        resolvedAt: null,
-      },
-    ])
-    setQaForm({ dateKey: todayKey, agentId: '', clientName: '', decision: 'Good Sale', callId: '', notes: '' })
-    setUiError(null)
-  }
-
-  const handleSaveEodReport = (weekKey: string, reportText: string, houseSales: number, houseCpa: number | null): void => {
-    setEodReports((prev) => [
-      ...prev,
-      {
-        id: uid('eod'),
-        weekKey,
-        dateKey: todayKey,
-        houseSales,
-        houseCpa,
-        reportText: reportText.trim(),
-        submittedAt: new Date().toISOString(),
-      },
-    ])
-  }
-
-  const handleAuditNoActionSubmit = (): void => {
-    if (!auditForm.agentId) {
-      setUiError('Select an agent before submitting No Action Needed.')
-      return
-    }
-    const agentId = auditForm.agentId
-    const hasAnyToday = auditRecords.some((row) => row.agentId === agentId && row.discoveryTs.slice(0, 10) === todayKey)
-    if (hasAnyToday) {
-      const agentName = agents.find((a) => a.id === agentId)?.name ?? 'Agent'
-      const proceed = window.confirm(`Audit for ${agentName} already has an entry today. Submit "No Action Needed" anyway?`)
-      if (!proceed) return
-    }
-    const nowIso = new Date().toISOString()
-    setAuditRecords((prev) => [
-      ...prev.filter(
-        (row) =>
-          !(row.agentId === agentId && row.discoveryTs.slice(0, 10) === todayKey && row.currentStatus === 'no_action_needed'),
-      ),
-      {
-        id: uid('audit'),
-        agentId,
-        carrier: 'N/A',
-        clientName: 'N/A',
-        reason: 'No action needed for day',
-        currentStatus: 'no_action_needed',
-        discoveryTs: nowIso,
-        mgmtNotified: true,
-        outreachMade: true,
-        resolutionTs: nowIso,
-        notes: '',
-      },
-    ])
-    setUiError(null)
-    setAuditForm((prev) => ({ ...prev, agentId: '' }))
-  }
-
-  const toggleAuditFlag = (id: string, field: 'mgmtNotified' | 'outreachMade'): void => {
-    setAuditRecords((prev) =>
-      prev.map((r) => {
-        if (r.id !== id) return r
-        const next = { ...r, [field]: !r[field] }
-        if (next.mgmtNotified && next.outreachMade && !next.resolutionTs)
-          next.resolutionTs = new Date().toISOString()
-        return next
-      }),
-    )
-  }
-
-  const resolveQa = (id: string): void =>
-    setQaRecords((prev) =>
-      prev.map((q) => (q.id === id ? { ...q, status: 'Resolved', resolvedAt: new Date().toISOString() } : q)),
-    )
-
-  const handleQaUpdate = (
-    id: string,
-    patch: Pick<QaRecord, 'agentId' | 'dateKey' | 'clientName' | 'decision' | 'status' | 'notes'>,
-  ): void => {
-    setQaRecords((prev) =>
-      prev.map((record) =>
-        record.id === id
-          ? {
-              ...record,
-              agentId: patch.agentId,
-              dateKey: patch.dateKey,
-              clientName: patch.clientName,
-              decision: patch.decision,
-              status: patch.status,
-              notes: patch.notes,
-            }
-          : record,
-      ),
-    )
-  }
-
-  const handleAuditUpdate = (
-    id: string,
-    patch: Partial<
-      Pick<
-        (typeof auditRecords)[number],
-        'agentId' | 'discoveryTs' | 'carrier' | 'clientName' | 'currentStatus' | 'resolutionTs' | 'notes'
-      >
-    >,
-  ): void => {
-    const resolvedPatch =
-      patch.currentStatus === 'accepted'
-        ? { ...patch, resolutionTs: new Date().toISOString() }
-        : patch
-    setAuditRecords((prev) =>
-      prev.map((record) =>
-        record.id === id ? { ...record, ...resolvedPatch } : record,
-      ),
-    )
-  }
-
-  const handleAuditDelete = (id: string): void => {
-    if (!window.confirm('Delete this audit record?')) return
-    setAuditRecords((prev) => prev.filter((r) => r.id !== id))
-  }
-
-  const handleSnapshotUpdate = (
-    id: string,
-    patch: Pick<(typeof snapshots)[number], 'billableCalls' | 'sales'>,
-  ): void => {
-    setSnapshots((prev) =>
-      prev.map((row) =>
-        row.id === id
-          ? {
-              ...row,
-              billableCalls: patch.billableCalls,
-              sales: patch.sales,
-              updatedAt: new Date().toISOString(),
-            }
-          : row,
-      ),
-    )
-  }
-
-  const handleMeetingUpdate = (
-    meetingId: string,
-    patch: Pick<VaultMeeting, 'dateKey' | 'meetingType' | 'notes' | 'actionItems'>,
-  ): void => {
-    setVaultMeetings((prev) =>
-      prev.map((m) => (m.id === meetingId ? { ...m, ...patch } : m)),
-    )
-  }
-
-  const setSpiffAmount = (agentId: string, dateKey: string, amount: number): void => {
-    const nextAmount = Number.isFinite(amount) ? Math.max(0, Math.round(amount * 100) / 100) : 0
-    setSpiffRecords((prev) => {
-      const existing = prev.find((row) => row.agentId === agentId && row.dateKey === dateKey)
-      if (!existing) {
-        return [...prev, { id: uid('spiff'), weekKey: selectedAttendanceWeekKey, dateKey, agentId, amount: nextAmount }]
-      }
-      return prev.map((row) => (row.id === existing.id ? { ...row, amount: nextAmount } : row))
-    })
-  }
-
-  const handleAddTransfer = (transfer: Omit<TransferRecord, 'id'>): void => {
-    setTransfers((prev) => [
-      ...prev,
-      {
-        ...transfer,
-        id: uid('transfer'),
-      },
-    ])
-  }
-
-  const handleDeleteTransfer = (id: string): void => {
-    setTransfers((prev) => prev.filter((row) => row.id !== id))
-  }
-
-  const saveWeeklyTarget = (sales: number, cpa: number): void => {
-    setWeeklyTargets((prev) => {
-      const existing = prev.find((w) => w.weekKey === currentWeekKey)
-      if (!existing)
-        return [...prev, { weekKey: currentWeekKey, targetSales: sales, targetCpa: cpa, setAt: new Date().toISOString() }]
-      return prev.map((w) =>
-        w.weekKey === currentWeekKey ? { ...w, targetSales: sales, targetCpa: cpa, setAt: new Date().toISOString() } : w,
-      )
-    })
-  }
-
-  const addMeeting = (e: React.FormEvent): void => {
-    e.preventDefault()
-    if (!selectedVaultAgent) return
-    setVaultMeetings((prev) => [
-      ...prev,
-      {
-        id: uid('meet'),
-        agentId: selectedVaultAgent.id,
-        dateKey: meetingForm.dateKey,
-        meetingType: meetingForm.meetingType,
-        notes: meetingForm.notes.trim(),
-        actionItems: meetingForm.actionItems.trim(),
-      },
-    ])
-    setMeetingForm({ dateKey: estDateKey(new Date()), meetingType: 'Coaching', notes: '', actionItems: '' })
-  }
-
-  const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    if (!selectedVaultAgent) return
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
-      setUiError('PDF only uploads are allowed.')
-      e.target.value = ''
-      return
-    }
-    setVaultDocs((prev) => [
-      ...prev,
-      {
-        id: uid('doc'),
-        agentId: selectedVaultAgent.id,
-        fileName: file.name,
-        fileSize: file.size,
-        uploadedAt: new Date().toISOString(),
-      },
-    ])
-    e.target.value = ''
-  }
-
-  const runExport = (): void => {
-    const lines: string[] = []
-    if (exportFlags.agents) {
-      lines.push('AGENTS', 'id,name,active,createdAt')
-      for (const a of agents) lines.push([a.id, a.name, a.active, a.createdAt].map(csvEscape).join(','))
-      lines.push('')
-    }
-    if (exportFlags.performanceHistory) {
-      lines.push('PERFORMANCE_HISTORY', 'id,dateKey,agentId,billableCalls,sales,marketing,cpa,cvr,frozenAt')
-      for (const p of store.perfHistory)
-        lines.push(
-          [
-            p.id,
-            p.dateKey,
-            p.agentId,
-            p.billableCalls,
-            p.sales,
-            p.marketing,
-            p.cpa ?? 'N/A',
-            p.cvr ?? 'N/A',
-            p.frozenAt,
-          ]
-            .map(csvEscape)
-            .join(','),
-        )
-      lines.push('')
-    }
-    if (exportFlags.qa) {
-      lines.push('MASTER_QA', 'id,dateKey,agentId,clientName,decision,status,notes,createdAt,resolvedAt')
-      for (const q of qaRecords)
-        lines.push(
-          [q.id, q.dateKey, q.agentId, q.clientName, q.decision, q.status, q.notes, q.createdAt, q.resolvedAt]
-            .map(csvEscape)
-            .join(','),
-        )
-      lines.push('')
-    }
-    if (exportFlags.audit) {
-      lines.push(
-        'MASTER_AUDIT',
-        'id,agentId,carrier,clientName,reason,currentStatus,discoveryTs,mgmtNotified,outreachMade,resolutionTs,notes',
-      )
-      for (const a of auditRecords)
-        lines.push(
-          [
-            a.id,
-            a.agentId,
-            a.carrier,
-            a.clientName,
-            a.reason,
-            a.currentStatus,
-            a.discoveryTs,
-            a.mgmtNotified,
-            a.outreachMade,
-            a.resolutionTs,
-            a.notes ?? '',
-          ]
-            .map(csvEscape)
-            .join(','),
-        )
-      lines.push('')
-    }
-    if (exportFlags.attendance) {
-      lines.push('ATTENDANCE', 'id,weekKey,dateKey,agentId,percent,notes')
-      for (const a of attendance)
-        lines.push([a.id, a.weekKey, a.dateKey, a.agentId, a.percent, a.notes].map(csvEscape).join(','))
-      lines.push('')
-    }
-    if (lines.length === 0) {
-      setUiError('Select at least one export section.')
-      return
-    }
-    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `vc_dashboard_export_${todayKey}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  const clearHistory = (): void => {
-    const proceed = window.confirm(
-      'This will permanently clear all dashboard data (agents, attendance, spiff, snapshots, QA, audits, targets, vault). Continue?',
-    )
-    if (!proceed) return
-    setAgents([])
-    setQaRecords([])
-    setAuditRecords([])
-    setSnapshots([])
-    void pushSnapshotsToApi([])
-    setAttendance([])
-    setSpiffRecords([])
-    setAttendanceSubmissions([])
-    setIntraSubmissions([])
-    setPerfHistory([])
-    setWeeklyTargets([])
-    setVaultMeetings([])
-    setVaultDocs([])
-    setUiError(null)
-  }
-
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
@@ -554,14 +216,22 @@ function App() {
     return <LoginForm onLogin={handleLogin} error={uiError ?? error} />
   }
 
+  if (location.pathname === '/') {
+    return <Navigate to="/dashboard" replace />
+  }
+  if (topPage === null) {
+    return <Navigate to="/dashboard" replace />
+  }
+
   return (
-    <div className="mx-auto max-w-[1480px] p-4 md:p-6">
+    <div className="min-w-0 overflow-x-hidden">
+      <div className="mx-auto max-w-[1480px] p-4 md:p-6">
       <header className="panel top-shell">
         <div className="top-shell-nav">
-          <TopNav topPage={topPage} setTopPage={setTopPage} />
+          <TopNav />
         </div>
         <div className="top-shell-actions">
-          <Button variant="danger" onClick={() => void logout()}>
+          <Button variant="danger" className="min-h-[44px]" onClick={() => void logout()}>
             Sign Out
           </Button>
         </div>
@@ -608,8 +278,8 @@ function App() {
             weekTrend={weekTrend}
             actionQa={actionQa}
             actionAudit={actionAudit}
-            onResolveQa={resolveQa}
-            onToggleAuditFlag={toggleAuditFlag}
+            onResolveQa={taskActions.resolveQa}
+            onToggleAuditFlag={taskActions.toggleAuditFlag}
             onRefreshData={() => void reload()}
           />
         )}
@@ -635,21 +305,15 @@ function App() {
             todayKey={todayKey}
             incompleteAuditAgentsToday={incompleteAuditAgentsToday}
             lastPoliciesBotRun={store.lastPoliciesBotRun ?? null}
-            onSetSpiffAmount={setSpiffAmount}
-            onSaveWeeklyTarget={saveWeeklyTarget}
-            onQaSubmit={handleQaSubmit}
-            onAuditNoActionSubmit={handleAuditNoActionSubmit}
-            onUpdateAuditRecord={handleAuditUpdate}
-            onDeleteAuditRecord={handleAuditDelete}
-            eodTodayTotals={eodTodayTotals}
-            eodHistoryDays={eodHistoryDays}
-            onSaveEodReport={handleSaveEodReport}
-            setPerfHistory={setPerfHistory}
-            agentPerformanceRows={agentPerformanceRows}
-            lastSnapshotLabel={lastSnapshotLabel}
+            onSetSpiffAmount={taskActions.setSpiffAmount}
+            onSaveWeeklyTarget={taskActions.saveWeeklyTarget}
+            onQaSubmit={taskActions.handleQaSubmit}
+            onAuditNoActionSubmit={taskActions.handleAuditNoActionSubmit}
+            onUpdateAuditRecord={taskActions.handleAuditUpdate}
+            onDeleteAuditRecord={taskActions.handleAuditDelete}
             transfers={transfers}
-            onAddTransfer={handleAddTransfer}
-            onDeleteTransfer={handleDeleteTransfer}
+            onAddTransfer={taskActions.handleAddTransfer}
+            onDeleteTransfer={taskActions.handleDeleteTransfer}
           />
         )}
 
@@ -684,6 +348,15 @@ function App() {
             eodWeeklyRows={eodWeeklyRows}
             eodWeeklySummary={eodWeeklySummary}
             monthLabel={monthLabel}
+            currentWeekKey={currentWeekKey}
+            todayKey={todayKey}
+            eodTodayTotals={eodTodayTotals}
+            eodHistoryDays={eodHistoryDays}
+            onSaveEodReport={taskActions.handleSaveEodReport}
+            agentPerformanceRows={agentPerformanceRows}
+            lastSnapshotLabel={lastSnapshotLabel}
+            activeAgents={activeAgents}
+            setPerfHistory={setPerfHistory}
           />
         )}
 
@@ -710,13 +383,13 @@ function App() {
             weeklyTargetHistory={weeklyTargetHistory}
             snapshots={snapshots}
             lastPoliciesBotRun={store.lastPoliciesBotRun ?? null}
-            onAddMeeting={addMeeting}
-            onPdfUpload={handlePdfUpload}
-            onUpdateQaRecord={handleQaUpdate}
-            onUpdateAuditRecord={handleAuditUpdate}
-            onDeleteAuditRecord={handleAuditDelete}
-            onUpdateSnapshot={handleSnapshotUpdate}
-            onUpdateMeeting={handleMeetingUpdate}
+            onAddMeeting={vaultActions.addMeeting}
+            onPdfUpload={vaultActions.handlePdfUpload}
+            onUpdateQaRecord={taskActions.handleQaUpdate}
+            onUpdateAuditRecord={taskActions.handleAuditUpdate}
+            onDeleteAuditRecord={taskActions.handleAuditDelete}
+            onUpdateSnapshot={vaultActions.handleSnapshotUpdate}
+            onUpdateMeeting={vaultActions.handleMeetingUpdate}
             transfers={transfers}
           />
         )}
@@ -735,6 +408,7 @@ function App() {
           />
         )}
       </main>
+      </div>
     </div>
   )
 }

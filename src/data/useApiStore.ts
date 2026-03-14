@@ -201,7 +201,7 @@ export function useDataStore(): DataStore {
   }, [agentsState, syncCollection])
   // Snapshots are written only by the bot; dashboard only reads. Do not sync snapshots
   // back to the API or we can overwrite fresh bot data with stale state after a cached GET.
-  // perfHistory is written by the bot (freeze_eod) and set_eod_marketing.py; do not sync
+  // perfHistory is written by the EOD bot (eod.py); do not sync
   // from the dashboard or we overwrite corrected EOD totals with stale client state.
   // useEffect(() => {
   //   void syncCollection('perfHistory', perfHistoryState)

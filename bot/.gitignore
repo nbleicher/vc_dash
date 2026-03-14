@@ -2,5 +2,7 @@
 auth_*.json
 .env
 agent_map.json
+# Codegen output may contain credentials; keep local-only
+codegen_*.py
 *_debug.png
 playwright-browsers/

@@ -10,8 +10,6 @@ import { SqliteStore } from './db/store.js'
 import type { StoreAdapter } from './db/store.types.js'
 import { authRoutes } from './routes/auth.js'
 import { healthRoutes } from './routes/health.js'
-import { metricsRoutes } from './routes/metrics.js'
-import { resourceRoutes } from './routes/resources.js'
 import { stateRoutes } from './routes/state.js'
 
 export type AppConfig = {
@@ -86,8 +84,6 @@ export async function buildApp(config: AppConfig) {
 
   await healthRoutes(app)
   await authRoutes(app, { adminUsername: config.adminUsername, adminPassword: config.adminPassword })
-  await metricsRoutes(app)
-  await resourceRoutes(app)
   await stateRoutes(app)
 
   app.addHook('onClose', async () => {

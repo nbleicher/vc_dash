@@ -1,6 +1,15 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 import App from './App'
+
+function renderApp(initialRoute = '/dashboard') {
+  return render(
+    <MemoryRouter initialEntries={[initialRoute]}>
+      <App />
+    </MemoryRouter>,
+  )
+}
 
 const emptyState = {
   agents: [],
@@ -50,7 +59,7 @@ describe('App smoke', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    render(<App />)
+    renderApp()
     const signOut = await screen.findByRole('button', { name: 'Sign Out' })
     signOut.click()
 
@@ -69,7 +78,7 @@ describe('App smoke', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    render(<App />)
+    renderApp()
 
     expect(await screen.findByText('vc.jawnix.com')).toBeInTheDocument()
   })
@@ -106,8 +115,8 @@ describe('App smoke', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    render(<App />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Settings' }))
+    renderApp()
+    fireEvent.click(await screen.findByRole('link', { name: 'Settings' }))
     const input = await screen.findByPlaceholderText('Add agent name')
     fireEvent.change(input, { target: { value: 'New Agent' } })
     fireEvent.click(screen.getByRole('button', { name: 'Add Agent' }))
@@ -161,8 +170,8 @@ describe('App smoke', () => {
     vi.stubGlobal('fetch', fetchMock)
     vi.spyOn(window, 'confirm').mockReturnValue(true)
 
-    render(<App />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Settings' }))
+    renderApp()
+    fireEvent.click(await screen.findByRole('link', { name: 'Settings' }))
     fireEvent.click(screen.getByRole('button', { name: 'Clear History' }))
 
     const clearsAgents = fetchMock.mock.calls.some((call) => {

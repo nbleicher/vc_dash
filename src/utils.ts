@@ -95,7 +95,7 @@ export function normalizeIsoTimestamp(ts: string): string {
   return ts.replace(/([+-]\d{2}:\d{2})Z$/i, '$1')
 }
 
-export function mondayFor(date: Date): Date {
+function mondayFor(date: Date): Date {
   const p = estParts(date)
   const base = new Date(Date.UTC(p.year, p.month - 1, p.day, 12, 0, 0))
   const day = base.getUTCDay()

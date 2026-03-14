@@ -28,6 +28,7 @@ export class SqliteStore {
             vaultMeetings: this.getVaultMeetings(),
             vaultDocs: this.getVaultDocs(),
             eodReports: this.getEodReports(),
+            transfers: this.getTransfers(),
             lastPoliciesBotRun: await this.getLastPoliciesBotRun(),
             houseMarketing: await this.getHouseMarketing(),
         };
@@ -140,6 +141,17 @@ export class SqliteStore {
                             .run(row);
                     }
                     break;
+                case 'transfers':
+                    this.db.prepare('DELETE FROM transfers').run();
+                    for (const row of rows) {
+                        this.db
+                            .prepare('INSERT INTO transfers (id,dateKey,fromAgentId,toAgentId,successClosed) VALUES (@id,@dateKey,@fromAgentId,@toAgentId,@successClosed)')
+                            .run({
+                            ...row,
+                            successClosed: row.successClosed ? 1 : 0,
+                        });
+                    }
+                    break;
                 case 'eodReports':
                     this.db.prepare('DELETE FROM eod_reports').run();
                     for (const row of rows) {
@@ -217,6 +229,15 @@ export class SqliteStore {
         return this.db
             .prepare('SELECT id,agentId,fileName,fileSize,uploadedAt FROM vault_docs')
             .all();
+    }
+    getTransfers() {
+        const rows = this.db
+            .prepare('SELECT id,dateKey,fromAgentId,toAgentId,successClosed FROM transfers')
+            .all();
+        return rows.map((row) => ({
+            ...row,
+            successClosed: Boolean(row.successClosed),
+        }));
     }
     getEodReports() {
         return this.db

@@ -10,9 +10,13 @@ export function LoginForm({ onLogin, error }: Props) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
 
+  const doLogin = (): void => {
+    void onLogin(username, password)
+  }
+
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault()
-    void onLogin(username, password)
+    doLogin()
   }
 
   return (
@@ -27,7 +31,7 @@ export function LoginForm({ onLogin, error }: Props) {
             {error}
           </p>
         ) : null}
-        <form className="space-y-3" onSubmit={handleSubmit}>
+        <form className="space-y-3" onSubmit={handleSubmit} action="#">
           <Field>
             <FieldLabel>Username</FieldLabel>
             <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="admin" />
@@ -36,7 +40,7 @@ export function LoginForm({ onLogin, error }: Props) {
             <FieldLabel>Password</FieldLabel>
             <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="admin" />
           </Field>
-          <Button type="submit" variant="default" className="w-full">
+          <Button type="button" variant="default" className="w-full min-h-[44px]" onClick={doLogin}>
             Sign In
           </Button>
         </form>

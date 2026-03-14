@@ -116,6 +116,14 @@ CREATE TABLE IF NOT EXISTS vault_docs (
   uploadedAt TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS transfers (
+  id TEXT PRIMARY KEY,
+  dateKey TEXT NOT NULL,
+  fromAgentId TEXT NOT NULL,
+  toAgentId TEXT NOT NULL,
+  successClosed INTEGER NOT NULL CHECK(successClosed IN (0,1))
+);
+
 CREATE TABLE IF NOT EXISTS eod_reports (
   id TEXT PRIMARY KEY,
   weekKey TEXT NOT NULL,

@@ -65,7 +65,4 @@ Authenticated endpoints:
 
 ## Export
 
-- `POST /export/csv` (auth required)
-  - Body:
-    - `{ agents, performanceHistory, qa, audit, attendance }` boolean flags
-  - Returns `text/csv` payload for selected sections.
+CSV export is performed client-side in the web app (no server endpoint).

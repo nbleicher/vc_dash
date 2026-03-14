@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
 Self-contained backfill bot: PolicyDen + WeGenerate via Playwright, headed by default
-so you can watch the process. No imports from bot.py, auth_login.py, or backfill_eod_from_sources.py.
+so you can watch the process. No imports from main.py, auth_login.py, or backfill.py.
 
 Usage:
-  python backfill_watch.py --start 2025-03-01 --end 2025-03-07
-  python backfill_watch.py --start 2025-03-01 --end 2025-03-07 --slow-mo 500 --trace ./traces
-  python backfill_watch.py --start 2025-03-01 --end 2025-03-07 --freeze
+  python backfill_headed.py --start 2025-03-01 --end 2025-03-07
+  python backfill_headed.py --start 2025-03-01 --end 2025-03-07 --slow-mo 500 --trace ./traces
+  python backfill_headed.py --start 2025-03-01 --end 2025-03-07 --freeze
 
 Requires: .env (API_BASE_URL, ADMIN_USERNAME, ADMIN_PASSWORD, POLICYDEN_USERNAME, POLICYDEN_PASSWORD,
          WEGENERATE_USERNAME, WEGENERATE_PASSWORD), agent_map.json. Auth JSON files optional (will login and save).
@@ -134,10 +134,56 @@ def api_set_house_marketing(session: requests.Session, base_url: str, date_key: 
     return True
 
 
+def api_put_perf_history(session: requests.Session, base_url: str, perf_history: list) -> bool:
+    url = f"{base_url.rstrip('/')}/state/perfHistory"
+    r = request_with_retries(session, "put", url, json=perf_history, timeout=15)
+    if r.status_code != 200:
+        log(f"  PUT /state/perfHistory failed: {r.status_code} {r.text[:200]}")
+        return False
+    return True
+
+
 def merge_snapshots(existing: list, new_rows: list, date_key: str, slot_key: str) -> list:
     key = (date_key, slot_key)
     rest = [s for s in existing if (s.get("dateKey"), s.get("slot")) != key]
     return rest + new_rows
+
+
+def delete_weekend_dates_in_range(
+    session: requests.Session,
+    api_base: str,
+    snapshots: list,
+    perf_history: list,
+    start_date: date,
+    end_date: date,
+    dry_run: bool,
+) -> tuple[list, list]:
+    """Remove snapshots and perfHistory for weekend dates in [start_date, end_date]. Returns (filtered_snapshots, filtered_perf_history)."""
+    weekend_dates = set()
+    cur = start_date
+    while cur <= end_date:
+        if cur.weekday() >= 5:
+            weekend_dates.add(cur.strftime("%Y-%m-%d"))
+        cur += timedelta(days=1)
+    if not weekend_dates:
+        return snapshots, perf_history
+    filtered_snapshots = [s for s in snapshots if not (s.get("dateKey") in weekend_dates)]
+    filtered_perf = [p for p in perf_history if not (p.get("dateKey") in weekend_dates)]
+    removed_snaps = len(snapshots) - len(filtered_snapshots)
+    removed_perf = len(perf_history) - len(filtered_perf)
+    log(f"  delete-weekends: {len(weekend_dates)} weekend dates in range: {sorted(weekend_dates)[:5]}{'...' if len(weekend_dates) > 5 else ''}")
+    if dry_run:
+        log(f"  delete-weekends: [dry-run] would remove {removed_snaps} snapshots, {removed_perf} perfHistory rows")
+        return snapshots, perf_history
+    if removed_snaps > 0 and not api_put_snapshots(session, api_base, filtered_snapshots):
+        log("  delete-weekends: failed to PUT snapshots")
+        return snapshots, perf_history
+    if removed_perf > 0 and not api_put_perf_history(session, api_base, filtered_perf):
+        log("  delete-weekends: failed to PUT perfHistory")
+        return snapshots, perf_history
+    if removed_snaps > 0 or removed_perf > 0:
+        log(f"  delete-weekends: removed {removed_snaps} snapshots, {removed_perf} perfHistory rows")
+    return filtered_snapshots, filtered_perf
 
 
 # --- Login helper (inlined, no auth_login import) ---
@@ -252,10 +298,23 @@ async def set_wegenerate_date(page, date_key: str) -> bool:
                     await page.wait_for_timeout(400)
                 except Exception:
                     break
+        # Select date: click day button (e.g. "Monday, January 5,") twice then Apply (same pattern as PolicyDen)
         day_label = d.strftime("%A, %B ") + str(d.day) + ","
-        await page.get_by_role("button", name=day_label).click(timeout=2000)
-        await page.wait_for_timeout(300)
-        await page.get_by_role("button", name="Apply").click(timeout=5000)
+        day_btn = page.get_by_role("button", name=day_label)
+        n = await day_btn.count()
+        if n >= 1:
+            loc = day_btn.first
+            await loc.click(timeout=2000)
+            await page.wait_for_timeout(300)
+            await loc.click(timeout=2000)
+            await page.wait_for_timeout(300)
+        # Wait for Apply to be enabled before clicking (date must be selected first)
+        apply_btn = page.get_by_role("button", name="Apply")
+        for _ in range(75):
+            if await apply_btn.is_enabled():
+                break
+            await page.wait_for_timeout(200)
+        await apply_btn.click(timeout=10000)
         await page.wait_for_timeout(500)
         return True
     except Exception as e:
@@ -353,7 +412,8 @@ async def scrape_wegenerate(
         await page.wait_for_timeout(3500)
     log(f"  WeGenerate: setting date to {date_key}")
     await set_wegenerate_date(page, date_key)
-    await page.wait_for_timeout(2000)
+    # Wait for table to load after date change (WeGenerate refetches data; 2s was often too short)
+    await page.wait_for_timeout(5000)
     table_scope = "div:has(h3:has-text('Agent Performance'))"
     rows_sel = f"{table_scope} table tbody tr"
     try:
@@ -393,7 +453,7 @@ async def scrape_wegenerate(
                 if not found_calls and "billable" in text:
                     col_calls = i
                     found_calls = True
-                if not found_marketing and "marketing" in text and "campaign" not in text:
+                if not found_marketing and "marketing" in text and "campaign" not in text and "cpa" not in text:
                     col_marketing = i
                     found_marketing = True
         log(f"  WeGenerate: columns Agent={col_agent}, Billable={col_calls}, Marketing={col_marketing}")
@@ -422,18 +482,22 @@ async def scrape_wegenerate(
                     except ValueError:
                         pass
         if marketing_val is None:
-            for cell in cells:
+            # Fallback: use bold cell only from marketing column or columns after it (avoid picking Sales column)
+            for i, cell in enumerate(cells):
+                if i < col_marketing:
+                    continue
                 cls = await cell.get_attribute("class") or ""
-                if "font-bold" in cls:
-                    text = (await cell.inner_text() or "").strip()
-                    if text and ("$" in text or re.search(r"[\d,]+(?:\.\d{2})?", text)):
-                        m = re.search(r"\$?[\d,]+(?:\.\d{2})?", text)
-                        if m:
-                            try:
-                                marketing_val = float(m.group(0).replace("$", "").replace(",", ""))
-                                break
-                            except ValueError:
-                                pass
+                if "font-bold" not in cls:
+                    continue
+                text = (await cell.inner_text() or "").strip()
+                if text and ("$" in text or re.search(r"[\d,]+(?:\.\d{2})?", text)):
+                    m = re.search(r"\$?[\d,]+(?:\.\d{2})?", text)
+                    if m:
+                        try:
+                            marketing_val = float(m.group(0).replace("$", "").replace(",", ""))
+                            break
+                        except ValueError:
+                            pass
         if agent:
             out_calls[agent] = out_calls.get(agent, 0) + calls
             if marketing_val is not None:
@@ -502,16 +566,16 @@ def build_snapshot_rows(
 
 
 def run_freeze(start_key: str, end_key: str, bot_dir: Path) -> int:
-    script = bot_dir / "freeze_eod.py"
+    script = bot_dir / "eod.py"
     if not script.exists():
-        log(f"  freeze_eod.py not found at {script}; skipping --freeze.")
+        log(f"  eod.py not found at {script}; skipping --freeze.")
         return 1
     cmd = [sys.executable, str(script), "--backfill-range", start_key, end_key]
     log(f"  Running: {' '.join(cmd)}")
     try:
         return subprocess.run(cmd, check=False).returncode
     except Exception as e:
-        log(f"  Error running freeze_eod: {e}")
+        log(f"  Error running eod: {e}")
         return 1
 
 
@@ -539,6 +603,7 @@ async def run_backfill(
     dry_run: bool = False,
     freeze: bool = False,
     skip_weekends: bool = True,
+    delete_weekends: bool = False,
 ) -> int:
     session = requests.Session()
     session.headers["Content-Type"] = "application/json"
@@ -550,7 +615,13 @@ async def run_backfill(
     agents = state.get("agents") or []
     active_ids = {a["id"] for a in agents if a.get("active")}
     snapshots = list(state.get("snapshots") or [])
+    perf_history = list(state.get("perfHistory") or [])
     start_key = start_date.strftime("%Y-%m-%d")
+    if delete_weekends:
+        log("Delete weekend dates in range...")
+        snapshots, perf_history = delete_weekend_dates_in_range(
+            session, api_base, snapshots, perf_history, start_date, end_date, dry_run
+        )
     end_key = end_date.strftime("%Y-%m-%d")
 
     launch_options = {"headless": not headed}
@@ -644,9 +715,10 @@ def main() -> int:
     parser.add_argument("--trace", type=str, default=None, metavar="DIR", help="Save trace to DIR")
     parser.add_argument("--video", type=str, default=None, metavar="DIR", help="Save video to DIR")
     parser.add_argument("--dry-run", action="store_true", help="Scrape only; do not PUT/POST")
-    parser.add_argument("--freeze", action="store_true", help="Run freeze_eod.py --backfill-range after snapshots")
+    parser.add_argument("--freeze", action="store_true", help="Run eod.py --backfill-range after snapshots (same as backfill.py --freeze)")
     parser.add_argument("--skip-weekends", action="store_true", default=True, help="Skip Saturday and Sunday (default)")
     parser.add_argument("--no-skip-weekends", action="store_false", dest="skip_weekends", help="Include weekends")
+    parser.add_argument("--delete-weekends", action="store_true", help="Remove existing snapshots and perfHistory for weekend dates in the range")
     args = parser.parse_args()
     try:
         start_date = datetime.strptime(args.start.strip(), "%Y-%m-%d").date()
@@ -683,6 +755,7 @@ def main() -> int:
         dry_run=args.dry_run,
         freeze=args.freeze,
         skip_weekends=args.skip_weekends,
+        delete_weekends=args.delete_weekends,
     ))
 
 

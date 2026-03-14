@@ -18,6 +18,7 @@ const seedState = {
     vaultMeetings: [],
     vaultDocs: [],
     eodReports: [],
+    transfers: [],
     lastPoliciesBotRun: null,
     houseMarketing: null,
 };

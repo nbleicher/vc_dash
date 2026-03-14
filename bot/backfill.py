@@ -2,20 +2,24 @@
 """
 Backfill EOD performance by scraping historical data from PolicyDen and WeGenerate.
 
+When run interactively (TTY), prompts: "Press 1 for headless, 2 for headed". Option 2
+delegates to backfill_headed.py (visible browser). When run non-interactively (e.g. cron),
+always uses headless.
+
 For each date in a given range, this script:
-- Scrapes PolicyDen (sales) and WeGenerate (calls + marketing) using the existing bot.scrapers.
+- Scrapes PolicyDen (sales) and WeGenerate (calls + marketing) using the existing scrapers.
 - Writes/overwrites snapshots for (dateKey, slot) and sets house-level marketing for that date.
-- Optionally runs freeze_eod.py --backfill-range to freeze perf_history for the same range.
+- Optionally runs eod.py --backfill-range to freeze perf_history for the same range.
 
 Usage examples:
   # Backfill from a start date up to yesterday (default slot=17:00)
-  ./venv/bin/python backfill_eod_from_sources.py --start 2025-03-01
+  ./venv/bin/python backfill.py --start 2025-03-01
 
   # Backfill an explicit date range
-  ./venv/bin/python backfill_eod_from_sources.py --start 2025-03-01 --end 2025-03-07
+  ./venv/bin/python backfill.py --start 2025-03-01 --end 2025-03-07
 
   # Backfill and immediately freeze perf_history for that range
-  ./venv/bin/python backfill_eod_from_sources.py --start 2025-03-01 --end 2025-03-07 --slot 17:00 --freeze
+  ./venv/bin/python backfill.py --start 2025-03-01 --end 2025-03-07 --slot 17:00 --freeze
 """
 
 from __future__ import annotations
@@ -36,7 +40,7 @@ from zoneinfo import ZoneInfo
 
 from http_retry import request_with_retries
 
-from bot import (  # type: ignore[import]
+from main import (  # type: ignore[import]
     SLOT_CONFIG,
     ZONE,
     _run_scrapes_async,
@@ -77,7 +81,7 @@ def parse_args() -> BackfillConfig:
     parser.add_argument(
         "--freeze",
         action="store_true",
-        help="After writing snapshots for the date range, run freeze_eod.py --backfill-range START END.",
+        help="After writing snapshots for the date range, run eod.py --backfill-range START END.",
     )
     parser.add_argument(
         "--dry-run",
@@ -204,23 +208,52 @@ def build_new_snapshot_rows(
 
 
 def run_freeze_backfill(start_key: str, end_key: str) -> int:
-    script_path = Path(__file__).resolve().with_name("freeze_eod.py")
+    script_path = Path(__file__).resolve().with_name("eod.py")
     if not script_path.exists():
-        log(f"freeze_eod.py not found at {script_path}; skipping --freeze step.")
+        log(f"eod.py not found at {script_path}; skipping --freeze step.")
         return 1
     cmd = [sys.executable, str(script_path), "--backfill-range", start_key, end_key]
-    log(f"Running freeze_eod backfill: {' '.join(cmd)}")
+    log(f"Running eod backfill: {' '.join(cmd)}")
     try:
         completed = subprocess.run(cmd, check=False)
         return completed.returncode
     except Exception as e:
-        log(f"Error running freeze_eod.py: {e}")
+        log(f"Error running eod.py: {e}")
         return 1
 
 
 def main() -> int:
     load_dotenv()
     cfg = parse_args()
+
+    # Interactive prompt: headless (1) or headed (2). Skip when not a TTY (e.g. cron).
+    if sys.stdin.isatty():
+        try:
+            choice = input("Press 1 for headless, 2 for headed [1]: ").strip() or "1"
+        except (EOFError, KeyboardInterrupt):
+            choice = "1"
+        if choice == "2":
+            bot_dir = Path(__file__).resolve().parent
+            headed_script = bot_dir / "backfill_headed.py"
+            if not headed_script.exists():
+                log(f"backfill_headed.py not found at {headed_script}; running headless.")
+            else:
+                cmd = [
+                    sys.executable,
+                    str(headed_script),
+                    "--start",
+                    cfg.start.strftime("%Y-%m-%d"),
+                    "--end",
+                    cfg.end.strftime("%Y-%m-%d"),
+                    "--slot",
+                    cfg.slot_key,
+                ]
+                if cfg.freeze:
+                    cmd.append("--freeze")
+                if cfg.dry_run:
+                    cmd.append("--dry-run")
+                log(f"Running headed backfill: {' '.join(cmd)}")
+                return subprocess.run(cmd).returncode
 
     api_base = os.environ.get("API_BASE_URL", "").strip()
     if not api_base:
@@ -344,7 +377,7 @@ def main() -> int:
         end_key = cfg.end.strftime("%Y-%m-%d")
         rc = run_freeze_backfill(start_key, end_key)
         if rc != 0:
-            log("freeze_eod backfill exited with non-zero status.")
+            log("eod backfill exited with non-zero status.")
             return rc
 
     log("Backfill complete.")
