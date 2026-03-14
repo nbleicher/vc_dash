@@ -172,19 +172,6 @@ Once the script runs (with `--freeze`), you’ll see:
 - House-level sales/CPA for those days in the EOD history and weekly summaries (sourced from `perf_history` + house marketing).
 - EOD narrative text (`eod_reports`) remains manual unless you choose to backfill it separately.
 
-### Skyvern backfill (AI-powered)
-
-If the Playwright backfill has trouble with calendar/date pickers on PolicyDen or WeGenerate, use the **Skyvern backfill** instead. It uses [Skyvern](https://github.com/Skyvern-AI/skyvern) with a local LLM (e.g. OpenClaw) to set dates and extract tables via natural language. See **[SKYVERN_BACKFILL.md](SKYVERN_BACKFILL.md)** for setup (OpenClaw, Skyvern server, Chrome optional), then run:
-
-```bash
-pip install -r requirements-skyvern.txt   # or: pip install skyvern
-skyvern run server   # in one terminal; keep it running
-./venv/bin/python skyvern_backfill_eod.py --start 2025-03-01 --end 2025-03-07 --dry-run --verbose
-./venv/bin/python skyvern_backfill_eod.py --start 2025-03-01 --end 2025-03-07 --freeze
-```
-
----
-
 ## 4. Policies bot (Action Needed Audit sync)
 
 `policies_bot.py` scrapes PolicyDen **Policies** for the current month (date range “This Month” only; no status filter), then syncs **audit records** with the dashboard: it **adds** records only for policies with status Pending CMS or Flagged, and **updates** existing records when PolicyDen status changes to accepted, issued, or placed so the website reflects the change. Uses the same `auth_policyden.json` and `agent_map.json` as the main bot.

@@ -354,13 +354,23 @@ async def scrape_wegenerate(
     log(f"  WeGenerate: setting date to {date_key}")
     await set_wegenerate_date(page, date_key)
     await page.wait_for_timeout(2000)
-    rows_sel = "div:has(h3:has-text('Agent Performance')) table tbody tr"
+    table_scope = "div:has(h3:has-text('Agent Performance'))"
+    rows_sel = f"{table_scope} table tbody tr"
     try:
         await page.locator("h3:has-text('Agent Performance')").first.scroll_into_view_if_needed(timeout=10000)
         await page.wait_for_timeout(1200)
     except Exception:
         pass
-    fallbacks = ["table tbody tr", "table tr"]
+    try:
+        scroll_sel = f"{table_scope} div.overflow-y-auto"
+        scroll_container = page.locator(scroll_sel)
+        if await scroll_container.count() > 0:
+            for _ in range(8):
+                await scroll_container.first.evaluate("e => { e.scrollTop = e.scrollHeight; }")
+                await page.wait_for_timeout(200)
+    except Exception:
+        pass
+    fallbacks = [f"{table_scope} table tbody tr", "table tbody tr", "table tr"]
     rows = await page.locator(rows_sel).all()
     if len(rows) == 0:
         for fb in fallbacks:
@@ -368,18 +378,40 @@ async def scrape_wegenerate(
             if len(rows) > 0:
                 break
     col_agent, col_calls, col_marketing = 1, 2, 4
+    try:
+        header_row = page.locator(f"{table_scope} table thead tr").first
+        if await header_row.count() > 0:
+            headers = await header_row.locator("th").all()
+            if not headers:
+                headers = await header_row.locator("td").all()
+            found_agent = found_calls = found_marketing = False
+            for i, th in enumerate(headers):
+                text = (await th.inner_text() or "").strip().lower()
+                if not found_agent and "agent" in text:
+                    col_agent = i
+                    found_agent = True
+                if not found_calls and "billable" in text:
+                    col_calls = i
+                    found_calls = True
+                if not found_marketing and "marketing" in text and "campaign" not in text:
+                    col_marketing = i
+                    found_marketing = True
+        log(f"  WeGenerate: columns Agent={col_agent}, Billable={col_calls}, Marketing={col_marketing}")
+    except Exception as e:
+        log(f"  WeGenerate: header detection failed ({e}), using default columns")
     for row in rows:
         cells = await row.locator("td").all()
         if len(cells) < 3:
             continue
         agent = (await cells[col_agent].inner_text() or "").strip() if 0 <= col_agent < len(cells) else ""
+        if not agent or agent.lower() in ("agent", "name", "rank"):
+            continue
         calls = 0
         marketing_val = None
         if 0 <= col_calls < len(cells):
-            try:
-                calls = int((await cells[col_calls].inner_text() or "0").replace(",", ""))
-            except ValueError:
-                pass
+            raw_calls = (await cells[col_calls].inner_text() or "").strip().replace(",", "")
+            if raw_calls.isdigit():
+                calls = int(raw_calls)
         if 0 <= col_marketing < len(cells):
             text = (await cells[col_marketing].inner_text() or "").strip()
             if text:

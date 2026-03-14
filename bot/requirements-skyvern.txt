@@ -1,3 +1,0 @@
-# Install on top of bot requirements when using Skyvern backfill.
-# From bot/: pip install -r requirements.txt && pip install -r requirements-skyvern.txt
-skyvern>=1.0.0
