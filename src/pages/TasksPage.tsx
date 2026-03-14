@@ -10,6 +10,7 @@ import type { DataStore } from '../data'
 import { formatDateKey, formatLastParsedDate, formatTimestamp, csvEscape } from '../utils'
 
 const AUDIT_HISTORY_PREVIEW_ROWS = 5
+const TRANSFER_HISTORY_PAGE_SIZE = 10
 
 type Props = {
   taskPage: TaskPage
@@ -93,6 +94,16 @@ export function TasksPage({
     toAgentId: '',
     clientName: '',
   })
+  const [showAllTransfers, setShowAllTransfers] = useState(false)
+  const sortedTransfers = useMemo(
+    () => [...transfers].sort((a, b) => b.dateKey.localeCompare(a.dateKey)),
+    [transfers],
+  )
+  const displayTransfers = useMemo(
+    () =>
+      showAllTransfers ? sortedTransfers : sortedTransfers.slice(0, TRANSFER_HISTORY_PAGE_SIZE),
+    [showAllTransfers, sortedTransfers],
+  )
   const cancelAuditEdit = (): void => {
     setEditingAuditId(null)
     setAuditDraft(null)
@@ -707,33 +718,44 @@ export function TasksPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {transfers.length === 0 && (
+                  {sortedTransfers.length === 0 && (
                     <tr>
                       <td colSpan={4}>N/A</td>
                     </tr>
                   )}
-                  {transfers
-                    .slice()
-                    .sort((a, b) => b.dateKey.localeCompare(a.dateKey))
-                    .map((row) => (
-                      <tr key={row.id}>
-                        <td>{formatDateKey(row.dateKey)}</td>
-                        <td>{agentName(row.fromAgentId)}</td>
-                        <td>{agentName(row.toAgentId)}</td>
-                        <td className="text-right">
-                          <Button
-                            type="button"
-                            variant="danger"
-                            onClick={() => onDeleteTransfer(row.id)}
-                          >
-                            Delete
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
+                  {displayTransfers.map((row) => (
+                    <tr key={row.id}>
+                      <td>{formatDateKey(row.dateKey)}</td>
+                      <td>{agentName(row.fromAgentId)}</td>
+                      <td>{agentName(row.toAgentId)}</td>
+                      <td className="text-right">
+                        <Button
+                          type="button"
+                          variant="danger"
+                          onClick={() => onDeleteTransfer(row.id)}
+                        >
+                          Delete
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </DataTable>
             </TableWrap>
+            {sortedTransfers.length > TRANSFER_HISTORY_PAGE_SIZE && (
+              <div className="mt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-sm text-slate-600"
+                  onClick={() => setShowAllTransfers((v) => !v)}
+                >
+                  {showAllTransfers
+                    ? 'Show less'
+                    : `Show more (${sortedTransfers.length - TRANSFER_HISTORY_PAGE_SIZE} more)`}
+                </Button>
+              </div>
+            )}
           </div>
         </Card>
       )}

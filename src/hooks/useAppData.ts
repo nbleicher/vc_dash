@@ -19,6 +19,7 @@ import {
   estParts,
   formatDateKey,
   formatTimestamp,
+  formatWeekRangeLabel,
   monFriDatesForWeek,
   normalizeIsoTimestamp,
   uid,
@@ -26,6 +27,9 @@ import {
   weekKeyMonFri,
   dateKeysBetween,
 } from '../utils'
+
+/** First week for EOD/EOW weekly views: week containing January 5 (1/5). */
+const EOD_VIEWS_START_DATE_KEY = '2025-01-05'
 
 type SlotConfig = (typeof SLOT_CONFIG)[number]
 
@@ -544,35 +548,32 @@ export function useAppData(store: DataStore) {
   }, [auditRecords, activeIds, metricsScope, effectiveMetricsAgentId, isInKpiPeriod])
 
   const eodWeekOptions = useMemo(() => {
-    const options: Array<{ weekKey: string; label: string }> = [{ weekKey: currentWeekKey, label: 'Current Week' }]
-    for (let i = 1; i < 8; i += 1) {
-      const monday = new Date(Date.UTC(est.year, est.month - 1, est.day, 12, 0, 0))
-      monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7) - 7 * i)
+    const startWeekKey = weekKeyFromDateKey(EOD_VIEWS_START_DATE_KEY)
+    const weekKeys: string[] = []
+    const [y, m, d] = startWeekKey.split('-').map(Number)
+    let monday = new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
+    while (true) {
       const key = weekKeyMonFri(monday)
-      if (!options.some((item) => item.weekKey === key)) {
-        options.push({
-          weekKey: key,
-          label: i === 1 ? 'Last Week' : `${i} Weeks Ago`,
-        })
-      }
+      if (key > currentWeekKey) break
+      weekKeys.push(key)
+      monday.setUTCDate(monday.getUTCDate() + 7)
     }
-    for (const row of perfHistory) {
-      const key = weekKeyFromDateKey(row.dateKey)
-      if (!options.some((item) => item.weekKey === key)) {
-        options.push({ weekKey: key, label: key })
-      }
+    if (weekKeys.length === 0) {
+      weekKeys.push(currentWeekKey)
     }
-    // Include weeks that have snapshots (e.g. backfilled) so EOD page can show history before eod.py runs
-    for (const snap of snapshots) {
-      if (snap.slot !== '17:00') continue
-      const key = weekKeyFromDateKey(snap.dateKey)
-      if (!options.some((item) => item.weekKey === key)) {
-        options.push({ weekKey: key, label: key })
-      }
-    }
-    options.sort((a, b) => b.weekKey.localeCompare(a.weekKey))
-    return options
-  }, [currentWeekKey, est.day, est.month, est.year, perfHistory, snapshots])
+    weekKeys.sort((a, b) => b.localeCompare(a))
+    return weekKeys.map((weekKey, idx) => {
+      const label =
+        weekKey === currentWeekKey
+          ? 'Current Week'
+          : idx === 1
+            ? 'Last Week'
+            : idx > 1 && idx < 8
+              ? `${idx} Weeks Ago`
+              : formatWeekRangeLabel(weekKey)
+      return { weekKey, label }
+    })
+  }, [currentWeekKey])
 
   const effectiveEodWeekKey = useMemo(
     () =>

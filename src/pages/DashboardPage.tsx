@@ -4,6 +4,7 @@ import type { DataStore } from '../data'
 import { formatNum, formatTimestamp } from '../utils'
 
 const CPA_HIGHLIGHT_THRESHOLD = 130
+const ACTION_CENTER_PAGE_SIZE = 10
 
 type AgentPerformanceRow = {
   agentId: string
@@ -75,6 +76,8 @@ export function DashboardPage({
 
   const [sortBy, setSortBy] = useState<'cpa' | 'sales'>('cpa')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [showAllActionQa, setShowAllActionQa] = useState(false)
+  const [showAllActionAudit, setShowAllActionAudit] = useState(false)
   const displayedRows = useMemo(() => {
     const rows = [...agentPerformanceRows]
     if (sortBy === 'cpa') {
@@ -249,7 +252,7 @@ export function DashboardPage({
             </div>
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto max-h-[55rem] space-y-3">
               {actionQa.length === 0 && <p className="text-sm text-slate-500">N/A - no flagged QA items.</p>}
-              {actionQa.map((q) => (
+              {(showAllActionQa ? actionQa : actionQa.slice(0, ACTION_CENTER_PAGE_SIZE)).map((q) => (
                 <div key={q.id} className="alert-card">
                   <p>
                     <strong>{agents.find((a) => a.id === q.agentId)?.name ?? 'Unknown Agent'}</strong> - {q.clientName}
@@ -260,6 +263,20 @@ export function DashboardPage({
                   </Button>
                 </div>
               ))}
+              {actionQa.length > ACTION_CENTER_PAGE_SIZE && (
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="text-sm text-slate-600"
+                    onClick={() => setShowAllActionQa((v) => !v)}
+                  >
+                    {showAllActionQa
+                      ? 'Show less'
+                      : `Show more (${actionQa.length - ACTION_CENTER_PAGE_SIZE} more)`}
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex flex-col rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -269,7 +286,7 @@ export function DashboardPage({
             </div>
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto max-h-[55rem] space-y-3">
               {actionAudit.length === 0 && <p className="text-sm text-slate-500">N/A - no active Action Needed items.</p>}
-              {actionAudit.map((a) => {
+              {(showAllActionAudit ? actionAudit : actionAudit.slice(0, ACTION_CENTER_PAGE_SIZE)).map((a) => {
                 const ageHrs = (now.getTime() - new Date(a.discoveryTs).getTime()) / 3_600_000
                 return (
                   <div key={a.id} className={`alert-card ${ageHrs > 4 ? 'stale-alert' : ''}`}>
@@ -299,6 +316,20 @@ export function DashboardPage({
                   </div>
                 )
               })}
+              {actionAudit.length > ACTION_CENTER_PAGE_SIZE && (
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="text-sm text-slate-600"
+                    onClick={() => setShowAllActionAudit((v) => !v)}
+                  >
+                    {showAllActionAudit
+                      ? 'Show less'
+                      : `Show more (${actionAudit.length - ACTION_CENTER_PAGE_SIZE} more)`}
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>
