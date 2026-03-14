@@ -44,18 +44,28 @@ WEGENERATE_LOGIN = "https://app.wegenerate.com/login"
 WEGENERATE_DASHBOARD = "https://app.wegenerate.com/dashboard"
 
 # --- Selectors ---
-# PolicyDen: use dashboard + "Open Live View" (auto today's date); live view leaderboard: RANK(0), AGENT(1), SALES(2)
+# PolicyDen: use dashboard date picker + "Open Live View"; live view leaderboard: RANK(0), AGENT(1), SALES(2)
 SELECTORS_POLICYDEN = {
     "open_live_view": 'button:has-text("Open Live View")',
     "table_rows": "table tbody tr",
     "col_agent": 1,   # AGENT column (name + email)
     "col_sales": 2,   # SALES column (e.g. 6)
 }
+
+# PolicyDen date picker: use set_policyden_date_on_page (codegen flow: combobox + day button name).
+SELECTORS_POLICYDEN_DATE = {
+    "date_trigger": "button#date",
+    "date_trigger_fallbacks": ["[data-slot='popover-trigger'][id='date']"],
+    "date_apply": "button:has-text('Apply')",
+}
 # WeGenerate /dashboard: table is inside a card "Agent Performance"; must open date picker, click Today, Apply to load data.
 # Per-agent marketing: td with class font-bold in each row (e.g. $201.00). Campaign Performance: marketing $ in a td with font-bold (e.g. $2,695.00).
 SELECTORS_WEGENERATE = {
     "date_trigger": "button#date",
     "date_apply": "button:has-text('Apply')",
+    "date_picker_today_ok": True,
+    "prev_month": "button[aria-label='Previous page']",
+    "next_month": "button[aria-label='Next page']",
     "card_heading": "h3:has-text('Agent Performance')",
     "table_rows": "div:has(h3:has-text('Agent Performance')) table tbody tr",
     "table_rows_fallbacks": [
@@ -117,6 +127,80 @@ def load_agent_map(bot_dir: Path) -> dict[str, str]:
         raise
 
 
+# Month names for calendar navigation (1-based index)
+_MONTH_NAMES = (
+    "", "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+)
+
+
+async def _navigate_calendar_to_month(page, popover, date_key: str, selectors: dict) -> None:
+    """Click prev_month or next_month until the calendar shows the month for date_key (e.g. WeGenerate)."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    try:
+        prev_sel = selectors.get("prev_month")
+        next_sel = selectors.get("next_month")
+        if not prev_sel and not next_sel:
+            return
+        parts = date_key.split("-")
+        if len(parts) != 3:
+            return
+        target_year = int(parts[0])
+        target_month = int(parts[1])
+        now = datetime.now(ZoneInfo(ZONE))
+        cur_year, cur_month = now.year, now.month
+        months_diff = (cur_year - target_year) * 12 + (cur_month - target_month)
+        if months_diff == 0:
+            return
+        container = popover if await popover.locator(prev_sel or next_sel).count() > 0 else page
+        for _ in range(abs(months_diff)):
+            if months_diff > 0 and prev_sel:
+                try:
+                    await container.locator(prev_sel).first.click(timeout=2000)
+                    await page.wait_for_timeout(400)
+                except Exception:
+                    break
+            elif months_diff < 0 and next_sel:
+                try:
+                    await container.locator(next_sel).first.click(timeout=2000)
+                    await page.wait_for_timeout(400)
+                except Exception:
+                    break
+    except Exception:
+        pass
+
+
+async def _set_calendar_month_only_in_popover(popover, date_key: str) -> bool:
+    """Set only the month dropdown(s) in a range picker (e.g. PolicyDen). Year left as-is."""
+    try:
+        parts = date_key.split("-")
+        if len(parts) != 3:
+            return False
+        month_num = int(parts[1])
+        if month_num < 1 or month_num > 12:
+            return False
+        month_name = _MONTH_NAMES[month_num]
+
+        triggers = await popover.locator('[data-slot="select-trigger"]').all()
+        p = popover.page
+        for t in triggers:
+            text = (await t.inner_text() or "").strip()
+            if text in _MONTH_NAMES[1:]:
+                await t.click(timeout=3000)
+                await p.wait_for_timeout(400)
+                month_opt = p.locator(f'[role="option"]:has-text("{month_name}")').first
+                if await month_opt.count() > 0:
+                    await month_opt.click(timeout=2000)
+                    await p.wait_for_timeout(300)
+                else:
+                    await p.keyboard.press("Escape")
+                    await p.wait_for_timeout(200)
+        return True
+    except Exception:
+        return False
+
+
 async def set_date_on_page(page, date_key: str, selectors: dict) -> bool:
     """Optional: open date picker, select date_key, click Apply. Return True if done."""
     if not selectors.get("date_apply"):
@@ -144,50 +228,92 @@ async def set_date_on_page(page, date_key: str, selectors: dict) -> bool:
         except Exception:
             pass
         await page.wait_for_timeout(400)
-        today_selectors = (
-            'button:has-text("Today")',
-            'button.bg-primary-500:has-text("Today")',
-            '[data-slot="button"]:has-text("Today")',
-        )
-        for today_sel in today_selectors:
-            try:
-                loc = popover.locator(today_sel)
-                if await loc.count() == 0:
-                    loc = page.locator(today_sel)
-                await loc.wait_for(state="visible", timeout=2000)
-                if await loc.count() > 0:
-                    await loc.first.click(timeout=2000)
-                    await page.wait_for_timeout(600)
-                    break
-            except Exception:
-                continue
+
+        try_today = selectors.get("date_picker_today_ok", False) and (date_key == get_date_key_est())
+        if try_today:
+            today_selectors = (
+                'button:has-text("Today")',
+                'button.bg-primary-500:has-text("Today")',
+                '[data-slot="button"]:has-text("Today")',
+            )
+            for today_sel in today_selectors:
+                try:
+                    loc = popover.locator(today_sel)
+                    if await loc.count() == 0:
+                        loc = page.locator(today_sel)
+                    if await loc.count() > 0:
+                        await loc.first.click(timeout=2000)
+                        await page.wait_for_timeout(600)
+                        break
+                except Exception:
+                    continue
+
+        if selectors.get("date_picker_use_month_dropdown"):
+            await _set_calendar_month_only_in_popover(popover, date_key)
+            await page.wait_for_timeout(500)
+
+        if selectors.get("prev_month") and date_key != get_date_key_est():
+            await _navigate_calendar_to_month(page, popover, date_key, selectors)
+            await page.wait_for_timeout(500)
+
         day = date_key.split("-")[2].lstrip("0") or "1"
         day_sel = (
-            f'[data-date="{date_key}"]',
             f'[data-value="{date_key}"]',
+            f'[data-date="{date_key}"]',
+            f'button[data-value="{date_key}"]',
+            f'[data-slot="calendar-cell-trigger"][data-value="{date_key}"]',
             f'[role="gridcell"]:has-text("{day}")',
             f'button:has-text("{day}")',
-            f'[class*="day"]:has-text("^{day}$")',
         )
         clicked_day = False
         for sel in day_sel:
             try:
-                loc = page.locator(sel)
+                loc = popover.locator(sel).first
                 if await loc.count() > 0:
-                    await loc.first.click(timeout=2000)
+                    await loc.click(timeout=2000)
                     clicked_day = True
                     break
             except Exception:
                 continue
+        if not clicked_day:
+            await page.wait_for_timeout(300)
+            for sel in day_sel[:4]:
+                try:
+                    loc = popover.locator(sel).first
+                    if await loc.count() > 0:
+                        await loc.click(timeout=2000)
+                        clicked_day = True
+                        break
+                except Exception:
+                    continue
+
+        if clicked_day and selectors.get("date_picker_range_select_both"):
+            await page.wait_for_timeout(300)
+            for sel in day_sel[:4]:
+                try:
+                    loc = popover.locator(sel)
+                    if await loc.count() >= 2:
+                        await loc.nth(1).click(timeout=2000)
+                        break
+                except Exception:
+                    continue
         if clicked_day:
             await page.wait_for_timeout(400)
-        apply_loc = page.locator(selectors["date_apply"])
+
+        apply_loc = popover.locator(selectors["date_apply"]).first
+        if await apply_loc.count() == 0:
+            apply_loc = page.locator(selectors["date_apply"]).first
         try:
             await apply_loc.wait_for(state="visible", timeout=3000)
-            for _ in range(50):
+            for _ in range(75):
                 if await apply_loc.is_enabled():
                     break
                 await page.wait_for_timeout(200)
+            if not await apply_loc.is_enabled():
+                log("  Apply button stayed disabled; date may not be selected.")
+                await page.keyboard.press("Escape")
+                await page.wait_for_timeout(300)
+                return False
             await apply_loc.click(timeout=5000)
         except Exception as e:
             log(f"  Apply button: {e}")
@@ -201,6 +327,49 @@ async def set_date_on_page(page, date_key: str, selectors: dict) -> bool:
         return False
 
 
+async def set_policyden_date_on_page(page, date_key: str) -> bool:
+    """Set PolicyDen dashboard date using codegen flow: combobox for month, then day button by aria-label, then Apply."""
+    from datetime import datetime
+
+    try:
+        await page.locator("button#date").first.click(timeout=4000)
+        await page.wait_for_timeout(600)
+        popover = page.locator('[id^="reka-popover-content-"], [role="dialog"]').first
+        await popover.wait_for(state="visible", timeout=4000)
+        await page.wait_for_timeout(400)
+
+        d = datetime.strptime(date_key, "%Y-%m-%d")
+        month_name = d.strftime("%B")
+        day_label = d.strftime("%A, %B ") + str(d.day) + ","
+
+        for i in range(2):
+            try:
+                cb = page.get_by_role("combobox").nth(i)
+                await cb.click(timeout=3000)
+                await page.wait_for_timeout(400)
+                opt = page.get_by_role("option", name=month_name)
+                await opt.first.click(timeout=2000)
+                await page.wait_for_timeout(300)
+            except Exception:
+                break
+
+        day_btn = page.get_by_role("button", name=day_label)
+        n = await day_btn.count()
+        if n >= 1:
+            await day_btn.first.click(timeout=2000)
+            await page.wait_for_timeout(300)
+        if n >= 2:
+            await day_btn.nth(1).click(timeout=2000)
+            await page.wait_for_timeout(300)
+
+        await page.get_by_role("button", name="Apply").click(timeout=5000)
+        await page.wait_for_timeout(500)
+        return True
+    except Exception as e:
+        log(f"  PolicyDen date picker failed: {e}")
+        return False
+
+
 async def scrape_policyden(
     auth_path: Path,
     date_key: str,
@@ -208,7 +377,7 @@ async def scrape_policyden(
     policyden_user: str = "",
     policyden_pass: str = "",
 ) -> dict[str, int]:
-    """Return { agent_name: sales_count } via dashboard -> Open Live View (today's date auto-set)."""
+    """Return { agent_name: sales_count } via dashboard date picker + Open Live View for the given date_key."""
     from playwright.async_api import async_playwright
 
     out: dict[str, int] = {}
@@ -279,11 +448,58 @@ async def scrape_policyden(
                 log("  PolicyDen: 0 table rows (Open Live View may have failed or session expired).")
             else:
                 log(f"  PolicyDen: {n_rows} table rows, {len(out)} agents with sales.")
+        except KeyboardInterrupt:
+            log("  PolicyDen scrape interrupted.")
         except Exception as e:
             log(f"  PolicyDen scrape failed: {e}")
         finally:
-            await browser.close()
+            try:
+                await browser.close()
+            except Exception:
+                pass
     return out
+
+
+async def set_wegenerate_date_on_page(page, date_key: str) -> bool:
+    """Set WeGenerate dashboard date using codegen flow: Previous/Next page, then day button by name, then Apply."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    try:
+        await page.locator("button#date").first.click(timeout=4000)
+        await page.wait_for_timeout(600)
+        popover = page.locator('[id^="reka-popover-content-"], [role="dialog"]').first
+        try:
+            await popover.wait_for(state="visible", timeout=4000)
+        except Exception:
+            pass
+        await page.wait_for_timeout(400)
+
+        d = datetime.strptime(date_key, "%Y-%m-%d")
+        now = datetime.now(ZoneInfo(ZONE))
+        months_diff = (now.year - d.year) * 12 + (now.month - d.month)
+        if months_diff != 0:
+            prev_btn = page.get_by_role("button", name="Previous page")
+            next_btn = page.get_by_role("button", name="Next page")
+            for _ in range(abs(months_diff)):
+                try:
+                    if months_diff > 0:
+                        await prev_btn.first.click(timeout=2000)
+                    else:
+                        await next_btn.first.click(timeout=2000)
+                    await page.wait_for_timeout(400)
+                except Exception:
+                    break
+
+        day_label = d.strftime("%A, %B ") + str(d.day) + ","
+        await page.get_by_role("button", name=day_label).click(timeout=2000)
+        await page.wait_for_timeout(300)
+        await page.get_by_role("button", name="Apply").click(timeout=5000)
+        await page.wait_for_timeout(500)
+        return True
+    except Exception as e:
+        log(f"  WeGenerate date picker failed: {e}")
+        return False
 
 
 async def scrape_wegenerate(
@@ -322,9 +538,8 @@ async def scrape_wegenerate(
                 log("  WeGenerate: session expired (no credentials in .env for auto re-login).")
                 return out, marketing_by_agent, campaign_marketing
 
-            if SELECTORS_WEGENERATE.get("date_trigger") and SELECTORS_WEGENERATE.get("date_apply"):
-                await set_date_on_page(page, date_key, SELECTORS_WEGENERATE)
-                await page.wait_for_timeout(1500)
+            # Use the dashboard's default date (typically Today) without manipulating the date picker.
+            await page.wait_for_timeout(1500)
 
             rows_sel = SELECTORS_WEGENERATE.get("table_rows") or "table tbody tr"
             col_agent = SELECTORS_WEGENERATE.get("col_agent")
@@ -458,10 +673,15 @@ async def scrape_wegenerate(
                         break
                 except Exception:
                     continue
+        except KeyboardInterrupt:
+            log("  WeGenerate scrape interrupted.")
         except Exception as e:
             log(f"  WeGenerate scrape failed: {e}")
         finally:
-            await browser.close()
+            try:
+                await browser.close()
+            except Exception:
+                pass
     return out, marketing_by_agent, campaign_marketing
 
 

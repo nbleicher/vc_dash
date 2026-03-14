@@ -1,6 +1,8 @@
 # Dependencies
 node_modules/
 server/node_modules/
+bot/venv/
+bot/venv_skyvern/
 
 # Build outputs
 dist/

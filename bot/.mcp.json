@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "skyvern": {
+      "command": "/Users/noahbleicher/Desktop/vc_dash/bot/venv_skyvern/bin/python3.11",
+      "args": [
+        "-m",
+        "skyvern",
+        "run",
+        "mcp"
+      ],
+      "env": {
+        "SKYVERN_BASE_URL": "http://localhost:8000",
+        "SKYVERN_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjQ5MTgzNzg1MzYsInN1YiI6Im9fNTA1NjY5NDE4MTEwMjk2ODY0In0.YBysjBsaYgj2r45e_UPUbwwZQOb9F3YGeDLHeKHMazA"
+      }
+    }
+  }
+}

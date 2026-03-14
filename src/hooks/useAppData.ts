@@ -403,6 +403,20 @@ export function useAppData(store: DataStore) {
         existing.marketing += row.marketing
         byAgent.set(row.agentId, existing)
       }
+      // Fallback: use 17:00 snapshots for dates in range when perfHistory is missing (e.g. before freeze_eod)
+      for (const dateKey of periodDates) {
+        if (dateKey === todayKey) continue
+        for (const snap of snapshots) {
+          if (snap.dateKey !== dateKey || snap.slot !== '17:00' || !activeIds.has(snap.agentId)) continue
+          const hasPerf = perfHistory.some((p) => p.dateKey === dateKey && p.agentId === snap.agentId)
+          if (hasPerf) continue
+          const existing = byAgent.get(snap.agentId) ?? { calls: 0, sales: 0, marketing: 0 }
+          existing.calls += snap.billableCalls
+          existing.sales += snap.sales
+          existing.marketing += snap.marketing ?? snap.billableCalls * 15
+          byAgent.set(snap.agentId, existing)
+        }
+      }
       if (periodDates.has(todayKey)) {
         for (const [agentId, snap] of liveByAgent.entries()) {
           if (!activeIds.has(agentId)) continue
@@ -415,7 +429,7 @@ export function useAppData(store: DataStore) {
       }
       return { byAgent, periodDates }
     },
-    [activeAgents, effectiveMetricsDateKey, liveByAgent, perfHistory, todayKey],
+    [activeAgents, effectiveMetricsDateKey, liveByAgent, perfHistory, snapshots, todayKey],
   )
 
   const rankRows = useMemo(() => {
@@ -548,8 +562,17 @@ export function useAppData(store: DataStore) {
         options.push({ weekKey: key, label: key })
       }
     }
+    // Include weeks that have snapshots (e.g. backfilled) so EOD page can show history before freeze_eod runs
+    for (const snap of snapshots) {
+      if (snap.slot !== '17:00') continue
+      const key = weekKeyFromDateKey(snap.dateKey)
+      if (!options.some((item) => item.weekKey === key)) {
+        options.push({ weekKey: key, label: key })
+      }
+    }
+    options.sort((a, b) => b.weekKey.localeCompare(a.weekKey))
     return options
-  }, [currentWeekKey, est.day, est.month, est.year, perfHistory])
+  }, [currentWeekKey, est.day, est.month, est.year, perfHistory, snapshots])
 
   const effectiveEodWeekKey = useMemo(
     () =>
@@ -638,6 +661,9 @@ export function useAppData(store: DataStore) {
     const dateKeys = new Set<string>()
     for (const r of eodReports) dateKeys.add(r.dateKey)
     for (const p of perfHistory) dateKeys.add(p.dateKey)
+    for (const s of snapshots) {
+      if (s.slot === '17:00') dateKeys.add(s.dateKey)
+    }
     const days = Array.from(dateKeys).sort((a, b) => b.localeCompare(a))
     return days.map((dateKey) => {
       const reportsForDay = eodReports.filter((r) => r.dateKey === dateKey)
@@ -645,6 +671,7 @@ export function useAppData(store: DataStore) {
         ? reportsForDay.sort((a, b) => (b.submittedAt > a.submittedAt ? 1 : -1))[0]
         : null
       const perfForDay = perfHistory.filter((p) => p.dateKey === dateKey)
+      const snapsForDay = snapshots.filter((s) => s.dateKey === dateKey && s.slot === '17:00')
       let houseSales = latestReport?.houseSales ?? 0
       let houseCpa = latestReport?.houseCpa ?? null
       if (!latestReport && perfForDay.length > 0) {
@@ -653,18 +680,40 @@ export function useAppData(store: DataStore) {
         houseSales = totalSales
         houseCpa = totalSales > 0 ? totalMarketing / totalSales : null
       }
-      const agentRows = perfForDay.map((p) => {
-        const agent = agents.find((a) => a.id === p.agentId)
-        return {
-          agentId: p.agentId,
-          agentName: agent?.name ?? p.agentId,
-          calls: p.billableCalls,
-          sales: p.sales,
-          marketing: p.marketing,
-          cpa: p.cpa,
-          cvr: p.cvr,
-        }
-      })
+      if (!latestReport && perfForDay.length === 0 && snapsForDay.length > 0) {
+        houseSales = snapsForDay.reduce((acc, s) => acc + s.sales, 0)
+        const totalMkt = snapsForDay.reduce((acc, s) => acc + (s.marketing ?? s.billableCalls * 15), 0)
+        houseCpa = houseSales > 0 ? totalMkt / houseSales : null
+      }
+      const agentRows =
+        perfForDay.length > 0
+          ? perfForDay.map((p) => {
+              const agent = agents.find((a) => a.id === p.agentId)
+              return {
+                agentId: p.agentId,
+                agentName: agent?.name ?? p.agentId,
+                calls: p.billableCalls,
+                sales: p.sales,
+                marketing: p.marketing,
+                cpa: p.cpa,
+                cvr: p.cvr,
+              }
+            })
+          : snapsForDay.map((s) => {
+              const agent = agents.find((a) => a.id === s.agentId)
+              const marketing = s.marketing ?? s.billableCalls * 15
+              const cpa = s.sales > 0 ? marketing / s.sales : null
+              const cvr = s.billableCalls > 0 ? s.sales / s.billableCalls : null
+              return {
+                agentId: s.agentId,
+                agentName: agent?.name ?? s.agentId,
+                calls: s.billableCalls,
+                sales: s.sales,
+                marketing,
+                cpa,
+                cvr,
+              }
+            })
       return {
         dateKey,
         houseSales,
@@ -674,7 +723,7 @@ export function useAppData(store: DataStore) {
         agentRows,
       }
     })
-  }, [agents, eodReports, perfHistory])
+  }, [agents, eodReports, perfHistory, snapshots])
 
   const eodWeeklyRows = useMemo(() => {
     const dates = monFriDatesForWeek(effectiveEodWeekKey)
