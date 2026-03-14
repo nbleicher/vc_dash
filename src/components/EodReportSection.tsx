@@ -47,7 +47,7 @@ type Props = {
 
 export function EodReportSection({
   currentWeekKey,
-  todayKey: _todayKey,
+  todayKey: _todayKey, // eslint-disable-line @typescript-eslint/no-unused-vars -- required by Props, reserved for future use
   eodTodayTotals,
   eodHistoryDays,
   onSaveEodReport,
