@@ -24,10 +24,6 @@ export async function buildApp(config) {
     const allowedOrigins = new Set(config.frontendOrigins.map(normalizeOrigin).filter(Boolean));
     const app = Fastify({ logger: true, trustProxy: true });
     app.decorate('store', store);
-    app.decorate('authenticate', async function authenticate(_request, _reply) {
-        // No-op auth in public mode
-        return;
-    });
     await app.register(cors, {
         origin(origin, callback) {
             if (!origin) {
@@ -54,7 +50,7 @@ export async function buildApp(config) {
         },
     });
     await healthRoutes(app);
-    await authRoutes(app, { adminUsername: config.adminUsername, adminPassword: config.adminPassword });
+    await authRoutes(app);
     await stateRoutes(app);
     app.addHook('onClose', async () => {
         await store.close();

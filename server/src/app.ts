@@ -3,7 +3,6 @@ import cookie from '@fastify/cookie'
 import cors from '@fastify/cors'
 import jwt from '@fastify/jwt'
 import rateLimit from '@fastify/rate-limit'
-import type { FastifyReply, FastifyRequest } from 'fastify'
 import { runMigrations } from './db/migrate.js'
 import { PostgresStore } from './db/postgres-store.js'
 import { SqliteStore } from './db/store.js'
@@ -21,14 +20,6 @@ export type AppConfig = {
   adminPassword: string
 }
 
-declare module 'fastify' {
-  interface FastifyInstance {
-    // authenticate is unused in no-auth mode; kept for type compatibility
-    authenticate(request: FastifyRequest, reply: FastifyReply): Promise<void>
-    store: StoreAdapter
-  }
-}
-
 export async function buildApp(config: AppConfig) {
   const normalizeOrigin = (value: string): string => value.trim().replace(/\/+$/, '')
   let store: StoreAdapter
@@ -44,9 +35,6 @@ export async function buildApp(config: AppConfig) {
   const allowedOrigins = new Set(config.frontendOrigins.map(normalizeOrigin).filter(Boolean))
   const app = Fastify({ logger: true, trustProxy: true })
   app.decorate('store', store)
-  app.decorate('authenticate', async function authenticate(): Promise<void> {
-    // No-op auth in public mode
-  })
 
   await app.register(cors, {
     origin(origin, callback) {

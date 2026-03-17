@@ -1,4 +1,4 @@
-export async function authRoutes(app, _env) {
+export async function authRoutes(app) {
     // Auth endpoints kept for backward compatibility; they now always
     // report logged-in status without enforcing credentials or cookies.
     app.post('/auth/login', async (_request, reply) => {

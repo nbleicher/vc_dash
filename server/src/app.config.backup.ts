@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Backup of original app.ts configuration (auth, CORS, JWT)
 // Created before mobile auth/cookie/CORS adjustments.
 import Fastify from 'fastify'
