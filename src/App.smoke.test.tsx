@@ -80,7 +80,7 @@ describe('App smoke', () => {
 
     renderApp()
 
-    expect(await screen.findByText('vc.jawnix.com')).toBeInTheDocument()
+    expect(await screen.findByText('value.jawnix.com')).toBeInTheDocument()
   })
 
   it('syncs agents collection to API after adding agent', async () => {

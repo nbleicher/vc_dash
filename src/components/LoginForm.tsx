@@ -23,7 +23,7 @@ export function LoginForm({ onLogin, error }: Props) {
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md space-y-4">
         <div className="space-y-1 text-center">
-          <h1>vc.jawnix.com</h1>
+          <h1>value.jawnix.com</h1>
           <p className="text-sm text-slate-500">Management login (default: admin / admin)</p>
         </div>
         {error ? (
