@@ -1,7 +1,6 @@
 import type { FastifyInstance } from 'fastify'
-import type { AuthEnv } from '../auth.js'
 
-export async function authRoutes(app: FastifyInstance, _env: AuthEnv): Promise<void> {
+export async function authRoutes(app: FastifyInstance): Promise<void> {
   // Auth endpoints kept for backward compatibility; they now always
   // report logged-in status without enforcing credentials or cookies.
   app.post('/auth/login', async (_request, reply) => {
