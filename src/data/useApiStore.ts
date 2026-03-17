@@ -117,19 +117,16 @@ export function useDataStore(): DataStore {
   const setVaultDocs = wrapSetter(setVaultDocsState)
   const setEodReports = wrapSetter(setEodReportsState)
 
-  const login = useCallback(
-    async (_username: string, _password: string) => {
-      hydratingRef.current = true
-      try {
-        setLoggedInState(true)
-        await loadFromApi()
-        setError(null)
-      } finally {
-        hydratingRef.current = false
-      }
-    },
-    [loadFromApi],
-  )
+  const login = useCallback(async () => {
+    hydratingRef.current = true
+    try {
+      setLoggedInState(true)
+      await loadFromApi()
+      setError(null)
+    } finally {
+      hydratingRef.current = false
+    }
+  }, [loadFromApi])
 
   const logout = useCallback(async () => {
     // No-op logout in no-auth mode; keep dashboard accessible

@@ -44,9 +44,8 @@ export async function buildApp(config: AppConfig) {
   const allowedOrigins = new Set(config.frontendOrigins.map(normalizeOrigin).filter(Boolean))
   const app = Fastify({ logger: true, trustProxy: true })
   app.decorate('store', store)
-  app.decorate('authenticate', async function authenticate(_request: FastifyRequest, _reply: FastifyReply) {
+  app.decorate('authenticate', async function authenticate(): Promise<void> {
     // No-op auth in public mode
-    return
   })
 
   await app.register(cors, {
