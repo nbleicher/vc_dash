@@ -90,7 +90,7 @@ export class ApiClient {
       method: options.method,
       headers,
       body: hasBody ? JSON.stringify(options.body) : undefined,
-      credentials: 'include',
+      // No auth cookies; treat API as public JSON backend
       cache: options.method === 'GET' ? 'no-store' : 'default',
     })
 
