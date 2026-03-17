@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Backup of original app.ts configuration (auth, CORS, JWT)
 // Created before mobile auth/cookie/CORS adjustments.
 import Fastify from 'fastify'
@@ -86,7 +85,7 @@ export async function buildApp(config: AppConfig) {
   })
 
   await healthRoutes(app)
-  await authRoutes(app, { adminUsername: config.adminUsername, adminPassword: config.adminPassword })
+  await authRoutes(app)
   await stateRoutes(app)
 
   app.addHook('onClose', async () => {
