@@ -35,21 +35,26 @@ describe('auth', () => {
     expect(parsed.data.db).toBe('ok')
   })
 
-  it('rejects unauthenticated /auth/me', async () => {
+  it('returns logged-in state from /auth/me (no auth required)', async () => {
     const res = await app.inject({ method: 'GET', url: '/auth/me' })
-    expect(res.statusCode).toBe(401)
+    expect(res.statusCode).toBe(200)
+    const parsed = res.json() as { data: { loggedIn: boolean; role: string } }
+    expect(parsed.data.loggedIn).toBe(true)
+    expect(parsed.data.role).toBe('admin')
   })
 
-  it('logs in and issues cookie', async () => {
+  it('logs in successfully (no cookie required)', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/auth/login',
       payload: { username: 'admin', password: 'admin' },
     })
     expect(res.statusCode).toBe(200)
-    const setCookie = res.headers['set-cookie']
-    expect(setCookie).toBeTruthy()
-    authCookie = Array.isArray(setCookie) ? setCookie[0] : String(setCookie)
+    const parsed = res.json() as { data: { loggedIn: boolean; role: string } }
+    expect(parsed.data.loggedIn).toBe(true)
+    expect(parsed.data.role).toBe('admin')
+    // In no-auth mode we don't rely on cookies, so authCookie is unused
+    authCookie = ''
   })
 
   it('logs out successfully with no body', async () => {
