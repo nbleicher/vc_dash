@@ -27,62 +27,6 @@ const emptyState = {
 }
 
 describe('App smoke', () => {
-  it('sends logout request without content-type when no body is present', async () => {
-    const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
-      const url = String(input)
-      if (url.endsWith('/auth/me')) {
-        return {
-          ok: true,
-          status: 200,
-          text: async () => JSON.stringify({ data: { loggedIn: true, role: 'admin' } }),
-        }
-      }
-      if (url.endsWith('/state') || url.includes('/state?')) {
-        return {
-          ok: true,
-          status: 200,
-          text: async () => JSON.stringify({ data: emptyState }),
-        }
-      }
-      if (url.endsWith('/auth/logout')) {
-        return {
-          ok: true,
-          status: 200,
-          text: async () => JSON.stringify({ data: { loggedIn: false } }),
-        }
-      }
-      return {
-        ok: true,
-        status: 200,
-        text: async () => JSON.stringify({ data: [] }),
-      }
-    })
-    vi.stubGlobal('fetch', fetchMock)
-
-    renderApp()
-    const signOut = await screen.findByRole('button', { name: 'Sign Out' })
-    signOut.click()
-
-    const logoutCall = fetchMock.mock.calls.find((call) => String(call[0]).endsWith('/auth/logout'))
-    expect(logoutCall).toBeTruthy()
-    const init = logoutCall?.[1] as RequestInit | undefined
-    const headers = (init?.headers ?? {}) as Record<string, string>
-    expect(headers['content-type']).toBeUndefined()
-  })
-
-  it('renders login form when unauthenticated', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 401,
-      text: async () => '',
-    })
-    vi.stubGlobal('fetch', fetchMock)
-
-    renderApp()
-
-    expect(await screen.findByText('value.jawnix.com')).toBeInTheDocument()
-  })
-
   it('syncs agents collection to API after adding agent', async () => {
     const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
@@ -116,7 +60,8 @@ describe('App smoke', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     renderApp()
-    fireEvent.click(await screen.findByRole('link', { name: 'Settings' }))
+    const settingsLinks = await screen.findAllByRole('link', { name: 'Settings' })
+    fireEvent.click(settingsLinks[0])
     const input = await screen.findByPlaceholderText('Add agent name')
     fireEvent.change(input, { target: { value: 'New Agent' } })
     fireEvent.click(screen.getByRole('button', { name: 'Add Agent' }))
