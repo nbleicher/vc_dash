@@ -26,19 +26,21 @@ export async function authRoutes(app, env) {
         }
         const token = app.jwt.sign({ sub: 'admin', role: 'admin' }, { expiresIn: '12h' });
         const isHttps = request.protocol === 'https';
-        const sameSite = isHttps ? 'none' : 'lax';
+        const isProd = process.env.NODE_ENV === 'production';
+        const sameSite = isHttps || isProd ? 'none' : 'lax';
         reply.setCookie(cookieName(), token, {
             path: '/',
             httpOnly: true,
             sameSite,
-            secure: isHttps,
+            secure: isHttps || isProd,
         });
         return reply.send({ data: { loggedIn: true, role: 'admin' } });
     });
     app.post('/auth/logout', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (request, reply) => {
         const isHttps = request.protocol === 'https';
-        const sameSite = isHttps ? 'none' : 'lax';
-        reply.clearCookie(cookieName(), { path: '/', sameSite, secure: isHttps });
+        const isProd = process.env.NODE_ENV === 'production';
+        const sameSite = isHttps || isProd ? 'none' : 'lax';
+        reply.clearCookie(cookieName(), { path: '/', sameSite, secure: isHttps || isProd });
         return reply.send({ data: { loggedIn: false } });
     });
     app.get('/auth/me', { preHandler: [app.authenticate] }, async (_request, reply) => {

@@ -34,13 +34,24 @@ export function LoginForm({ onLogin, error }: Props) {
         <form className="space-y-3" onSubmit={handleSubmit} action="#">
           <Field>
             <FieldLabel>Username</FieldLabel>
-            <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="admin" />
+            <Input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="admin"
+              autoComplete="username"
+            />
           </Field>
           <Field>
             <FieldLabel>Password</FieldLabel>
-            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="admin" />
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="admin"
+              autoComplete="current-password"
+            />
           </Field>
-          <Button type="button" variant="default" className="w-full min-h-[44px]" onClick={doLogin}>
+          <Button type="submit" variant="default" className="w-full min-h-[44px]">
             Sign In
           </Button>
         </form>

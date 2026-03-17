@@ -59,7 +59,7 @@ SELECTORS_POLICYDEN_DATE = {
     "date_apply": "button:has-text('Apply')",
 }
 # WeGenerate /dashboard: table is inside a card "Agent Performance"; must open date picker, click Today, Apply to load data.
-# Per-agent marketing: td with class font-bold in each row (e.g. $201.00). Campaign Performance: marketing $ in a td with font-bold (e.g. $2,695.00).
+# Per-agent marketing: td with class font-bold in each row (e.g. $201.00). Campaign Performance / Marketing card: marketing $ in a bold amount element (e.g. $2,695.00 or the Marketing card total).
 SELECTORS_WEGENERATE = {
     "date_trigger": "button#date",
     "date_apply": "button:has-text('Apply')",
@@ -79,8 +79,15 @@ SELECTORS_WEGENERATE = {
     "col_agent": 1,   # Agent column
     "col_calls": 2,   # Billable column
     "col_marketing": 4,  # Marketing column (Rank=0, Agent=1, Billable=2, Sales=3, Marketing=4, CPA=5)
-    "campaign_marketing_cell": "td.font-bold",  # Campaign Performance table: cell with $ amount
-    "campaign_marketing_fallbacks": ["td[class*='font-bold']", "[class*='font-bold']"],
+    # Campaign marketing (house total): Marketing card only (h3 \"Marketing\" + div.text-2xl.font-bold). Do NOT fall back to table cells,
+    # because those can be per-agent/per-call figures and will not match the card total.
+    "campaign_marketing_cell": "div.rounded-xl.border.bg-card.text-card-foreground.shadow:has(h3:has-text('Marketing')) div.text-2xl.font-bold",
+    "campaign_marketing_fallbacks": [
+        "div.rounded-xl:has(h3:has-text('Marketing')) div.text-2xl.font-bold",
+        "div:has(h3:has-text('Marketing')) div.text-2xl.font-bold",
+        "div:has(h3:has-text('Marketing')) [class*='text-2xl']",
+        "div:has(h3:has-text('Marketing')) [class*='font-bold']",
+    ],
 }
 
 
@@ -668,7 +675,7 @@ async def scrape_wegenerate(
                                 raw = match.group(0).replace("$", "").replace(",", "")
                                 try:
                                     campaign_marketing = float(raw)
-                                    log(f"  WeGenerate: campaign marketing ${campaign_marketing:,.2f}")
+                                    log(f"  WeGenerate: campaign marketing ${campaign_marketing:,.2f} (from card)")
                                     break
                                 except ValueError:
                                     pass
@@ -676,6 +683,10 @@ async def scrape_wegenerate(
                         break
                 except Exception:
                     continue
+
+            if campaign_marketing is None and marketing_by_agent:
+                campaign_marketing = sum(marketing_by_agent.values())
+                log(f"  WeGenerate: campaign marketing ${campaign_marketing:,.2f} (sum of agents)")
         except KeyboardInterrupt:
             log("  WeGenerate scrape interrupted.")
         except Exception as e:

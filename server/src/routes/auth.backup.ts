@@ -1,3 +1,4 @@
+// Backup of original auth routes before mobile cookie changes.
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { cookieName, isValidAdmin, type AuthEnv } from '../auth.js'
@@ -31,13 +32,12 @@ export async function authRoutes(app: FastifyInstance, env: AuthEnv): Promise<vo
 
     const token = app.jwt.sign({ sub: 'admin', role: 'admin' }, { expiresIn: '12h' })
     const isHttps = request.protocol === 'https'
-    const isProd = process.env.NODE_ENV === 'production'
-    const sameSite = isHttps || isProd ? 'none' : 'lax'
+    const sameSite = isHttps ? 'none' : 'lax'
     reply.setCookie(cookieName(), token, {
       path: '/',
       httpOnly: true,
       sameSite,
-      secure: isHttps || isProd,
+      secure: isHttps,
     })
 
     return reply.send({ data: { loggedIn: true, role: 'admin' } })
@@ -45,9 +45,8 @@ export async function authRoutes(app: FastifyInstance, env: AuthEnv): Promise<vo
 
   app.post('/auth/logout', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (request, reply) => {
     const isHttps = request.protocol === 'https'
-    const isProd = process.env.NODE_ENV === 'production'
-    const sameSite = isHttps || isProd ? 'none' : 'lax'
-    reply.clearCookie(cookieName(), { path: '/', sameSite, secure: isHttps || isProd })
+    const sameSite = isHttps ? 'none' : 'lax'
+    reply.clearCookie(cookieName(), { path: '/', sameSite, secure: isHttps })
     return reply.send({ data: { loggedIn: false } })
   })
 
@@ -55,3 +54,4 @@ export async function authRoutes(app: FastifyInstance, env: AuthEnv): Promise<vo
     return reply.send({ data: { loggedIn: true, role: 'admin' } })
   })
 }
+
