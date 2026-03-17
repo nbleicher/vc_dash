@@ -23,6 +23,7 @@ export type AppConfig = {
 
 declare module 'fastify' {
   interface FastifyInstance {
+    // authenticate is unused in no-auth mode; kept for type compatibility
     authenticate(request: FastifyRequest, reply: FastifyReply): Promise<void>
     store: StoreAdapter
   }
@@ -43,17 +44,9 @@ export async function buildApp(config: AppConfig) {
   const allowedOrigins = new Set(config.frontendOrigins.map(normalizeOrigin).filter(Boolean))
   const app = Fastify({ logger: true, trustProxy: true })
   app.decorate('store', store)
-  app.decorate('authenticate', async function authenticate(request: FastifyRequest, reply: FastifyReply) {
-    try {
-      await request.jwtVerify()
-    } catch {
-      reply.code(401).send({
-        error: {
-          code: 'AUTH_REQUIRED',
-          message: 'Authentication required.',
-        },
-      })
-    }
+  app.decorate('authenticate', async function authenticate(_request: FastifyRequest, _reply: FastifyReply) {
+    // No-op auth in public mode
+    return
   })
 
   await app.register(cors, {
@@ -64,7 +57,7 @@ export async function buildApp(config: AppConfig) {
       }
       callback(null, allowedOrigins.has(normalizeOrigin(origin)))
     },
-    credentials: true,
+    credentials: false,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'OPTIONS'],
     allowedHeaders: ['content-type', 'authorization', 'cache-control', 'pragma'],
     maxAge: 86400,

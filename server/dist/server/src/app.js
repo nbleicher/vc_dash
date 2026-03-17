@@ -24,18 +24,9 @@ export async function buildApp(config) {
     const allowedOrigins = new Set(config.frontendOrigins.map(normalizeOrigin).filter(Boolean));
     const app = Fastify({ logger: true, trustProxy: true });
     app.decorate('store', store);
-    app.decorate('authenticate', async function authenticate(request, reply) {
-        try {
-            await request.jwtVerify();
-        }
-        catch {
-            reply.code(401).send({
-                error: {
-                    code: 'AUTH_REQUIRED',
-                    message: 'Authentication required.',
-                },
-            });
-        }
+    app.decorate('authenticate', async function authenticate(_request, _reply) {
+        // No-op auth in public mode
+        return;
     });
     await app.register(cors, {
         origin(origin, callback) {
@@ -45,7 +36,7 @@ export async function buildApp(config) {
             }
             callback(null, allowedOrigins.has(normalizeOrigin(origin)));
         },
-        credentials: true,
+        credentials: false,
         methods: ['GET', 'HEAD', 'POST', 'PUT', 'OPTIONS'],
         allowedHeaders: ['content-type', 'authorization', 'cache-control', 'pragma'],
         maxAge: 86400,

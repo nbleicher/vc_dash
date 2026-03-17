@@ -1,49 +1,13 @@
-import { z } from 'zod';
-import { cookieName, isValidAdmin } from '../auth.js';
-const loginSchema = z.object({
-    username: z.string().min(1),
-    password: z.string().min(1),
-});
-export async function authRoutes(app, env) {
-    app.post('/auth/login', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
-        const parse = loginSchema.safeParse(request.body);
-        if (!parse.success) {
-            return reply.code(400).send({
-                error: {
-                    code: 'INVALID_BODY',
-                    message: 'Invalid login payload.',
-                    details: parse.error.flatten(),
-                },
-            });
-        }
-        if (!isValidAdmin(parse.data.username, parse.data.password, env)) {
-            return reply.code(401).send({
-                error: {
-                    code: 'INVALID_CREDENTIALS',
-                    message: 'Invalid credentials.',
-                },
-            });
-        }
-        const token = app.jwt.sign({ sub: 'admin', role: 'admin' }, { expiresIn: '12h' });
-        const isHttps = request.protocol === 'https';
-        const isProd = process.env.NODE_ENV === 'production';
-        const sameSite = isHttps || isProd ? 'none' : 'lax';
-        reply.setCookie(cookieName(), token, {
-            path: '/',
-            httpOnly: true,
-            sameSite,
-            secure: isHttps || isProd,
-        });
+export async function authRoutes(app, _env) {
+    // Auth endpoints kept for backward compatibility; they now always
+    // report logged-in status without enforcing credentials or cookies.
+    app.post('/auth/login', async (_request, reply) => {
         return reply.send({ data: { loggedIn: true, role: 'admin' } });
     });
-    app.post('/auth/logout', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (request, reply) => {
-        const isHttps = request.protocol === 'https';
-        const isProd = process.env.NODE_ENV === 'production';
-        const sameSite = isHttps || isProd ? 'none' : 'lax';
-        reply.clearCookie(cookieName(), { path: '/', sameSite, secure: isHttps || isProd });
+    app.post('/auth/logout', async (_request, reply) => {
         return reply.send({ data: { loggedIn: false } });
     });
-    app.get('/auth/me', { preHandler: [app.authenticate] }, async (_request, reply) => {
+    app.get('/auth/me', async (_request, reply) => {
         return reply.send({ data: { loggedIn: true, role: 'admin' } });
     });
 }

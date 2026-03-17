@@ -30,7 +30,7 @@ export function useDataStore(): DataStore {
   const client = useMemo(() => createApiClient(), [])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [loggedIn, setLoggedInState] = useState(false)
+  const [loggedIn, setLoggedInState] = useState(true)
   const hasLoadedRemoteRef = useRef(false)
 
   const [agentsState, setAgentsState] = useState<Agent[]>([])
@@ -52,13 +52,6 @@ export function useDataStore(): DataStore {
   const [houseMarketing, setHouseMarketing] = useState<{ dateKey: string; amount: number } | null>(null)
   const loadFromApi = useCallback(async () => {
     try {
-      const me = await client.me()
-      setLoggedInState(me)
-      if (!me) {
-        hasLoadedRemoteRef.current = false
-        setError(null)
-        return
-      }
       const state = await client.getState()
       if (import.meta.env.DEV) {
         const todayKey = estDateKey(new Date())
@@ -125,10 +118,9 @@ export function useDataStore(): DataStore {
   const setEodReports = wrapSetter(setEodReportsState)
 
   const login = useCallback(
-    async (username: string, password: string) => {
+    async (_username: string, _password: string) => {
       hydratingRef.current = true
       try {
-        await client.login(username, password)
         setLoggedInState(true)
         await loadFromApi()
         setError(null)
@@ -136,42 +128,38 @@ export function useDataStore(): DataStore {
         hydratingRef.current = false
       }
     },
-    [client, loadFromApi],
+    [loadFromApi],
   )
 
   const logout = useCallback(async () => {
-    try {
-      await client.logout()
-      setLoggedInState(false)
-      hasLoadedRemoteRef.current = false
-      setError(null)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sign out.')
-    }
-  }, [client])
+    // No-op logout in no-auth mode; keep dashboard accessible
+    setLoggedInState(true)
+    hasLoadedRemoteRef.current = false
+    setError(null)
+  }, [])
 
   const syncCollection = useCallback(
     async <K extends Parameters<typeof client.putCollection>[0]>(key: K, value: Parameters<typeof client.putCollection<K>>[1]) => {
-      if (hydratingRef.current || !loggedIn || !hasLoadedRemoteRef.current) return
+      if (hydratingRef.current || !hasLoadedRemoteRef.current) return
       try {
         await client.putCollection(key, value)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to sync data.')
       }
     },
-    [client, loggedIn],
+    [client],
   )
 
   const pushSnapshotsToApi = useCallback(
     async (snapshots: Snapshot[]) => {
-      if (!loggedIn || !hasLoadedRemoteRef.current) return
+      if (!hasLoadedRemoteRef.current) return
       try {
         await client.putCollection('snapshots', snapshots)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to sync data.')
       }
     },
-    [client, loggedIn],
+    [client],
   )
 
   useEffect(() => {
@@ -188,13 +176,13 @@ export function useDataStore(): DataStore {
 
   // Refetch state every 5 min so dashboard picks up bot snapshot updates
   useEffect(() => {
-    if (!loggedIn || !hasLoadedRemoteRef.current) return
+    if (!hasLoadedRemoteRef.current) return
     const intervalMs = 5 * 60 * 1000
     const id = window.setInterval(() => {
       void loadFromApi()
     }, intervalMs)
     return () => window.clearInterval(id)
-  }, [loggedIn, loadFromApi])
+  }, [loadFromApi])
 
   useEffect(() => {
     void syncCollection('agents', agentsState)

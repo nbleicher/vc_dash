@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { Button, Card, LoginForm, TopNav } from './components'
+import { Button, Card, TopNav } from './components'
 import { useDataStore } from './data'
 import { useAppData, useSettingsActions, useTaskActions, useVaultActions } from './hooks'
 import type { QaFormState } from './hooks'
@@ -38,8 +38,6 @@ function App() {
     vaultMeetings,
     vaultDocs,
     transfers,
-    loggedIn,
-    login,
     logout,
     reload,
     lastFetchedAt,
@@ -168,22 +166,6 @@ function App() {
     return activeAgents.filter((agent) => !completed.has(agent.id))
   }, [activeAgents, qaRecords, qaForm.dateKey])
 
-  const handleLogin = async (username: string, password: string): Promise<void> => {
-    try {
-      await login(username, password)
-      setUiError(null)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Login failed.'
-      if (msg.toLowerCase().includes('fetch')) {
-        setUiError('Cannot reach API server. Start backend with: npm run server:dev')
-      } else if (msg.toLowerCase().includes('invalid credentials')) {
-        setUiError('Invalid credentials. Use admin / admin.')
-      } else {
-        setUiError(msg)
-      }
-    }
-  }
-
   const handleAddAgent = (e: React.FormEvent): void => {
     e.preventDefault()
     const name = newAgent.trim()
@@ -210,10 +192,6 @@ function App() {
         </Card>
       </div>
     )
-  }
-
-  if (!loggedIn) {
-    return <LoginForm onLogin={handleLogin} error={uiError ?? error} />
   }
 
   if (location.pathname === '/') {
