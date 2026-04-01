@@ -106,7 +106,7 @@ export function AgentPage({
           <div className="rounded-lg border border-slate-200 p-3">
             <p className="mb-2 text-sm font-medium text-slate-700">Selected Agent Ranking</p>
             <TableWrap>
-              <DataTable>
+              <DataTable className="min-w-0 text-xs">
                 <thead>
                   <tr>
                     <th>Rank</th>
@@ -147,16 +147,16 @@ export function AgentPage({
           {agentWeekRows.map((row) => (
             <div
               key={row.dateKey}
-              className="rounded-md border border-amber-500/25 bg-slate-950 px-3 py-2 text-slate-100 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.15)]"
+              className="rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900"
             >
-              <div className="mb-2 flex items-start justify-between border-b border-slate-800 pb-2">
+              <div className="mb-2 flex items-start justify-between border-b border-slate-200 pb-2">
                 <div>
-                  <p className="text-[10px] uppercase tracking-wide text-slate-400">{row.dayLabel.slice(0, 3)}</p>
+                  <p className="text-[10px] uppercase tracking-wide text-slate-500">{row.dayLabel.slice(0, 3)}</p>
                   <p className="text-[11px] text-slate-500">{row.dateKey}</p>
                 </div>
-                <p className="text-base font-semibold leading-none text-amber-400">{row.sales}</p>
+                <p className="text-base font-semibold leading-none text-slate-900">{row.sales}</p>
               </div>
-              <div className="space-y-1 text-[11px] text-slate-300">
+              <div className="space-y-1 text-[11px] text-slate-700">
                 <p className="flex items-center justify-between">
                   <span className="text-slate-500">Calls</span>
                   <span className="tabular-nums">{row.calls}</span>
