@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { Button, Card, TopNav } from './components'
 import { useDataStore } from './data'
@@ -177,6 +177,12 @@ function App() {
     return activeAgents.filter((agent) => !completed.has(agent.id))
   }, [activeAgents, qaRecords, qaForm.dateKey])
 
+  const triggerShadowSave = useCallback(() => {
+    window.setTimeout(() => {
+      void flushShadowLogsSync()
+    }, 0)
+  }, [flushShadowLogsSync])
+
   const handleAddAgent = (e: React.FormEvent): void => {
     e.preventDefault()
     const name = newAgent.trim()
@@ -204,9 +210,7 @@ function App() {
       }
       return [...prev, next]
     })
-    window.setTimeout(() => {
-      void flushShadowLogsSync()
-    }, 0)
+    triggerShadowSave()
   }
   const handleAddShadowCall = (): void => {
     setShadowLogs((prev) =>
@@ -219,9 +223,7 @@ function App() {
         }
       }),
     )
-    window.setTimeout(() => {
-      void flushShadowLogsSync()
-    }, 0)
+    triggerShadowSave()
   }
   const handleUpdateShadowCall = (
     logId: string,
@@ -238,9 +240,7 @@ function App() {
         }
       }),
     )
-    window.setTimeout(() => {
-      void flushShadowLogsSync()
-    }, 0)
+    triggerShadowSave()
   }
   const handleDeleteShadowCall = (logId: string, callId: string): void => {
     setShadowLogs((prev) =>
@@ -253,22 +253,44 @@ function App() {
         }
       }),
     )
-    window.setTimeout(() => {
-      void flushShadowLogsSync()
-    }, 0)
+    triggerShadowSave()
   }
   const handleEndShadow = (): void => {
-    setShadowLogs((prev) =>
-      prev.map((row) =>
-        row.agentId === agentPageAgentId && row.dateKey === todayKey && row.endedAt === null
-          ? { ...row, endedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-          : row,
-      ),
-    )
-    window.setTimeout(() => {
-      void flushShadowLogsSync()
-    }, 0)
+    setShadowLogs((prev) => {
+      const nowTs = new Date().toISOString()
+      return prev.flatMap((row) => {
+        if (row.agentId !== agentPageAgentId || row.dateKey !== todayKey || row.endedAt !== null) return [row]
+        const hasExactlyOneBlankCall =
+          row.calls.length === 1 &&
+          row.calls[0].notes.trim() === '' &&
+          row.calls[0].coaching.trim() === '' &&
+          row.calls[0].durationMinutes === null &&
+          row.calls[0].sale === false
+        if (hasExactlyOneBlankCall) return []
+        return [{ ...row, endedAt: nowTs, updatedAt: nowTs }]
+      })
+    })
+    triggerShadowSave()
   }
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      void flushShadowLogsSync()
+    }
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        void flushShadowLogsSync()
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('pagehide', handleBeforeUnload)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('pagehide', handleBeforeUnload)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [flushShadowLogsSync])
 
   if (isLoading) {
     return (
@@ -370,7 +392,7 @@ function App() {
             onStartShadow={handleStartShadow}
             onAddCall={handleAddShadowCall}
             onEndShadow={handleEndShadow}
-            onShadowInteraction={() => void flushShadowLogsSync()}
+            onShadowInteraction={triggerShadowSave}
             onDeleteShadowCall={handleDeleteShadowCall}
             onUpdateShadowCall={handleUpdateShadowCall}
             todayKey={todayKey}

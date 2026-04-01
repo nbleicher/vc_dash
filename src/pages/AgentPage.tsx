@@ -145,99 +145,149 @@ export function AgentPage({
                 <div
                   key={log.id}
                   className="space-y-2 rounded-lg border border-slate-200 p-3"
+                  onMouseDownCapture={onShadowInteraction}
+                  onFocusCapture={onShadowInteraction}
                   onBlurCapture={(e) => {
                     if (!e.currentTarget.contains(e.relatedTarget as Node | null)) onShadowInteraction()
                   }}
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs text-slate-500">
-                      Manager: {log.managerName} | Start: {formatTimestamp(log.startedAt)} | End:{' '}
-                      {log.endedAt ? formatTimestamp(log.endedAt) : 'Active'}
-                    </p>
-                    <p className="text-xs text-slate-500">Last Saved: {formatTimestamp(log.updatedAt)}</p>
-                  </div>
-                  <TableWrap>
-                    <DataTable>
-                      <thead>
-                        <tr>
-                          <th>Notes</th>
-                          <th>Coaching</th>
-                          <th>Duration</th>
-                          <th>Sale</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {log.calls.map((call) => (
-                          <tr key={call.id}>
-                            <td>
-                              <Textarea
-                                className="min-h-[72px]"
-                                value={call.notes}
-                                disabled={log.endedAt !== null}
-                                onChange={(e) => onUpdateShadowCall(log.id, call.id, { notes: e.target.value })}
-                              />
-                            </td>
-                            <td>
-                              <Textarea
-                                className="min-h-[72px]"
-                                value={call.coaching}
-                                disabled={log.endedAt !== null}
-                                onChange={(e) => onUpdateShadowCall(log.id, call.id, { coaching: e.target.value })}
-                              />
-                            </td>
-                            <td>
-                              <Input
-                                type="number"
-                                min={0}
-                                value={call.durationMinutes ?? ''}
-                                disabled={log.endedAt !== null}
-                                onChange={(e) =>
-                                  onUpdateShadowCall(log.id, call.id, {
-                                    durationMinutes: e.target.value ? Number(e.target.value) : null,
-                                  })
-                                }
-                              />
-                            </td>
-                            <td className="text-center">
-                              <input
-                                type="checkbox"
-                                checked={call.sale}
-                                disabled={log.endedAt !== null}
-                                onChange={(e) => onUpdateShadowCall(log.id, call.id, { sale: e.target.checked })}
-                              />
-                            </td>
-                            <td className="text-right">
-                              <Button
-                                type="button"
-                                variant="danger"
-                                onClick={() => onDeleteShadowCall(log.id, call.id)}
-                                disabled={log.endedAt !== null}
-                              >
-                                Delete
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                        {log.calls.length === 0 && (
-                          <tr>
-                            <td colSpan={5}>N/A</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </DataTable>
-                  </TableWrap>
-                  {log.endedAt === null && (
-                    <div className="row-wrap pt-2">
-                      <Button type="button" variant="secondary" onClick={onAddCall}>
-                        Add Call
-                      </Button>
-                      {activeLog ? (
-                        <Button type="button" variant="danger" onClick={onEndShadow}>
-                          End Shadow
+                  {log.endedAt !== null ? (
+                    <details>
+                      <summary className="cursor-pointer text-xs text-slate-600">
+                        {formatTimestamp(log.endedAt)} | {log.managerName}
+                      </summary>
+                      <div className="mt-2 space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-xs text-slate-500">
+                            Manager: {log.managerName} | Start: {formatTimestamp(log.startedAt)} | End:{' '}
+                            {formatTimestamp(log.endedAt)}
+                          </p>
+                          <p className="text-xs text-slate-500">Last Saved: {formatTimestamp(log.updatedAt)}</p>
+                        </div>
+                        <TableWrap>
+                          <DataTable>
+                            <thead>
+                              <tr>
+                                <th>Notes</th>
+                                <th>Coaching</th>
+                                <th>Duration</th>
+                                <th>Sale</th>
+                                <th>Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {log.calls.map((call) => (
+                                <tr key={call.id}>
+                                  <td>
+                                    <Textarea className="min-h-[72px]" value={call.notes} disabled />
+                                  </td>
+                                  <td>
+                                    <Textarea className="min-h-[72px]" value={call.coaching} disabled />
+                                  </td>
+                                  <td>
+                                    <Input type="number" min={0} value={call.durationMinutes ?? ''} disabled />
+                                  </td>
+                                  <td className="text-center">
+                                    <input type="checkbox" checked={call.sale} disabled />
+                                  </td>
+                                  <td className="text-right">
+                                    <Button type="button" variant="danger" disabled>
+                                      Delete
+                                    </Button>
+                                  </td>
+                                </tr>
+                              ))}
+                              {log.calls.length === 0 && (
+                                <tr>
+                                  <td colSpan={5}>N/A</td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </DataTable>
+                        </TableWrap>
+                      </div>
+                    </details>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs text-slate-500">
+                          Manager: {log.managerName} | Start: {formatTimestamp(log.startedAt)} | End: Active
+                        </p>
+                        <p className="text-xs text-slate-500">Last Saved: {formatTimestamp(log.updatedAt)}</p>
+                      </div>
+                      <TableWrap>
+                        <DataTable>
+                          <thead>
+                            <tr>
+                              <th>Notes</th>
+                              <th>Coaching</th>
+                              <th>Duration</th>
+                              <th>Sale</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {log.calls.map((call) => (
+                              <tr key={call.id}>
+                                <td>
+                                  <Textarea
+                                    className="min-h-[72px]"
+                                    value={call.notes}
+                                    onChange={(e) => onUpdateShadowCall(log.id, call.id, { notes: e.target.value })}
+                                  />
+                                </td>
+                                <td>
+                                  <Textarea
+                                    className="min-h-[72px]"
+                                    value={call.coaching}
+                                    onChange={(e) => onUpdateShadowCall(log.id, call.id, { coaching: e.target.value })}
+                                  />
+                                </td>
+                                <td>
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    value={call.durationMinutes ?? ''}
+                                    onChange={(e) =>
+                                      onUpdateShadowCall(log.id, call.id, {
+                                        durationMinutes: e.target.value ? Number(e.target.value) : null,
+                                      })
+                                    }
+                                  />
+                                </td>
+                                <td className="text-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={call.sale}
+                                    onChange={(e) => onUpdateShadowCall(log.id, call.id, { sale: e.target.checked })}
+                                  />
+                                </td>
+                                <td className="text-right">
+                                  <Button type="button" variant="danger" onClick={() => onDeleteShadowCall(log.id, call.id)}>
+                                    Delete
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))}
+                            {log.calls.length === 0 && (
+                              <tr>
+                                <td colSpan={5}>N/A</td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </DataTable>
+                      </TableWrap>
+                      <div className="row-wrap pt-2">
+                        <Button type="button" variant="secondary" onClick={onAddCall}>
+                          Add Call
                         </Button>
-                      ) : null}
-                    </div>
+                        {activeLog ? (
+                          <Button type="button" variant="danger" onClick={onEndShadow}>
+                            End Shadow
+                          </Button>
+                        ) : null}
+                      </div>
+                    </>
                   )}
                 </div>
               ))}
