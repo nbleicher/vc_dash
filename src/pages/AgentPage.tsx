@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Textarea } from '../components'
 import type { RankMetric, ShadowLog } from '../types'
 import { formatNum, formatTimestamp } from '../utils'
