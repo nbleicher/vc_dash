@@ -270,7 +270,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen min-h-dvh min-w-0 overflow-x-hidden">
+    <div className="min-h-screen min-h-dvh min-w-0">
       <div className="mx-auto max-w-[1480px] p-4 md:p-6">
       <header className="panel top-shell">
         <div className="top-shell-nav">
