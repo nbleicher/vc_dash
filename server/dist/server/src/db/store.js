@@ -29,6 +29,7 @@ export class SqliteStore {
             vaultDocs: this.getVaultDocs(),
             eodReports: this.getEodReports(),
             transfers: this.getTransfers(),
+            shadowLogs: this.getShadowLogs(),
             lastPoliciesBotRun: await this.getLastPoliciesBotRun(),
             houseMarketing: await this.getHouseMarketing(),
         };
@@ -160,6 +161,24 @@ export class SqliteStore {
                             .run(row);
                     }
                     break;
+                case 'shadowLogs':
+                    this.db.prepare('DELETE FROM shadow_logs').run();
+                    for (const row of rows) {
+                        this.db
+                            .prepare('INSERT INTO shadow_logs (id,agentId,managerName,dateKey,startedAt,endedAt,callsJson,createdAt,updatedAt) VALUES (@id,@agentId,@managerName,@dateKey,@startedAt,@endedAt,@callsJson,@createdAt,@updatedAt)')
+                            .run({
+                            id: row.id,
+                            agentId: row.agentId,
+                            managerName: row.managerName,
+                            dateKey: row.dateKey,
+                            startedAt: row.startedAt,
+                            endedAt: row.endedAt,
+                            callsJson: JSON.stringify(row.calls ?? []),
+                            createdAt: row.createdAt,
+                            updatedAt: row.updatedAt,
+                        });
+                    }
+                    break;
             }
         });
         tx();
@@ -243,6 +262,34 @@ export class SqliteStore {
         return this.db
             .prepare('SELECT id,weekKey,dateKey,houseSales,houseCpa,reportText,submittedAt FROM eod_reports')
             .all();
+    }
+    getShadowLogs() {
+        const rows = this.db
+            .prepare('SELECT id,agentId,managerName,dateKey,startedAt,endedAt,callsJson,createdAt,updatedAt FROM shadow_logs')
+            .all();
+        return rows.map((row) => {
+            let calls = [];
+            try {
+                const parsed = JSON.parse(row.callsJson);
+                if (Array.isArray(parsed)) {
+                    calls = parsed.filter(Boolean);
+                }
+            }
+            catch {
+                calls = [];
+            }
+            return {
+                id: row.id,
+                agentId: row.agentId,
+                managerName: row.managerName,
+                dateKey: row.dateKey,
+                startedAt: row.startedAt,
+                endedAt: row.endedAt,
+                calls,
+                createdAt: row.createdAt,
+                updatedAt: row.updatedAt,
+            };
+        });
     }
     readLastPoliciesBotRun() {
         const row = this.db.prepare("SELECT value FROM app_meta WHERE key = 'lastPoliciesBotRun'").get();

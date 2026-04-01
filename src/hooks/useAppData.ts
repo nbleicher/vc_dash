@@ -47,6 +47,7 @@ export function useAppData(store: DataStore) {
     intraSubmissions,
     weeklyTargets,
     transfers,
+    shadowLogs,
     setPerfHistory,
     setSnapshots,
     houseMarketing,
@@ -65,6 +66,8 @@ export function useAppData(store: DataStore) {
   const [kpiPeriod, setKpiPeriod] = useState<RankPeriod>('day')
   const [metricsDateStart, setMetricsDateStart] = useState<string | null>(null)
   const [metricsDateEnd, setMetricsDateEnd] = useState<string | null>(null)
+  const [agentPageAgentId, setAgentPageAgentId] = useState('')
+  const [selectedAgentWeekKey, setSelectedAgentWeekKey] = useState<string>('')
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 30_000)
@@ -580,6 +583,80 @@ export function useAppData(store: DataStore) {
       eodWeekOptions.some((option) => option.weekKey === selectedEodWeekKey) ? selectedEodWeekKey : currentWeekKey,
     [currentWeekKey, eodWeekOptions, selectedEodWeekKey],
   )
+  const effectiveAgentWeekKey = useMemo(
+    () =>
+      eodWeekOptions.some((option) => option.weekKey === selectedAgentWeekKey) ? selectedAgentWeekKey : currentWeekKey,
+    [currentWeekKey, eodWeekOptions, selectedAgentWeekKey],
+  )
+  const effectiveAgentPageAgentId = useMemo(
+    () => (activeAgents.some((a) => a.id === agentPageAgentId) ? agentPageAgentId : activeAgents[0]?.id ?? ''),
+    [activeAgents, agentPageAgentId],
+  )
+  const agentWeekRows = useMemo(() => {
+    const dates = monFriDatesForWeek(effectiveAgentWeekKey)
+    return dates.map((dateKey, idx) => {
+      const perf = perfHistory.find((p) => p.dateKey === dateKey && p.agentId === effectiveAgentPageAgentId)
+      if (perf) {
+        return {
+          dayLabel: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'][idx],
+          dateKey,
+          sales: perf.sales,
+          calls: perf.billableCalls,
+          marketing: perf.marketing,
+          cpa: perf.cpa,
+        }
+      }
+      const snap17 = snapshots.find(
+        (s) => s.dateKey === dateKey && s.slot === '17:00' && s.agentId === effectiveAgentPageAgentId,
+      )
+      if (snap17) {
+        const marketing = snap17.marketing ?? snap17.billableCalls * 15
+        return {
+          dayLabel: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'][idx],
+          dateKey,
+          sales: snap17.sales,
+          calls: snap17.billableCalls,
+          marketing,
+          cpa: snap17.sales > 0 ? marketing / snap17.sales : null,
+        }
+      }
+      if (dateKey === todayKey) {
+        const live = liveByAgent.get(effectiveAgentPageAgentId)
+        if (live) {
+          const marketing = live.marketing ?? live.billableCalls * 15
+          return {
+            dayLabel: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'][idx],
+            dateKey,
+            sales: live.sales,
+            calls: live.billableCalls,
+            marketing,
+            cpa: live.sales > 0 ? marketing / live.sales : null,
+          }
+        }
+      }
+      return {
+        dayLabel: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'][idx],
+        dateKey,
+        sales: 0,
+        calls: 0,
+        marketing: 0,
+        cpa: null,
+      }
+    })
+  }, [effectiveAgentPageAgentId, effectiveAgentWeekKey, liveByAgent, perfHistory, snapshots, todayKey])
+  const shadowLogsByDateForAgent = useMemo(() => {
+    const map = new Map<string, typeof shadowLogs>()
+    for (const log of shadowLogs) {
+      if (log.agentId !== effectiveAgentPageAgentId) continue
+      const list = map.get(log.dateKey) ?? []
+      list.push(log)
+      map.set(log.dateKey, list)
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+    }
+    return map
+  }, [effectiveAgentPageAgentId, shadowLogs])
 
   const eodDateTotals = useMemo(() => {
     const dates = monFriDatesForWeek(effectiveEodWeekKey)
@@ -904,6 +981,12 @@ export function useAppData(store: DataStore) {
     selectedEodWeekKey: effectiveEodWeekKey,
     setSelectedEodWeekKey,
     eodWeekOptions,
+    selectedAgentWeekKey: effectiveAgentWeekKey,
+    setSelectedAgentWeekKey,
+    agentPageAgentId: effectiveAgentPageAgentId,
+    setAgentPageAgentId,
+    agentWeekRows,
+    shadowLogsByDateForAgent,
     eodWeeklyRows,
     eodWeeklySummary,
     eodTodayTotals,

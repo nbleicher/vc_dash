@@ -35,6 +35,7 @@ export class PostgresStore {
             vaultDocs: await this.getCollection('vaultDocs'),
             eodReports: await this.getCollection('eodReports'),
             transfers: await this.getCollection('transfers'),
+            shadowLogs: await this.getCollection('shadowLogs'),
             lastPoliciesBotRun: await this.getLastPoliciesBotRun(),
             houseMarketing: await this.getHouseMarketing(),
         };

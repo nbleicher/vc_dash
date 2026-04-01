@@ -9,6 +9,7 @@ import type {
   IntraSubmission,
   PerfHistory,
   QaRecord,
+  ShadowLog,
   TransferRecord,
   Snapshot,
   SpiffRecord,
@@ -44,6 +45,7 @@ export function useDataStore(): DataStore {
   const [intraSubmissionsState, setIntraSubmissionsState] = useState<IntraSubmission[]>([])
   const [weeklyTargetsState, setWeeklyTargetsState] = useState<WeeklyTarget[]>([])
   const [transfersState, setTransfersState] = useState<TransferRecord[]>([])
+  const [shadowLogsState, setShadowLogsState] = useState<ShadowLog[]>([])
   const [vaultMeetingsState, setVaultMeetingsState] = useState<VaultMeeting[]>([])
   const [vaultDocsState, setVaultDocsState] = useState<VaultDoc[]>([])
   const [eodReportsState, setEodReportsState] = useState<EodReport[]>([])
@@ -73,6 +75,7 @@ export function useDataStore(): DataStore {
       setIntraSubmissionsState(state.intraSubmissions ?? [])
       setWeeklyTargetsState(state.weeklyTargets)
       setTransfersState(state.transfers ?? [])
+      setShadowLogsState(state.shadowLogs ?? [])
       setVaultMeetingsState(state.vaultMeetings)
       setVaultDocsState(state.vaultDocs)
       setEodReportsState(state.eodReports ?? [])
@@ -113,6 +116,7 @@ export function useDataStore(): DataStore {
   const setIntraSubmissions = wrapSetter(setIntraSubmissionsState)
   const setWeeklyTargets = wrapSetter(setWeeklyTargetsState)
   const setTransfers = wrapSetter(setTransfersState)
+  const setShadowLogs = wrapSetter(setShadowLogsState)
   const setVaultMeetings = wrapSetter(setVaultMeetingsState)
   const setVaultDocs = wrapSetter(setVaultDocsState)
   const setEodReports = wrapSetter(setEodReportsState)
@@ -224,6 +228,9 @@ export function useDataStore(): DataStore {
   useEffect(() => {
     void syncCollection('transfers', transfersState)
   }, [transfersState, syncCollection])
+  useEffect(() => {
+    void syncCollection('shadowLogs', shadowLogsState)
+  }, [shadowLogsState, syncCollection])
 
   return {
     loggedIn,
@@ -259,6 +266,8 @@ export function useDataStore(): DataStore {
     setAttendance,
     transfers: transfersState,
     setTransfers,
+    shadowLogs: shadowLogsState,
+    setShadowLogs,
     spiffRecords: spiffRecordsState,
     setSpiffRecords,
     attendanceSubmissions: attendanceSubmissionsState,

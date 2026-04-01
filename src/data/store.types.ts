@@ -8,6 +8,7 @@ import type {
   IntraSubmission,
   PerfHistory,
   QaRecord,
+  ShadowLog,
   TransferRecord,
   Snapshot,
   SpiffRecord,
@@ -56,6 +57,9 @@ export interface DataStore {
 
   transfers: TransferRecord[]
   setTransfers: Dispatch<SetStateAction<TransferRecord[]>>
+
+  shadowLogs: ShadowLog[]
+  setShadowLogs: Dispatch<SetStateAction<ShadowLog[]>>
 
   spiffRecords: SpiffRecord[]
   setSpiffRecords: Dispatch<SetStateAction<SpiffRecord[]>>

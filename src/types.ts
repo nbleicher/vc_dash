@@ -1,4 +1,4 @@
-export type TopPage = 'dashboard' | 'tasks' | 'metrics' | 'eod' | 'vault' | 'settings'
+export type TopPage = 'dashboard' | 'agent' | 'tasks' | 'metrics' | 'eod' | 'vault' | 'settings'
 export type TaskPage = 'spiff' | 'qa' | 'audit' | 'transfers' | 'targets'
 export type VaultHistoryView = 'attendance' | 'qa' | 'audit' | 'targets'
 export type VaultScope = 'agent' | 'house'
@@ -142,6 +142,26 @@ export type TransferRecord = {
   fromAgentId: string
   toAgentId: string
   successClosed: boolean
+}
+
+export type ShadowLogCall = {
+  id: string
+  notes: string
+  coaching: string
+  durationMinutes: number | null
+  sale: boolean
+}
+
+export type ShadowLog = {
+  id: string
+  agentId: string
+  managerName: string
+  dateKey: string
+  startedAt: string
+  endedAt: string | null
+  calls: ShadowLogCall[]
+  createdAt: string
+  updatedAt: string
 }
 
 export type ExportFlags = {

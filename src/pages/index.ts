@@ -1,4 +1,5 @@
 export { DashboardPage } from './DashboardPage'
+export { AgentPage } from './AgentPage'
 export { EodPage } from './EodPage'
 export { MetricsPage } from './MetricsPage'
 export { SettingsPage } from './SettingsPage'

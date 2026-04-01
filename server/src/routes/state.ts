@@ -14,6 +14,7 @@ const keySchema = z.enum([
   'intraSubmissions',
   'weeklyTargets',
   'transfers',
+  'shadowLogs',
   'vaultMeetings',
   'vaultDocs',
   'eodReports',

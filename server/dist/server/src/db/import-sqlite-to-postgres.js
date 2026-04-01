@@ -14,8 +14,11 @@ const keys = [
     'attendanceSubmissions',
     'intraSubmissions',
     'weeklyTargets',
+    'transfers',
+    'shadowLogs',
     'vaultMeetings',
     'vaultDocs',
+    'eodReports',
 ];
 async function run() {
     if (!databaseUrl) {

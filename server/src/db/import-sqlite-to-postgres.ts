@@ -17,8 +17,11 @@ const keys: EntityKey[] = [
   'attendanceSubmissions',
   'intraSubmissions',
   'weeklyTargets',
+  'transfers',
+  'shadowLogs',
   'vaultMeetings',
   'vaultDocs',
+  'eodReports',
 ]
 
 async function run(): Promise<void> {

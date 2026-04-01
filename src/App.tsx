@@ -4,10 +4,11 @@ import { Button, Card, TopNav } from './components'
 import { useDataStore } from './data'
 import { useAppData, useSettingsActions, useTaskActions, useVaultActions } from './hooks'
 import type { QaFormState } from './hooks'
-import type { ExportFlags, TopPage, VaultMeeting } from './types'
+import type { ExportFlags, ShadowLog, TopPage, VaultMeeting } from './types'
 import { estDateKey, uid } from './utils'
 import {
   DashboardPage,
+  AgentPage,
   EodPage,
   MetricsPage,
   SettingsPage,
@@ -17,6 +18,7 @@ import {
 
 function pathToTopPage(path: string): TopPage | null {
   if (path === '/' || path === '/dashboard') return 'dashboard'
+  if (path === '/agent') return 'agent'
   if (path === '/tasks') return 'tasks'
   if (path === '/metrics') return 'metrics'
   if (path === '/eod') return 'eod'
@@ -38,6 +40,7 @@ function App() {
     vaultMeetings,
     vaultDocs,
     transfers,
+    setShadowLogs,
     logout,
     reload,
     lastFetchedAt,
@@ -69,6 +72,12 @@ function App() {
     selectedEodWeekKey,
     setSelectedEodWeekKey,
     eodWeekOptions,
+    selectedAgentWeekKey,
+    setSelectedAgentWeekKey,
+    agentPageAgentId,
+    setAgentPageAgentId,
+    agentWeekRows,
+    shadowLogsByDateForAgent,
     eodWeeklyRows,
     eodWeeklySummary,
     eodTodayTotals,
@@ -154,6 +163,7 @@ function App() {
   )
   const pageMeta: Record<TopPage, { title: string; subtitle: string }> = {
     dashboard: { title: 'Dashboard', subtitle: 'Monitor floor performance, alerts, and intra-day activity.' },
+    agent: { title: 'Agent', subtitle: 'Track weekly KPIs, shadow calls, and ranking for a selected agent.' },
     tasks: { title: 'Tasks', subtitle: 'Manage attendance, QA, audits, and weekly targets.' },
     metrics: { title: 'Metrics', subtitle: 'Track KPIs and ranking trends across house and agent scope.' },
     eod: { title: 'EOD', subtitle: 'Review weekly totals and end-of-week house summary snapshots.' },
@@ -172,6 +182,64 @@ function App() {
     if (!name) return
     setAgents((prev) => [...prev, { id: uid('agent'), name, active: true, createdAt: new Date().toISOString() }])
     setNewAgent('')
+  }
+  const handleStartShadow = (managerName: string): void => {
+    const name = managerName.trim()
+    if (!name || !agentPageAgentId) return
+    const nowTs = new Date().toISOString()
+    setShadowLogs((prev) => {
+      const alreadyActive = prev.some((row) => row.agentId === agentPageAgentId && row.dateKey === todayKey && row.endedAt === null)
+      if (alreadyActive) return prev
+      const next: ShadowLog = {
+        id: uid('shadow'),
+        agentId: agentPageAgentId,
+        managerName: name,
+        dateKey: todayKey,
+        startedAt: nowTs,
+        endedAt: null,
+        calls: [],
+        createdAt: nowTs,
+        updatedAt: nowTs,
+      }
+      return [...prev, next]
+    })
+  }
+  const handleAddShadowCall = (): void => {
+    setShadowLogs((prev) =>
+      prev.map((row) => {
+        if (row.agentId !== agentPageAgentId || row.dateKey !== todayKey || row.endedAt !== null) return row
+        return {
+          ...row,
+          calls: [...row.calls, { id: uid('shadow_call'), notes: '', coaching: '', durationMinutes: null, sale: false }],
+          updatedAt: new Date().toISOString(),
+        }
+      }),
+    )
+  }
+  const handleUpdateShadowCall = (
+    logId: string,
+    callId: string,
+    patch: Partial<{ notes: string; coaching: string; durationMinutes: number | null; sale: boolean }>,
+  ): void => {
+    setShadowLogs((prev) =>
+      prev.map((row) => {
+        if (row.id !== logId) return row
+        return {
+          ...row,
+          calls: row.calls.map((call) => (call.id === callId ? { ...call, ...patch } : call)),
+          updatedAt: new Date().toISOString(),
+        }
+      }),
+    )
+  }
+  const handleEndShadow = (): void => {
+    setShadowLogs((prev) =>
+      prev.map((row) =>
+        row.agentId === agentPageAgentId && row.dateKey === todayKey && row.endedAt === null
+          ? { ...row, endedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+          : row,
+      ),
+    )
   }
 
   if (isLoading) {
@@ -259,6 +327,26 @@ function App() {
             onResolveQa={taskActions.resolveQa}
             onToggleAuditFlag={taskActions.toggleAuditFlag}
             onRefreshData={() => void reload()}
+          />
+        )}
+        {topPage === 'agent' && (
+          <AgentPage
+            activeAgents={activeAgents}
+            agentPageAgentId={agentPageAgentId}
+            setAgentPageAgentId={setAgentPageAgentId}
+            selectedAgentWeekKey={selectedAgentWeekKey}
+            setSelectedAgentWeekKey={setSelectedAgentWeekKey}
+            eodWeekOptions={eodWeekOptions}
+            agentWeekRows={agentWeekRows}
+            shadowLogsByDateForAgent={shadowLogsByDateForAgent}
+            rankRows={rankRows}
+            rankMetric={rankMetric}
+            setRankMetric={setRankMetric}
+            onStartShadow={handleStartShadow}
+            onAddCall={handleAddShadowCall}
+            onEndShadow={handleEndShadow}
+            onUpdateShadowCall={handleUpdateShadowCall}
+            todayKey={todayKey}
           />
         )}
 

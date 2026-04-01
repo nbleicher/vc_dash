@@ -124,6 +124,18 @@ CREATE TABLE IF NOT EXISTS transfers (
   successClosed INTEGER NOT NULL CHECK(successClosed IN (0,1))
 );
 
+CREATE TABLE IF NOT EXISTS shadow_logs (
+  id TEXT PRIMARY KEY,
+  agentId TEXT NOT NULL,
+  managerName TEXT NOT NULL,
+  dateKey TEXT NOT NULL,
+  startedAt TEXT NOT NULL,
+  endedAt TEXT,
+  callsJson TEXT NOT NULL,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS eod_reports (
   id TEXT PRIMARY KEY,
   weekKey TEXT NOT NULL,

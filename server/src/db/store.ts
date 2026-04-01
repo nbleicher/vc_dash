@@ -8,6 +8,7 @@ import type {
   IntraSubmission,
   PerfHistory,
   QaRecord,
+  ShadowLog,
   TransferRecord,
   Snapshot,
   SpiffRecord,
@@ -50,6 +51,7 @@ export class SqliteStore implements StoreAdapter {
       vaultDocs: this.getVaultDocs(),
       eodReports: this.getEodReports(),
       transfers: this.getTransfers(),
+      shadowLogs: this.getShadowLogs(),
       lastPoliciesBotRun: await this.getLastPoliciesBotRun(),
       houseMarketing: await this.getHouseMarketing(),
     }
@@ -209,6 +211,26 @@ export class SqliteStore implements StoreAdapter {
               .run(row)
           }
           break
+        case 'shadowLogs':
+          this.db.prepare('DELETE FROM shadow_logs').run()
+          for (const row of rows as ShadowLog[]) {
+            this.db
+              .prepare(
+                'INSERT INTO shadow_logs (id,agentId,managerName,dateKey,startedAt,endedAt,callsJson,createdAt,updatedAt) VALUES (@id,@agentId,@managerName,@dateKey,@startedAt,@endedAt,@callsJson,@createdAt,@updatedAt)',
+              )
+              .run({
+                id: row.id,
+                agentId: row.agentId,
+                managerName: row.managerName,
+                dateKey: row.dateKey,
+                startedAt: row.startedAt,
+                endedAt: row.endedAt,
+                callsJson: JSON.stringify(row.calls ?? []),
+                createdAt: row.createdAt,
+                updatedAt: row.updatedAt,
+              })
+          }
+          break
       }
     })
 
@@ -334,6 +356,44 @@ export class SqliteStore implements StoreAdapter {
     return this.db
       .prepare('SELECT id,weekKey,dateKey,houseSales,houseCpa,reportText,submittedAt FROM eod_reports')
       .all() as EodReport[]
+  }
+
+  private getShadowLogs(): ShadowLog[] {
+    const rows = this.db
+      .prepare('SELECT id,agentId,managerName,dateKey,startedAt,endedAt,callsJson,createdAt,updatedAt FROM shadow_logs')
+      .all() as Array<{
+        id: string
+        agentId: string
+        managerName: string
+        dateKey: string
+        startedAt: string
+        endedAt: string | null
+        callsJson: string
+        createdAt: string
+        updatedAt: string
+      }>
+    return rows.map((row) => {
+      let calls: ShadowLog['calls'] = []
+      try {
+        const parsed = JSON.parse(row.callsJson) as unknown
+        if (Array.isArray(parsed)) {
+          calls = parsed.filter(Boolean) as ShadowLog['calls']
+        }
+      } catch {
+        calls = []
+      }
+      return {
+        id: row.id,
+        agentId: row.agentId,
+        managerName: row.managerName,
+        dateKey: row.dateKey,
+        startedAt: row.startedAt,
+        endedAt: row.endedAt,
+        calls,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      }
+    })
   }
 
   private readLastPoliciesBotRun(): string | null {

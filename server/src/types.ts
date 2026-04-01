@@ -133,6 +133,26 @@ export type TransferRecord = {
   successClosed: boolean
 }
 
+export type ShadowLogCall = {
+  id: string
+  notes: string
+  coaching: string
+  durationMinutes: number | null
+  sale: boolean
+}
+
+export type ShadowLog = {
+  id: string
+  agentId: string
+  managerName: string
+  dateKey: string
+  startedAt: string
+  endedAt: string | null
+  calls: ShadowLogCall[]
+  createdAt: string
+  updatedAt: string
+}
+
 export type StoreState = {
   agents: Agent[]
   snapshots: Snapshot[]
@@ -145,6 +165,7 @@ export type StoreState = {
   intraSubmissions: IntraSubmission[]
   weeklyTargets: WeeklyTarget[]
   transfers: TransferRecord[]
+  shadowLogs: ShadowLog[]
   vaultMeetings: VaultMeeting[]
   vaultDocs: VaultDoc[]
   eodReports: EodReport[]
