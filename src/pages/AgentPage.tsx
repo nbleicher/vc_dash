@@ -24,6 +24,7 @@ type Props = {
   onStartShadow: (managerName: string) => void
   onAddCall: () => void
   onEndShadow: () => void
+  onShadowInteraction: () => void
   onUpdateShadowCall: (
     logId: string,
     callId: string,
@@ -44,6 +45,7 @@ export function AgentPage({
   onStartShadow,
   onAddCall,
   onEndShadow,
+  onShadowInteraction,
   onUpdateShadowCall,
   todayKey,
 }: Props) {
@@ -138,7 +140,13 @@ export function AgentPage({
             <div key={dateKey} className="space-y-3">
               <h3 className="text-sm font-semibold text-slate-800">{dateKey}</h3>
               {logs.map((log) => (
-                <div key={log.id} className="space-y-2 rounded-lg border border-slate-200 p-3">
+                <div
+                  key={log.id}
+                  className="space-y-2 rounded-lg border border-slate-200 p-3"
+                  onBlurCapture={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) onShadowInteraction()
+                  }}
+                >
                   <p className="text-xs text-slate-500">
                     Manager: {log.managerName} | Start: {formatTimestamp(log.startedAt)} | End:{' '}
                     {log.endedAt ? formatTimestamp(log.endedAt) : 'Active'}

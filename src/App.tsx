@@ -41,6 +41,7 @@ function App() {
     vaultDocs,
     transfers,
     setShadowLogs,
+    flushShadowLogsSync,
     logout,
     reload,
     lastFetchedAt,
@@ -203,6 +204,9 @@ function App() {
       }
       return [...prev, next]
     })
+    window.setTimeout(() => {
+      void flushShadowLogsSync()
+    }, 0)
   }
   const handleAddShadowCall = (): void => {
     setShadowLogs((prev) =>
@@ -215,6 +219,9 @@ function App() {
         }
       }),
     )
+    window.setTimeout(() => {
+      void flushShadowLogsSync()
+    }, 0)
   }
   const handleUpdateShadowCall = (
     logId: string,
@@ -231,6 +238,9 @@ function App() {
         }
       }),
     )
+    window.setTimeout(() => {
+      void flushShadowLogsSync()
+    }, 0)
   }
   const handleEndShadow = (): void => {
     setShadowLogs((prev) =>
@@ -240,6 +250,9 @@ function App() {
           : row,
       ),
     )
+    window.setTimeout(() => {
+      void flushShadowLogsSync()
+    }, 0)
   }
 
   if (isLoading) {
@@ -342,6 +355,7 @@ function App() {
             onStartShadow={handleStartShadow}
             onAddCall={handleAddShadowCall}
             onEndShadow={handleEndShadow}
+            onShadowInteraction={() => void flushShadowLogsSync()}
             onUpdateShadowCall={handleUpdateShadowCall}
             todayKey={todayKey}
           />

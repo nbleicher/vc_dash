@@ -52,6 +52,9 @@ export function useDataStore(): DataStore {
   const [lastFetchedAt, setLastFetchedAt] = useState<string | null>(null)
   const [lastPoliciesBotRun, setLastPoliciesBotRun] = useState<string | null>(null)
   const [houseMarketing, setHouseMarketing] = useState<{ dateKey: string; amount: number } | null>(null)
+  const shadowSyncInFlightRef = useRef(false)
+  const shadowSyncQueuedRef = useRef(false)
+  const shadowSyncLatestRef = useRef<ShadowLog[]>([])
   const loadFromApi = useCallback(async () => {
     try {
       const state = await client.getState()
@@ -163,6 +166,29 @@ export function useDataStore(): DataStore {
     [client],
   )
 
+  const flushShadowLogsSync = useCallback(async () => {
+    if (hydratingRef.current || !hasLoadedRemoteRef.current) return
+    shadowSyncLatestRef.current = shadowLogsState
+    if (shadowSyncInFlightRef.current) {
+      shadowSyncQueuedRef.current = true
+      return
+    }
+
+    shadowSyncInFlightRef.current = true
+    try {
+      do {
+        shadowSyncQueuedRef.current = false
+        try {
+          await client.putCollection('shadowLogs', shadowSyncLatestRef.current)
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to sync data.')
+        }
+      } while (shadowSyncQueuedRef.current)
+    } finally {
+      shadowSyncInFlightRef.current = false
+    }
+  }, [client, shadowLogsState])
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -229,8 +255,8 @@ export function useDataStore(): DataStore {
     void syncCollection('transfers', transfersState)
   }, [transfersState, syncCollection])
   useEffect(() => {
-    void syncCollection('shadowLogs', shadowLogsState)
-  }, [shadowLogsState, syncCollection])
+    void flushShadowLogsSync()
+  }, [flushShadowLogsSync])
 
   return {
     loggedIn,
@@ -268,6 +294,7 @@ export function useDataStore(): DataStore {
     setTransfers,
     shadowLogs: shadowLogsState,
     setShadowLogs,
+    flushShadowLogsSync,
     spiffRecords: spiffRecordsState,
     setSpiffRecords,
     attendanceSubmissions: attendanceSubmissionsState,

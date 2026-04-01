@@ -60,6 +60,7 @@ export interface DataStore {
 
   shadowLogs: ShadowLog[]
   setShadowLogs: Dispatch<SetStateAction<ShadowLog[]>>
+  flushShadowLogsSync: () => Promise<void>
 
   spiffRecords: SpiffRecord[]
   setSpiffRecords: Dispatch<SetStateAction<SpiffRecord[]>>
