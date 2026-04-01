@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Textarea } from '../components'
 import type { RankMetric, ShadowLog } from '../types'
 import { formatNum, formatTimestamp } from '../utils'
@@ -55,11 +55,9 @@ export function AgentPage({
 }: Props) {
   const [managerName, setManagerName] = useState('')
   const selectedAgentName = activeAgents.find((a) => a.id === agentPageAgentId)?.name ?? 'N/A'
-  const selectedAgentRankRow = useMemo(() => {
-    const index = rankRows.findIndex((row) => row.agentId === agentPageAgentId)
-    if (index < 0) return null
-    return { ...rankRows[index], rank: index + 1 }
-  }, [agentPageAgentId, rankRows])
+  void rankRows
+  void rankMetric
+  void setRankMetric
   const currentDateKey = todayKey
   const shadowLogs = shadowLogsByDateForAgent.get(currentDateKey ?? '') ?? []
   const activeLog = shadowLogs.find((log) => log.endedAt === null) ?? null
@@ -103,7 +101,7 @@ export function AgentPage({
               </Select>
             </Field>
           </div>
-          <div className="rounded-lg border border-slate-200 p-3">
+          {/* <div className="rounded-lg border border-slate-200 p-3">
             <p className="mb-2 text-sm font-medium text-slate-700">Selected Agent Ranking</p>
             <TableWrap>
               <DataTable className="min-w-0 text-xs">
@@ -137,7 +135,7 @@ export function AgentPage({
                 </tbody>
               </DataTable>
             </TableWrap>
-          </div>
+          </div> */}
         </div>
       </Card>
 
