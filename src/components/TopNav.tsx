@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Menu, X } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import type { TopPage } from '../types'
@@ -17,12 +17,10 @@ const navLinkClass =
   'inline-flex min-h-[44px] shrink-0 items-center rounded-md border px-3 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2'
 
 export function TopNav() {
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const [mobileOpenRequested, setMobileOpenRequested] = useState(false)
+  const [mobileOpenPath, setMobileOpenPath] = useState<string | null>(null)
   const location = useLocation()
-
-  useEffect(() => {
-    setMobileOpen(false)
-  }, [location.pathname])
+  const mobileOpen = mobileOpenRequested && mobileOpenPath === location.pathname
 
   return (
     <>
@@ -52,7 +50,11 @@ export function TopNav() {
       <div className="flex min-h-[44px] items-center md:hidden">
         <button
           type="button"
-          onClick={() => setMobileOpen((o) => !o)}
+          onClick={() => {
+            const nextOpen = !mobileOpen
+            setMobileOpenRequested(nextOpen)
+            setMobileOpenPath(nextOpen ? location.pathname : null)
+          }}
           className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
           aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={mobileOpen}
@@ -67,7 +69,10 @@ export function TopNav() {
           <div
             className="fixed inset-0 z-40 bg-slate-900/50 md:hidden"
             aria-hidden
-            onClick={() => setMobileOpen(false)}
+            onClick={() => {
+              setMobileOpenRequested(false)
+              setMobileOpenPath(null)
+            }}
           />
           <nav
             className="mobile-modal-scroll fixed left-0 top-0 z-50 h-full w-[min(280px,85vw)] border-r border-slate-200 bg-white shadow-lg md:hidden"
@@ -78,7 +83,10 @@ export function TopNav() {
                 <NavLink
                   key={item.key}
                   to={item.path}
-                  onClick={() => setMobileOpen(false)}
+                  onClick={() => {
+                    setMobileOpenRequested(false)
+                    setMobileOpenPath(null)
+                  }}
                   className={({ isActive }) =>
                     `block min-h-[44px] rounded-md border px-3 py-2.5 text-sm font-medium ${
                       isActive
