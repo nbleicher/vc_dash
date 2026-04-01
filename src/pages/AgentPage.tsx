@@ -25,6 +25,7 @@ type Props = {
   onAddCall: () => void
   onEndShadow: () => void
   onShadowInteraction: () => void
+  onDeleteShadowCall: (logId: string, callId: string) => void
   onUpdateShadowCall: (
     logId: string,
     callId: string,
@@ -46,6 +47,7 @@ export function AgentPage({
   onAddCall,
   onEndShadow,
   onShadowInteraction,
+  onDeleteShadowCall,
   onUpdateShadowCall,
   todayKey,
 }: Props) {
@@ -147,10 +149,13 @@ export function AgentPage({
                     if (!e.currentTarget.contains(e.relatedTarget as Node | null)) onShadowInteraction()
                   }}
                 >
-                  <p className="text-xs text-slate-500">
-                    Manager: {log.managerName} | Start: {formatTimestamp(log.startedAt)} | End:{' '}
-                    {log.endedAt ? formatTimestamp(log.endedAt) : 'Active'}
-                  </p>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-slate-500">
+                      Manager: {log.managerName} | Start: {formatTimestamp(log.startedAt)} | End:{' '}
+                      {log.endedAt ? formatTimestamp(log.endedAt) : 'Active'}
+                    </p>
+                    <p className="text-xs text-slate-500">Last Saved: {formatTimestamp(log.updatedAt)}</p>
+                  </div>
                   <TableWrap>
                     <DataTable>
                       <thead>
@@ -159,6 +164,7 @@ export function AgentPage({
                           <th>Coaching</th>
                           <th>Duration</th>
                           <th>Sale</th>
+                          <th>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -201,11 +207,21 @@ export function AgentPage({
                                 onChange={(e) => onUpdateShadowCall(log.id, call.id, { sale: e.target.checked })}
                               />
                             </td>
+                            <td className="text-right">
+                              <Button
+                                type="button"
+                                variant="danger"
+                                onClick={() => onDeleteShadowCall(log.id, call.id)}
+                                disabled={log.endedAt !== null}
+                              >
+                                Delete
+                              </Button>
+                            </td>
                           </tr>
                         ))}
                         {log.calls.length === 0 && (
                           <tr>
-                            <td colSpan={4}>N/A</td>
+                            <td colSpan={5}>N/A</td>
                           </tr>
                         )}
                       </tbody>

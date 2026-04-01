@@ -242,6 +242,21 @@ function App() {
       void flushShadowLogsSync()
     }, 0)
   }
+  const handleDeleteShadowCall = (logId: string, callId: string): void => {
+    setShadowLogs((prev) =>
+      prev.map((row) => {
+        if (row.id !== logId || row.endedAt !== null) return row
+        return {
+          ...row,
+          calls: row.calls.filter((call) => call.id !== callId),
+          updatedAt: new Date().toISOString(),
+        }
+      }),
+    )
+    window.setTimeout(() => {
+      void flushShadowLogsSync()
+    }, 0)
+  }
   const handleEndShadow = (): void => {
     setShadowLogs((prev) =>
       prev.map((row) =>
@@ -356,6 +371,7 @@ function App() {
             onAddCall={handleAddShadowCall}
             onEndShadow={handleEndShadow}
             onShadowInteraction={() => void flushShadowLogsSync()}
+            onDeleteShadowCall={handleDeleteShadowCall}
             onUpdateShadowCall={handleUpdateShadowCall}
             todayKey={todayKey}
           />
