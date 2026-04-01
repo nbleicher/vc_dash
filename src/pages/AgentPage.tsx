@@ -129,12 +129,6 @@ export function AgentPage({
           <Button type="button" onClick={() => onStartShadow(managerName)} disabled={!managerName.trim() || !!activeLog}>
             Start Shadow
           </Button>
-          <Button type="button" variant="secondary" onClick={onAddCall} disabled={!activeLog}>
-            Add Call
-          </Button>
-          <Button type="button" variant="danger" onClick={onEndShadow} disabled={!activeLog}>
-            End Shadow
-          </Button>
         </div>
         <p className="text-sm text-slate-600">Current agent: {selectedAgentName}</p>
 
@@ -209,6 +203,18 @@ export function AgentPage({
                       </tbody>
                     </DataTable>
                   </TableWrap>
+                  {log.endedAt === null && (
+                    <div className="row-wrap pt-2">
+                      <Button type="button" variant="secondary" onClick={onAddCall}>
+                        Add Call
+                      </Button>
+                      {activeLog ? (
+                        <Button type="button" variant="danger" onClick={onEndShadow}>
+                          End Shadow
+                        </Button>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -396,20 +396,20 @@ export function EodReportSection({
               if (!day) return null
               return (
                 <div
-                  className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 overflow-y-auto"
+                  className="mobile-modal-scroll fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4"
                   role="dialog"
                   aria-modal="true"
                   aria-labelledby="eod-detail-title"
                   onClick={() => setExpandedEodDateKey(null)}
                 >
                   <Card
-                    className="my-4 w-full min-w-0 max-w-[calc(100vw-2rem)] sm:max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
+                    className="my-4 flex max-h-[90dvh] w-full min-w-0 max-w-[calc(100vw-2rem)] flex-col overflow-hidden sm:max-w-4xl"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <CardTitle id="eod-detail-title" className="border-b border-slate-200 pb-3">
                       EOD Report — {formatDateKey(day.dateKey)}
                     </CardTitle>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    <div className="mobile-modal-scroll flex-1 p-4 space-y-4">
                       <div className="grid gap-3 sm:grid-cols-2 max-w-md">
                         <MetricCard title="House Sales" value={day.houseSales} />
                         <MetricCard

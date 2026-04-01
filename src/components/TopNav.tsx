@@ -70,7 +70,7 @@ export function TopNav() {
             onClick={() => setMobileOpen(false)}
           />
           <nav
-            className="fixed left-0 top-0 z-50 h-full w-[min(280px,85vw)] overflow-y-auto border-r border-slate-200 bg-white shadow-lg md:hidden"
+            className="mobile-modal-scroll fixed left-0 top-0 z-50 h-full w-[min(280px,85vw)] border-r border-slate-200 bg-white shadow-lg md:hidden"
             aria-label="Primary mobile"
           >
             <div className="flex flex-col gap-1 p-3 pt-16">
