@@ -1119,8 +1119,8 @@ export function VaultPage({
       )}
 
       {fullTableMode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
-          <Card className="max-h-[88vh] w-full min-w-0 max-w-[calc(100vw-2rem)] sm:max-w-7xl overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/45 p-4 sm:items-center">
+          <Card className="max-h-[90dvh] w-full min-w-0 max-w-[calc(100vw-2rem)] sm:max-w-7xl overflow-hidden">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <h3>{fullTableMode === 'qa' ? 'Daily QA History' : 'Action Needed History'} - Full Table</h3>
               <Button
@@ -1151,7 +1151,7 @@ export function VaultPage({
                 {filteredRowsCount}
               </p>
             </div>
-            <TableWrap className="max-h-[58vh]">
+            <TableWrap className="max-h-[56dvh] sm:max-h-[58vh]">
               {fullTableMode === 'qa' ? (
                 <DataTable>
                   <thead>

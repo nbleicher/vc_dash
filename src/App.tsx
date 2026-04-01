@@ -339,9 +339,6 @@ function App() {
             eodWeekOptions={eodWeekOptions}
             agentWeekRows={agentWeekRows}
             shadowLogsByDateForAgent={shadowLogsByDateForAgent}
-            rankRows={rankRows}
-            rankMetric={rankMetric}
-            setRankMetric={setRankMetric}
             onStartShadow={handleStartShadow}
             onAddCall={handleAddShadowCall}
             onEndShadow={handleEndShadow}

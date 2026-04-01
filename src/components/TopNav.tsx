@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Menu, X } from 'lucide-react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import type { TopPage } from '../types'
 
 const items: Array<{ path: string; key: TopPage; label: string }> = [
@@ -18,6 +18,11 @@ const navLinkClass =
 
 export function TopNav() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const location = useLocation()
+
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [location.pathname])
 
   return (
     <>

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Textarea } from '../components'
-import type { RankMetric, ShadowLog } from '../types'
+import type { ShadowLog } from '../types'
 import { formatNum, formatTimestamp } from '../utils'
 
 type AgentWeekRow = {
@@ -21,9 +21,6 @@ type Props = {
   eodWeekOptions: Array<{ weekKey: string; label: string }>
   agentWeekRows: AgentWeekRow[]
   shadowLogsByDateForAgent: Map<string, ShadowLog[]>
-  rankRows: Array<{ agentId: string; agentName: string; sales: number; cpa: number | null; cvr: number | null }>
-  rankMetric: RankMetric
-  setRankMetric: (m: RankMetric) => void
   onStartShadow: (managerName: string) => void
   onAddCall: () => void
   onEndShadow: () => void
@@ -44,9 +41,6 @@ export function AgentPage({
   eodWeekOptions,
   agentWeekRows,
   shadowLogsByDateForAgent,
-  rankRows,
-  rankMetric,
-  setRankMetric,
   onStartShadow,
   onAddCall,
   onEndShadow,
@@ -55,9 +49,6 @@ export function AgentPage({
 }: Props) {
   const [managerName, setManagerName] = useState('')
   const selectedAgentName = activeAgents.find((a) => a.id === agentPageAgentId)?.name ?? 'N/A'
-  void rankRows
-  void rankMetric
-  void setRankMetric
   const currentDateKey = todayKey
   const shadowLogs = shadowLogsByDateForAgent.get(currentDateKey ?? '') ?? []
   const activeLog = shadowLogs.find((log) => log.endedAt === null) ?? null
@@ -70,9 +61,8 @@ export function AgentPage({
     <div className="page-grid">
       <Card className="space-y-4">
         <CardTitle>Agent Focus</CardTitle>
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_460px]">
-          <div className="row-wrap control-bar">
-            <Field className="w-full min-w-0 sm:min-w-[260px]">
+        <div className="control-bar grid gap-3 md:grid-cols-2">
+          <Field className="w-full min-w-0">
               <FieldLabel>Agent</FieldLabel>
               <Select value={agentPageAgentId} onChange={(e) => setAgentPageAgentId(e.target.value)}>
                 {activeAgents.map((agent) => (
@@ -81,8 +71,8 @@ export function AgentPage({
                   </option>
                 ))}
               </Select>
-            </Field>
-            <Field className="w-full min-w-0 sm:min-w-[220px]">
+          </Field>
+          <Field className="w-full min-w-0">
               <FieldLabel>Week</FieldLabel>
               <Select value={selectedAgentWeekKey} onChange={(e) => setSelectedAgentWeekKey(e.target.value)}>
                 {eodWeekOptions.map((option) => (
@@ -91,51 +81,7 @@ export function AgentPage({
                   </option>
                 ))}
               </Select>
-            </Field>
-            <Field className="w-full min-w-0 sm:min-w-[180px]">
-              <FieldLabel>Rank Metric</FieldLabel>
-              <Select value={rankMetric} onChange={(e) => setRankMetric(e.target.value as RankMetric)}>
-                <option>Sales</option>
-                <option>CPA</option>
-                <option>CVR</option>
-              </Select>
-            </Field>
-          </div>
-          {/* <div className="rounded-lg border border-slate-200 p-3">
-            <p className="mb-2 text-sm font-medium text-slate-700">Selected Agent Ranking</p>
-            <TableWrap>
-              <DataTable className="min-w-0 text-xs">
-                <thead>
-                  <tr>
-                    <th>Rank</th>
-                    <th>Agent</th>
-                    <th className="text-right">Sales</th>
-                    <th className="text-right">CPA</th>
-                    <th className="text-right">CVR</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedAgentRankRow ? (
-                    <tr>
-                      <td>{selectedAgentRankRow.rank}</td>
-                      <td>{selectedAgentRankRow.agentName}</td>
-                      <td className="text-right tabular-nums">{selectedAgentRankRow.sales}</td>
-                      <td className="text-right tabular-nums">
-                        {selectedAgentRankRow.cpa === null ? 'N/A' : `$${formatNum(selectedAgentRankRow.cpa)}`}
-                      </td>
-                      <td className="text-right tabular-nums">
-                        {selectedAgentRankRow.cvr === null ? 'N/A' : `${formatNum(selectedAgentRankRow.cvr * 100)}%`}
-                      </td>
-                    </tr>
-                  ) : (
-                    <tr>
-                      <td colSpan={5}>N/A</td>
-                    </tr>
-                  )}
-                </tbody>
-              </DataTable>
-            </TableWrap>
-          </div> */}
+          </Field>
         </div>
       </Card>
 
