@@ -55,6 +55,11 @@ export function AgentPage({
 }: Props) {
   const [managerName, setManagerName] = useState('')
   const selectedAgentName = activeAgents.find((a) => a.id === agentPageAgentId)?.name ?? 'N/A'
+  const selectedAgentRankRow = useMemo(() => {
+    const index = rankRows.findIndex((row) => row.agentId === agentPageAgentId)
+    if (index < 0) return null
+    return { ...rankRows[index], rank: index + 1 }
+  }, [agentPageAgentId, rankRows])
   const currentDateKey = todayKey
   const shadowLogs = shadowLogsByDateForAgent.get(currentDateKey ?? '') ?? []
   const activeLog = shadowLogs.find((log) => log.endedAt === null) ?? null
@@ -67,58 +72,107 @@ export function AgentPage({
     <div className="page-grid">
       <Card className="space-y-4">
         <CardTitle>Agent Focus</CardTitle>
-        <div className="row-wrap control-bar">
-          <Field className="w-full min-w-0 sm:min-w-[260px]">
-            <FieldLabel>Agent</FieldLabel>
-            <Select value={agentPageAgentId} onChange={(e) => setAgentPageAgentId(e.target.value)}>
-              {activeAgents.map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field className="w-full min-w-0 sm:min-w-[220px]">
-            <FieldLabel>Week</FieldLabel>
-            <Select value={selectedAgentWeekKey} onChange={(e) => setSelectedAgentWeekKey(e.target.value)}>
-              {eodWeekOptions.map((option) => (
-                <option key={option.weekKey} value={option.weekKey}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
-          </Field>
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_460px]">
+          <div className="row-wrap control-bar">
+            <Field className="w-full min-w-0 sm:min-w-[260px]">
+              <FieldLabel>Agent</FieldLabel>
+              <Select value={agentPageAgentId} onChange={(e) => setAgentPageAgentId(e.target.value)}>
+                {activeAgents.map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field className="w-full min-w-0 sm:min-w-[220px]">
+              <FieldLabel>Week</FieldLabel>
+              <Select value={selectedAgentWeekKey} onChange={(e) => setSelectedAgentWeekKey(e.target.value)}>
+                {eodWeekOptions.map((option) => (
+                  <option key={option.weekKey} value={option.weekKey}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field className="w-full min-w-0 sm:min-w-[180px]">
+              <FieldLabel>Rank Metric</FieldLabel>
+              <Select value={rankMetric} onChange={(e) => setRankMetric(e.target.value as RankMetric)}>
+                <option>Sales</option>
+                <option>CPA</option>
+                <option>CVR</option>
+              </Select>
+            </Field>
+          </div>
+          <div className="rounded-lg border border-slate-200 p-3">
+            <p className="mb-2 text-sm font-medium text-slate-700">Selected Agent Ranking</p>
+            <TableWrap>
+              <DataTable>
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Agent</th>
+                    <th className="text-right">Sales</th>
+                    <th className="text-right">CPA</th>
+                    <th className="text-right">CVR</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedAgentRankRow ? (
+                    <tr>
+                      <td>{selectedAgentRankRow.rank}</td>
+                      <td>{selectedAgentRankRow.agentName}</td>
+                      <td className="text-right tabular-nums">{selectedAgentRankRow.sales}</td>
+                      <td className="text-right tabular-nums">
+                        {selectedAgentRankRow.cpa === null ? 'N/A' : `$${formatNum(selectedAgentRankRow.cpa)}`}
+                      </td>
+                      <td className="text-right tabular-nums">
+                        {selectedAgentRankRow.cvr === null ? 'N/A' : `${formatNum(selectedAgentRankRow.cvr * 100)}%`}
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr>
+                      <td colSpan={5}>N/A</td>
+                    </tr>
+                  )}
+                </tbody>
+              </DataTable>
+            </TableWrap>
+          </div>
         </div>
       </Card>
 
       <Card className="space-y-4">
         <CardTitle>Weekly KPI Calendar (M-F)</CardTitle>
-        <TableWrap>
-          <DataTable>
-            <thead>
-              <tr>
-                <th>Day</th>
-                <th>Date</th>
-                <th className="text-right">Sales</th>
-                <th className="text-right">Calls</th>
-                <th className="text-right">Marketing</th>
-                <th className="text-right">CPA</th>
-              </tr>
-            </thead>
-            <tbody>
-              {agentWeekRows.map((row) => (
-                <tr key={row.dateKey}>
-                  <td>{row.dayLabel}</td>
-                  <td>{row.dateKey}</td>
-                  <td className="text-right tabular-nums">{row.sales}</td>
-                  <td className="text-right tabular-nums">{row.calls}</td>
-                  <td className="text-right tabular-nums">${formatNum(row.marketing, 0)}</td>
-                  <td className="text-right tabular-nums">{row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}</td>
-                </tr>
-              ))}
-            </tbody>
-          </DataTable>
-        </TableWrap>
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-3 xl:grid-cols-5">
+          {agentWeekRows.map((row) => (
+            <div
+              key={row.dateKey}
+              className="rounded-md border border-amber-500/25 bg-slate-950 px-3 py-2 text-slate-100 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.15)]"
+            >
+              <div className="mb-2 flex items-start justify-between border-b border-slate-800 pb-2">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-slate-400">{row.dayLabel.slice(0, 3)}</p>
+                  <p className="text-[11px] text-slate-500">{row.dateKey}</p>
+                </div>
+                <p className="text-base font-semibold leading-none text-amber-400">{row.sales}</p>
+              </div>
+              <div className="space-y-1 text-[11px] text-slate-300">
+                <p className="flex items-center justify-between">
+                  <span className="text-slate-500">Calls</span>
+                  <span className="tabular-nums">{row.calls}</span>
+                </p>
+                <p className="flex items-center justify-between">
+                  <span className="text-slate-500">Mkt</span>
+                  <span className="tabular-nums">${formatNum(row.marketing, 0)}</span>
+                </p>
+                <p className="flex items-center justify-between">
+                  <span className="text-slate-500">CPA</span>
+                  <span className="tabular-nums">{row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}</span>
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
       </Card>
 
       <Card className="space-y-4">
@@ -218,41 +272,6 @@ export function AgentPage({
         })}
       </Card>
 
-      <Card className="space-y-4">
-        <CardTitle>Agent Ranking (Standard)</CardTitle>
-        <Field className="w-full min-w-0 sm:min-w-[180px]">
-          <FieldLabel>Metric</FieldLabel>
-          <Select value={rankMetric} onChange={(e) => setRankMetric(e.target.value as RankMetric)}>
-            <option>Sales</option>
-            <option>CPA</option>
-            <option>CVR</option>
-          </Select>
-        </Field>
-        <TableWrap>
-          <DataTable>
-            <thead>
-              <tr>
-                <th>Rank</th>
-                <th>Agent</th>
-                <th className="text-right">Sales</th>
-                <th className="text-right">CPA</th>
-                <th className="text-right">CVR</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rankRows.map((row, idx) => (
-                <tr key={row.agentId} className={row.agentId === agentPageAgentId ? '!bg-blue-50' : undefined}>
-                  <td>{idx + 1}</td>
-                  <td>{row.agentName}</td>
-                  <td className="text-right tabular-nums">{row.sales}</td>
-                  <td className="text-right tabular-nums">{row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}</td>
-                  <td className="text-right tabular-nums">{row.cvr === null ? 'N/A' : `${formatNum(row.cvr * 100)}%`}</td>
-                </tr>
-              ))}
-            </tbody>
-          </DataTable>
-        </TableWrap>
-      </Card>
     </div>
   )
 }
