@@ -83,7 +83,6 @@ function App() {
     eodWeeklySummary,
     eodTodayTotals,
     eodHistoryDays,
-    monthLabel,
     rankRows,
     rankRowsTransferAdjusted,
     rankMetric,
@@ -501,7 +500,6 @@ function App() {
             eodWeekOptions={eodWeekOptions}
             eodWeeklyRows={eodWeeklyRows}
             eodWeeklySummary={eodWeeklySummary}
-            monthLabel={monthLabel}
             currentWeekKey={currentWeekKey}
             todayKey={todayKey}
             eodTodayTotals={eodTodayTotals}

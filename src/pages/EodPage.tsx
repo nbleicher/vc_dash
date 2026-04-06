@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Card, CardTitle, DataTable, EodReportSection, type EodHistoryDay, Field, FieldLabel, Select, TableWrap } from '../components'
+import { Button, Card, CardTitle, EodReportSection, type EodHistoryDay, Field, FieldLabel, Select } from '../components'
 import type { PerfHistory } from '../types'
 import { formatDateKey, formatNum, formatTimestamp, formatWeekRangeLabel } from '../utils'
 
@@ -24,7 +24,6 @@ type Props = {
     updatedAt: string | null
     finalized: boolean
   }
-  monthLabel: string
   currentWeekKey: string
   todayKey: string
   eodTodayTotals: { sales: number; marketing: number; cpa: number | null }
@@ -49,7 +48,6 @@ export function EodPage({
   eodWeekOptions,
   eodWeeklyRows,
   eodWeeklySummary,
-  monthLabel,
   currentWeekKey,
   todayKey,
   eodTodayTotals,
@@ -110,7 +108,7 @@ export function EodPage({
         </div>
       </Card>
 
-      <Card className="w-full max-w-md space-y-2 border-slate-200 shadow-sm">
+      <Card className="w-full space-y-2 border-slate-200 shadow-sm">
         <CardTitle>EOW Summary</CardTitle>
         <div className="space-y-1 text-sm text-slate-700">
           <p className="flex items-center justify-between">
@@ -133,32 +131,6 @@ export function EodPage({
             ? `Summary last refreshed: ${formatTimestamp(eodWeeklySummary.updatedAt)}`
             : 'Weekly summary finalizes Friday at 6:15 PM and refreshes if new data is added after cutoff.'}
         </p>
-      </Card>
-
-      <Card className="space-y-4">
-        <CardTitle>{monthLabel}</CardTitle>
-        <TableWrap>
-          <DataTable>
-            <thead>
-              <tr>
-                <th>Snapshot</th>
-                <th className="text-right">Total Deals</th>
-                <th className="text-right">Total Marketing</th>
-                <th className="text-right">CPA</th>
-                <th>Last Updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>{eodWeekOptions.find((option) => option.weekKey === selectedEodWeekKey)?.label ?? formatDateKey(selectedEodWeekKey)}</td>
-                <td className="text-right tabular-nums">{eodWeeklySummary.deals}</td>
-                <td className="text-right tabular-nums">${formatNum(eodWeeklySummary.marketing, 0)}</td>
-                <td className="text-right tabular-nums">{eodWeeklySummary.cpa === null ? 'N/A' : `$${formatNum(eodWeeklySummary.cpa)}`}</td>
-                <td>{formatTimestamp(eodWeeklySummary.updatedAt)}</td>
-              </tr>
-            </tbody>
-          </DataTable>
-        </TableWrap>
       </Card>
 
       <EodReportSection
