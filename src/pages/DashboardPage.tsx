@@ -59,7 +59,7 @@ export function DashboardPage({
   lastSnapshotLabel,
   lastFetchedAt,
   todaySnapshotCount,
-  floorCapacity,
+  floorCapacity: _floorCapacity,
   weekTarget,
   weekTrend,
   actionQa,
@@ -149,12 +149,12 @@ export function DashboardPage({
           <Card className="h-full w-full space-y-3.5">
             <CardTitle>House Pulse</CardTitle>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-              <MetricCard title="Total Sales" value={houseLive.totalSales} />
-              <MetricCard title="Total Billable Calls" value={houseLive.totalCalls} />
-              <MetricCard title="Total Marketing" value={`$${formatNum(houseLive.marketing, 0)}`} />
               <MetricCard title="Floor CPA" value={houseLive.cpa === null ? 'N/A' : `$${formatNum(houseLive.cpa)}`} />
+              <MetricCard title="Total Sales" value={houseLive.totalSales} />
+              <MetricCard title="Total Marketing" value={`$${formatNum(houseLive.marketing, 0)}`} />
+              <MetricCard title="Billable Calls" value={houseLive.totalCalls} />
               <MetricCard title="Floor CVR" value={houseLive.cvr === null ? 'N/A' : `${formatNum(houseLive.cvr * 100)}%`} />
-              <MetricCard title="Floor Capacity (Mon-Fri)" value={formatNum(floorCapacity, 2)} />
+              {/* <MetricCard title="Floor Capacity (Mon-Fri)" value={formatNum(_floorCapacity, 2)} /> */}
             </div>
           </Card>
         </div>
