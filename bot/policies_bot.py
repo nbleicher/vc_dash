@@ -79,6 +79,16 @@ def _normalize_carrier(raw: str) -> Optional[str]:
     return None
 
 
+def append_unique_status_transition_note(notes: str, transition_note: str) -> str:
+    trimmed = (notes or "").strip()
+    if not trimmed:
+        return transition_note
+    lines = [line.strip() for line in trimmed.split("\n")]
+    if transition_note in lines:
+        return trimmed
+    return f"{trimmed}\n{transition_note}"
+
+
 def log(msg: str) -> None:
     print(msg, flush=True)
 
@@ -412,7 +422,7 @@ async def main_async() -> int:
         return 1
 
     existing = api_get_audit_records(session, api_base)
-    # One record per (clientName, agentId): keep latest by discoveryTs so we don't create duplicates across months
+    # Build a lookup of latest row per (clientName, agentId) while preserving full history in `existing`.
     by_client_agent: dict[tuple[str, str], dict] = {}
     for r in existing:
         key = (r.get("clientName", "").strip(), (r.get("agentId") or "").strip())
@@ -421,7 +431,6 @@ async def main_async() -> int:
         existing_ts = r.get("discoveryTs") or ""
         if key not in by_client_agent or (existing_ts > (by_client_agent[key].get("discoveryTs") or "")):
             by_client_agent[key] = r
-    existing = list(by_client_agent.values())
 
     added = 0
     updated = 0
@@ -456,15 +465,19 @@ async def main_async() -> int:
                 added += 1
             else:
                 if rec.get("currentStatus") != status:
+                    transition_note = f"Status changed: {rec.get('currentStatus')} -> {status}"
                     rec["currentStatus"] = status
                     rec["reason"] = f"PolicyDen: {'Pending CMS' if status == 'pending_cms' else 'Flagged'}"
-                    rec["resolutionTs"] = None
+                    rec["resolutionTs"] = now_iso
+                    rec["notes"] = append_unique_status_transition_note(rec.get("notes"), transition_note)
                     updated += 1
         elif status in POSITIVE_STATUSES:
             if rec is not None and rec.get("currentStatus") in ACTION_NEEDED_STATUSES:
+                transition_note = f"Status changed: {rec.get('currentStatus')} -> {status}"
                 rec["currentStatus"] = status
                 rec["resolutionTs"] = now_iso
                 rec["reason"] = f"PolicyDen: {status.replace('_', ' ').title()}"
+                rec["notes"] = append_unique_status_transition_note(rec.get("notes"), transition_note)
                 updated += 1
 
     if added or updated:

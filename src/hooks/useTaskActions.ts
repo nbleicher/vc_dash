@@ -33,6 +33,13 @@ export function useTaskActions(
     (agentId: string): string => (agentId ? agentId : activeAgents[0]?.id ?? ''),
     [activeAgents],
   )
+  const appendUniqueStatusTransitionNote = useCallback((notes: string, transitionNote: string): string => {
+    const trimmed = notes.trim()
+    if (!trimmed) return transitionNote
+    const lines = trimmed.split('\n').map((line) => line.trim())
+    if (lines.includes(transitionNote)) return trimmed
+    return `${trimmed}\n${transitionNote}`
+  }, [])
 
   const handleQaSubmit = useCallback(
     (e: React.FormEvent): void => {
@@ -209,15 +216,37 @@ export function useTaskActions(
         >
       >,
     ): void => {
-      const resolvedPatch =
-        patch.currentStatus === 'accepted'
-          ? { ...patch, resolutionTs: new Date().toISOString() }
-          : patch
-      store.setAuditRecords((prev) =>
-        prev.map((record) => (record.id === id ? { ...record, ...resolvedPatch } : record)),
-      )
+      store.setAuditRecords((prev) => {
+        const record = prev.find((row) => row.id === id)
+        if (!record) return prev
+        const nextStatus = patch.currentStatus ?? record.currentStatus
+        const statusChanged = nextStatus !== record.currentStatus
+
+        if (statusChanged) {
+          const nowIso = new Date().toISOString()
+          const transitionNote = `Status changed: ${record.currentStatus} -> ${nextStatus}`
+          const nextNotes = appendUniqueStatusTransitionNote(patch.notes ?? record.notes, transitionNote)
+          return prev.map((row) =>
+            row.id === id
+              ? {
+                  ...row,
+                  ...patch,
+                  currentStatus: nextStatus,
+                  resolutionTs: nowIso,
+                  notes: nextNotes,
+                }
+              : row,
+          )
+        }
+
+        const resolvedPatch =
+          patch.currentStatus === 'accepted'
+            ? { ...patch, resolutionTs: new Date().toISOString() }
+            : patch
+        return prev.map((row) => (row.id === id ? { ...row, ...resolvedPatch } : row))
+      })
     },
-    [store],
+    [store, appendUniqueStatusTransitionNote],
   )
 
   const handleAuditDelete = useCallback((id: string): void => {
