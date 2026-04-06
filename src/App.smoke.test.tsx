@@ -72,7 +72,7 @@ describe('App smoke', () => {
     expect(putCall).toBeTruthy()
   })
 
-  it('clears all history after confirmation', async () => {
+  it('does not expose clear history control in settings', async () => {
     const populatedState = {
       ...emptyState,
       agents: [{ id: 'a1', name: 'Alex', active: true, createdAt: '2026-02-15T12:00:00.000Z' }],
@@ -113,27 +113,9 @@ describe('App smoke', () => {
       }
     })
     vi.stubGlobal('fetch', fetchMock)
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
-
     renderApp()
     fireEvent.click(await screen.findByRole('link', { name: 'Settings' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Clear History' }))
-
-    const clearsAgents = fetchMock.mock.calls.some((call) => {
-      if (!String(call[0]).endsWith('/state/agents')) return false
-      const init = call[1] as RequestInit | undefined
-      if (!init || init.method !== 'PUT') return false
-      return init.body === '[]'
-    })
-    const clearsSnapshots = fetchMock.mock.calls.some((call) => {
-      if (!String(call[0]).endsWith('/state/snapshots')) return false
-      const init = call[1] as RequestInit | undefined
-      if (!init || init.method !== 'PUT') return false
-      return init.body === '[]'
-    })
-
-    expect(clearsAgents).toBe(true)
-    expect(clearsSnapshots).toBe(true)
+    expect(screen.queryByRole('button', { name: 'Clear History' })).toBeNull()
   })
 
 })
