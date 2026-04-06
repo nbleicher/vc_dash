@@ -568,6 +568,7 @@ export function VaultPage({
 
       <Card className="space-y-4">
         <CardTitle>Agent Ranking</CardTitle>
+        <p className="text-xs text-slate-500">Current year to date</p>
         <div className="row-wrap control-bar">
           <Field className="w-full min-w-0 sm:min-w-[180px]">
             <FieldLabel>Metric</FieldLabel>

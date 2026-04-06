@@ -439,8 +439,13 @@ export function useAppData(store: DataStore) {
     [activeAgents, effectiveMetricsDateKey, liveByAgent, perfHistory, snapshots, todayKey],
   )
 
+  const yearStartKey = `${todayKey.slice(0, 4)}-01-01`
+  const hasExplicitRankRange = Boolean(metricsDateStart || metricsDateEnd)
+  const rankDateStart = hasExplicitRankRange ? metricsDateStart : yearStartKey
+  const rankDateEnd = hasExplicitRankRange ? metricsDateEnd : todayKey
+
   const rankRows = useMemo(() => {
-    const { byAgent } = buildRankBaseByAgent(metricsDateStart, metricsDateEnd)
+    const { byAgent } = buildRankBaseByAgent(rankDateStart, rankDateEnd)
     const rows = activeAgents.map((agent) => {
       const t = byAgent.get(agent.id) ?? { calls: 0, sales: 0, marketing: 0 }
       return {
@@ -457,10 +462,10 @@ export function useAppData(store: DataStore) {
       return (a.cpa ?? Number.POSITIVE_INFINITY) - (b.cpa ?? Number.POSITIVE_INFINITY)
     })
     return rows
-  }, [activeAgents, buildRankBaseByAgent, rankMetric, metricsDateStart, metricsDateEnd])
+  }, [activeAgents, buildRankBaseByAgent, rankMetric, rankDateStart, rankDateEnd])
 
   const rankRowsTransferAdjusted = useMemo(() => {
-    const { byAgent, periodDates } = buildRankBaseByAgent(metricsDateStart, metricsDateEnd)
+    const { byAgent, periodDates } = buildRankBaseByAgent(rankDateStart, rankDateEnd)
 
     const salesDeltaByAgent = new Map<string, number>()
     const inPeriod = (dateKey: string): boolean => periodDates.has(dateKey)
@@ -496,7 +501,7 @@ export function useAppData(store: DataStore) {
     })
 
     return rows
-  }, [activeAgents, buildRankBaseByAgent, metricsDateEnd, metricsDateStart, transfers, rankMetric])
+  }, [activeAgents, buildRankBaseByAgent, rankDateEnd, rankDateStart, transfers, rankMetric])
 
   const activeIds = useMemo(() => new Set(activeAgents.map((agent) => agent.id)), [activeAgents])
   const metricsMonthPrefix = effectiveMetricsDateKey.slice(0, 7)
