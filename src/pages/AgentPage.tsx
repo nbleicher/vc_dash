@@ -199,7 +199,7 @@ export function AgentPage({
   }
 
   return (
-    <div className="page-grid">
+    <div className="page-grid gap-4 xl:gap-5">
       <Card className="space-y-4">
         <CardTitle>Agent Focus</CardTitle>
         <div className="control-bar grid gap-3 md:grid-cols-2">
@@ -221,7 +221,7 @@ export function AgentPage({
 
       {agentTab === 'overview' && (
         <>
-          <Card className="space-y-4">
+          <Card className="space-y-3.5">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <CardTitle>Weekly KPI Calendar (M-F)</CardTitle>
               <Field className="w-full min-w-0 md:w-[280px]">
@@ -267,7 +267,7 @@ export function AgentPage({
             </div>
           </Card>
 
-          <Card className="space-y-4">
+          <Card className="space-y-3.5">
         <CardTitle>Shadow Log</CardTitle>
         <div className="row-wrap control-bar">
           <Field className="w-full min-w-0 sm:min-w-[260px]">
@@ -463,7 +463,7 @@ export function AgentPage({
       )}
 
       {agentTab === 'qa-history' && (
-        <Card className="space-y-4">
+        <Card className="space-y-3.5">
           <CardTitle>Daily QA History</CardTitle>
           <TableWrap>
             <DataTable>
@@ -530,12 +530,13 @@ export function AgentPage({
                     <td>
                       {editingQaId === row.id ? (
                         <div className="flex gap-2">
-                          <Button variant="default" onClick={saveQaEdit}>Save</Button>
-                          <Button variant="secondary" onClick={cancelQaEdit}>Cancel</Button>
+                          <Button variant="default" className="h-8 px-2.5 py-1 text-xs" onClick={saveQaEdit}>Save</Button>
+                          <Button variant="secondary" className="h-8 px-2.5 py-1 text-xs" onClick={cancelQaEdit}>Cancel</Button>
                         </div>
                       ) : (
                         <Button
                           variant="secondary"
+                          className="h-8 px-2.5 py-1 text-xs"
                           onClick={() => {
                             setEditingQaId(row.id)
                             setQaDraft({
@@ -561,7 +562,7 @@ export function AgentPage({
       )}
 
       {agentTab === 'audit-history' && (
-        <Card className="space-y-4">
+        <Card className="space-y-3.5">
           <CardTitle>Action Needed History</CardTitle>
           <TableWrap>
             <DataTable>
@@ -627,12 +628,13 @@ export function AgentPage({
                       <div className="flex flex-wrap gap-2">
                         {editingAuditId === row.id ? (
                           <>
-                            <Button variant="default" onClick={saveAuditEdit}>Save</Button>
-                            <Button variant="secondary" onClick={cancelAuditEdit}>Cancel</Button>
+                            <Button variant="default" className="h-8 px-2.5 py-1 text-xs" onClick={saveAuditEdit}>Save</Button>
+                            <Button variant="secondary" className="h-8 px-2.5 py-1 text-xs" onClick={cancelAuditEdit}>Cancel</Button>
                           </>
                         ) : (
                           <Button
                             variant="secondary"
+                            className="h-8 px-2.5 py-1 text-xs"
                             onClick={() => {
                               setEditingAuditId(row.id)
                               setAuditDraft({
@@ -664,7 +666,7 @@ export function AgentPage({
 
       {agentTab === 'performance' && (
         <>
-          <Card className="space-y-4 bg-slate-50">
+          <Card className="space-y-3.5 bg-slate-50">
             <CardTitle>Performance Meeting</CardTitle>
             <form onSubmit={onAddMeeting} className="form-grid">
               <Field>
@@ -688,11 +690,11 @@ export function AgentPage({
                 <FieldLabel>Action Items</FieldLabel>
                 <Textarea value={meetingForm.actionItems} onChange={(e) => setMeetingForm((prev) => ({ ...prev, actionItems: e.target.value }))} />
               </Field>
-              <Button type="submit" variant="default" className="w-fit">Save Meeting</Button>
+              <Button type="submit" variant="default" className="h-8 w-fit px-2.5 py-1 text-xs">Save Meeting</Button>
             </form>
           </Card>
 
-          <div className="split">
+          <div className="split gap-3.5">
             <Card className="space-y-3 bg-slate-50">
               <h3>PDF Uploads</h3>
               <Input type="file" accept=".pdf,application/pdf" onChange={onPdfUpload} className="h-auto py-2" />
@@ -763,12 +765,13 @@ export function AgentPage({
                         <td>
                           {editingMeetingId === meeting.id ? (
                             <div className="flex gap-2">
-                              <Button variant="default" onClick={saveMeetingEdit}>Save</Button>
-                              <Button variant="secondary" onClick={cancelMeetingEdit}>Cancel</Button>
+                              <Button variant="default" className="h-8 px-2.5 py-1 text-xs" onClick={saveMeetingEdit}>Save</Button>
+                              <Button variant="secondary" className="h-8 px-2.5 py-1 text-xs" onClick={cancelMeetingEdit}>Cancel</Button>
                             </div>
                           ) : (
                             <Button
                               variant="secondary"
+                              className="h-8 px-2.5 py-1 text-xs"
                               onClick={() => {
                                 setEditingMeetingId(meeting.id)
                                 setMeetingDraft({
