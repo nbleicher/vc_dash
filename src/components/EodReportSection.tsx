@@ -519,7 +519,6 @@ export function EodReportSection({
               )
             })()}
           </div>
-        </div>
       </div>
     </Card>
   )

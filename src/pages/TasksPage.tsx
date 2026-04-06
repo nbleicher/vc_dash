@@ -614,7 +614,7 @@ export function TasksPage({
       )}
 
       {/* Transfers temporarily disabled */}
-      {false && taskPage === 'transfers' && (
+      {taskPage === 'transfers' && (
         <Card className="space-y-4">
           <CardTitle>Transfers</CardTitle>
           <p className="text-sm text-slate-500">

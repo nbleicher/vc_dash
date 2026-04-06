@@ -88,19 +88,13 @@ function App() {
     rankRowsTransferAdjusted,
     rankMetric,
     setRankMetric,
-    setVaultAgentId,
-    vaultHistoryView,
-    setVaultHistoryView,
     vaultScope,
     setVaultScope,
     historySort,
     setHistorySort,
-    effectiveVaultAgentId,
     selectedVaultAgent,
-    vaultAttendanceHistory,
     vaultQaHistory,
     vaultAuditHistory,
-    weeklyTargetHistory,
     snapshots,
   } = data
 
@@ -522,33 +516,15 @@ function App() {
           <VaultPage
             vaultScope={vaultScope}
             setVaultScope={setVaultScope}
-            setVaultAgentId={setVaultAgentId}
-            effectiveVaultAgentId={effectiveVaultAgentId}
-            selectedVaultAgent={selectedVaultAgent}
-            activeAgents={activeAgents}
-            vaultHistoryView={vaultHistoryView}
-            setVaultHistoryView={setVaultHistoryView}
             historySort={historySort}
             setHistorySort={setHistorySort}
             agents={agents}
-            vaultDocs={vaultDocs}
-            vaultMeetings={vaultMeetings}
-            meetingForm={meetingForm}
-            setMeetingForm={setMeetingForm}
-            vaultAttendanceHistory={vaultAttendanceHistory}
             vaultQaHistory={vaultQaHistory}
             vaultAuditHistory={vaultAuditHistory}
-            weeklyTargetHistory={weeklyTargetHistory}
-            snapshots={snapshots}
             lastPoliciesBotRun={store.lastPoliciesBotRun ?? null}
-            onAddMeeting={vaultActions.addMeeting}
-            onPdfUpload={vaultActions.handlePdfUpload}
             onUpdateQaRecord={taskActions.handleQaUpdate}
             onUpdateAuditRecord={taskActions.handleAuditUpdate}
             onDeleteAuditRecord={taskActions.handleAuditDelete}
-            onUpdateSnapshot={vaultActions.handleSnapshotUpdate}
-            onUpdateMeeting={vaultActions.handleMeetingUpdate}
-            transfers={transfers}
             rankRows={rankRows}
             rankRowsTransferAdjusted={rankRowsTransferAdjusted}
             rankMetric={rankMetric}

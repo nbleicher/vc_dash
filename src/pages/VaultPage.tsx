@@ -1,29 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { DataStore } from '../data'
-import { Badge, Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap, Textarea } from '../components'
+import { Badge, Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Select, TableWrap } from '../components'
 import { POLICY_STATUSES } from '../constants'
 
 const AUDIT_STATUS_OPTIONS = [...POLICY_STATUSES, 'no_action_needed']
-import type { AuditRecord, QaRecord, RankMetric, VaultHistoryView, VaultScope, VaultMeeting } from '../types'
-import { formatDateKey, formatLastParsedDate, formatNum, formatPctDelta, formatTimestamp } from '../utils'
+import type { AuditRecord, QaRecord, RankMetric, VaultScope } from '../types'
+import { formatDateKey, formatLastParsedDate, formatNum, formatTimestamp } from '../utils'
 
 type Props = {
   vaultScope: VaultScope
   setVaultScope: (s: VaultScope) => void
-  setVaultAgentId: (s: string) => void
-  effectiveVaultAgentId: string
-  selectedVaultAgent: { id: string } | null
-  activeAgents: Array<{ id: string; name: string }>
-  vaultHistoryView: VaultHistoryView
-  setVaultHistoryView: (v: VaultHistoryView) => void
   historySort: 'newest' | 'oldest'
   setHistorySort: (s: 'newest' | 'oldest') => void
   agents: DataStore['agents']
-  vaultDocs: DataStore['vaultDocs']
-  vaultMeetings: DataStore['vaultMeetings']
-  meetingForm: { dateKey: string; meetingType: VaultMeeting['meetingType']; notes: string; actionItems: string }
-  setMeetingForm: React.Dispatch<React.SetStateAction<{ dateKey: string; meetingType: VaultMeeting['meetingType']; notes: string; actionItems: string }>>
-  vaultAttendanceHistory: Array<{ id: string; agentId: string; dateKey: string; percent: number; notes: string }>
   vaultQaHistory: Array<{
     id: string
     agentId: string
@@ -42,22 +31,7 @@ type Props = {
     currentStatus: string
     resolutionTs: string | null
   }>
-  weeklyTargetHistory: Array<{
-    weekKey: string
-    targetSales: number
-    targetCpa: number
-    actualSales: number
-    actualCpa: number | null
-    salesHit: boolean
-    cpaHit: boolean
-    salesDeltaPct: number | null
-    cpaDeltaPct: number | null
-    setAt: string
-  }>
-  snapshots: DataStore['snapshots']
   lastPoliciesBotRun: string | null
-  onAddMeeting: (e: React.FormEvent) => void
-  onPdfUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onUpdateQaRecord: (
     recordId: string,
     patch: Pick<QaRecord, 'agentId' | 'dateKey' | 'clientName' | 'decision' | 'status' | 'notes'>,
@@ -67,15 +41,6 @@ type Props = {
     patch: Pick<AuditRecord, 'agentId' | 'discoveryTs' | 'carrier' | 'clientName' | 'currentStatus' | 'resolutionTs' | 'notes'>,
   ) => void
   onDeleteAuditRecord: (recordId: string) => void
-  onUpdateSnapshot: (
-    rowId: string,
-    patch: Pick<DataStore['snapshots'][number], 'billableCalls' | 'sales'>,
-  ) => void
-  onUpdateMeeting: (
-    meetingId: string,
-    patch: Pick<VaultMeeting, 'dateKey' | 'meetingType' | 'notes' | 'actionItems'>,
-  ) => void
-  transfers: DataStore['transfers']
   rankRows: Array<{ agentId: string; agentName: string; sales: number; cpa: number | null; cvr: number | null }>
   rankRowsTransferAdjusted: Array<{ agentId: string; agentName: string; sales: number; cpa: number | null; cvr: number | null }>
   rankMetric: RankMetric
@@ -88,33 +53,15 @@ const QUICK_VIEW_ROWS = 5
 export function VaultPage({
   vaultScope,
   setVaultScope,
-  setVaultAgentId: _setVaultAgentId,
-  effectiveVaultAgentId,
-  selectedVaultAgent,
-  activeAgents,
-  vaultHistoryView,
-  setVaultHistoryView,
   historySort,
   setHistorySort,
   agents,
-  vaultDocs,
-  vaultMeetings,
-  meetingForm,
-  setMeetingForm,
-  vaultAttendanceHistory,
   vaultQaHistory,
   vaultAuditHistory,
-  weeklyTargetHistory,
-  snapshots,
   lastPoliciesBotRun,
-  onAddMeeting,
-  onPdfUpload,
   onUpdateQaRecord,
   onUpdateAuditRecord,
   onDeleteAuditRecord,
-  onUpdateSnapshot: _onUpdateSnapshot,
-  onUpdateMeeting,
-  transfers: _transfers,
   rankRows,
   rankRowsTransferAdjusted,
   rankMetric,
@@ -125,15 +72,11 @@ export function VaultPage({
   const [popupPage, setPopupPage] = useState(1)
   const [editingQaId, setEditingQaId] = useState<string | null>(null)
   const [editingAuditId, setEditingAuditId] = useState<string | null>(null)
-  const [editingMeetingId, setEditingMeetingId] = useState<string | null>(null)
   const [qaDraft, setQaDraft] = useState<Pick<QaRecord, 'agentId' | 'dateKey' | 'clientName' | 'decision' | 'status' | 'notes'> | null>(
     null,
   )
   const [auditDraft, setAuditDraft] = useState<
     Pick<AuditRecord, 'agentId' | 'discoveryTs' | 'carrier' | 'clientName' | 'currentStatus' | 'resolutionTs' | 'notes'> | null
-  >(null)
-  const [meetingDraft, setMeetingDraft] = useState<
-    Pick<VaultMeeting, 'dateKey' | 'meetingType' | 'notes' | 'actionItems'> | null
   >(null)
   const [editError, setEditError] = useState<string | null>(null)
   useEffect(() => {
@@ -257,33 +200,6 @@ export function VaultPage({
     }
     onUpdateAuditRecord(editingAuditId, { ...auditDraft, clientName, carrier })
     cancelAuditEdit()
-  }
-
-  const startMeetingEdit = (m: VaultMeeting): void => {
-    setEditingMeetingId(m.id)
-    setMeetingDraft({
-      dateKey: m.dateKey,
-      meetingType: m.meetingType,
-      notes: m.notes,
-      actionItems: m.actionItems,
-    })
-    setEditError(null)
-  }
-
-  const cancelMeetingEdit = (): void => {
-    setEditingMeetingId(null)
-    setMeetingDraft(null)
-    setEditError(null)
-  }
-
-  const saveMeetingEdit = (): void => {
-    if (!editingMeetingId || !meetingDraft) return
-    onUpdateMeeting(editingMeetingId, {
-      ...meetingDraft,
-      notes: meetingDraft.notes.trim(),
-      actionItems: meetingDraft.actionItems.trim(),
-    })
-    cancelMeetingEdit()
   }
 
   const renderQaHistoryCard = (rows: Props['vaultQaHistory'], showFullAction = false, allowEdit = false) => {
@@ -629,92 +545,6 @@ export function VaultPage({
     </Card>
     )
   }
-
-  const renderAgentHistorySection = () => (
-    <>
-      {vaultHistoryView === 'attendance' && (
-        <Card>
-          <h3>Attendance History</h3>
-          <TableWrap>
-            <DataTable>
-              <thead>
-                <tr>
-                  <th>Agent</th>
-                  <th>Date</th>
-                  <th>Percent</th>
-                  <th>Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vaultAttendanceHistory.length === 0 && (
-                  <tr>
-                    <td colSpan={4}>N/A</td>
-                  </tr>
-                )}
-                {vaultAttendanceHistory.map((row) => (
-                  <tr key={row.id}>
-                    <td>{agents.find((a) => a.id === row.agentId)?.name ?? 'Unknown'}</td>
-                    <td>{formatDateKey(row.dateKey)}</td>
-                    <td className="text-right tabular-nums">{row.percent}%</td>
-                    <td>{row.notes || 'N/A'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </DataTable>
-          </TableWrap>
-        </Card>
-      )}
-
-      {vaultHistoryView === 'qa' && renderQaHistoryCard(vaultQaHistory, true, canEditHistory)}
-
-      {vaultHistoryView === 'audit' && renderAuditHistoryCard(vaultAuditHistory, true, canEditHistory)}
-
-      {vaultHistoryView === 'targets' && (
-        <Card>
-          <h3>Weekly Target History (House)</h3>
-          <TableWrap>
-            <DataTable>
-              <thead>
-                <tr>
-                  <th>Week (Mon)</th>
-                  <th>Sales Goal</th>
-                  <th>Actual Sales</th>
-                  <th>Sales Hit?</th>
-                  <th>Sales % Over/Under</th>
-                  <th>CPA Goal</th>
-                  <th>Actual CPA</th>
-                  <th>CPA Hit?</th>
-                  <th>CPA % Over/Under</th>
-                  <th>Set At</th>
-                </tr>
-              </thead>
-              <tbody>
-                {weeklyTargetHistory.length === 0 && (
-                  <tr>
-                    <td colSpan={10}>N/A</td>
-                  </tr>
-                )}
-                {weeklyTargetHistory.map((row) => (
-                  <tr key={row.weekKey}>
-                    <td>{formatDateKey(row.weekKey)}</td>
-                    <td className="text-right tabular-nums">{row.targetSales}</td>
-                    <td className="text-right tabular-nums">{row.actualSales}</td>
-                    <td>{row.salesHit ? <Badge variant="success">On Track</Badge> : <Badge variant="warning">Needs Review</Badge>}</td>
-                    <td className="text-right tabular-nums">{formatPctDelta(row.salesDeltaPct)}</td>
-                    <td className="text-right tabular-nums">${formatNum(row.targetCpa)}</td>
-                    <td className="text-right tabular-nums">{row.actualCpa === null ? 'N/A' : `$${formatNum(row.actualCpa)}`}</td>
-                    <td>{row.cpaHit ? <Badge variant="success">On Track</Badge> : <Badge variant="danger">Critical</Badge>}</td>
-                    <td className="text-right tabular-nums">{formatPctDelta(row.cpaDeltaPct)}</td>
-                    <td>{formatTimestamp(row.setAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </DataTable>
-          </TableWrap>
-        </Card>
-      )}
-    </>
-  )
 
   return (
     <Card className="space-y-4">
