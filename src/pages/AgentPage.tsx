@@ -111,7 +111,6 @@ export function AgentPage({
     Pick<VaultMeeting, 'dateKey' | 'meetingType' | 'notes' | 'actionItems'> | null
   >(null)
   const [editError, setEditError] = useState<string | null>(null)
-  const selectedAgentName = activeAgents.find((a) => a.id === agentPageAgentId)?.name ?? 'N/A'
   const currentDateKey = todayKey
   const shadowLogs = shadowLogsByDateForAgent.get(currentDateKey ?? '') ?? []
   const activeLog = shadowLogs.find((log) => log.endedAt === null) ?? null
@@ -280,7 +279,6 @@ export function AgentPage({
             </Button>
           </div>
         ) : null}
-        <p className="text-sm text-slate-600">Current agent: {selectedAgentName}</p>
 
         {groupedDates.map((dateKey) => {
           const logs = shadowLogsByDateForAgent.get(dateKey) ?? []
@@ -304,24 +302,23 @@ export function AgentPage({
                       </summary>
                       <div className="mt-2 space-y-2">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="text-xs text-slate-500">
+                          <p className="min-w-0 flex-1 text-xs text-slate-500">
                             Manager: {log.managerName} | Start: {formatTimestamp(log.startedAt)} | End:{' '}
                             {formatTimestamp(log.endedAt)}
                           </p>
-                          <div className="row-wrap items-center gap-2">
-                            <p className="text-xs text-slate-500">Last Saved: {formatTimestamp(log.updatedAt)}</p>
-                            <Button
-                              type="button"
-                              variant="danger"
-                              onClick={() => {
-                                if (!window.confirm('Delete this shadow session? This cannot be undone.')) return
-                                onDeleteShadowLog(log.id)
-                              }}
-                            >
-                              Delete Session
-                            </Button>
-                          </div>
+                          <Button
+                            type="button"
+                            variant="danger"
+                            className="shrink-0"
+                            onClick={() => {
+                              if (!window.confirm('Delete this shadow session? This cannot be undone.')) return
+                              onDeleteShadowLog(log.id)
+                            }}
+                          >
+                            Delete Session
+                          </Button>
                         </div>
+                        <p className="text-xs text-slate-500">Last Saved: {formatTimestamp(log.updatedAt)}</p>
                         <TableWrap>
                           <DataTable>
                             <thead>
@@ -368,15 +365,15 @@ export function AgentPage({
                   ) : (
                     <>
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-xs text-slate-500">
+                        <p className="min-w-0 flex-1 text-xs text-slate-500">
                           Manager: {log.managerName} | Start: {formatTimestamp(log.startedAt)} | End: Active
                         </p>
-                        <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
                           <span className="h-2 w-2 rounded-full bg-red-500" />
                           Live
                         </span>
-                        <p className="text-xs text-slate-500">Last Saved: {formatTimestamp(log.updatedAt)}</p>
                       </div>
+                      <p className="text-xs text-slate-500">Last Saved: {formatTimestamp(log.updatedAt)}</p>
                       <TableWrap>
                         <DataTable>
                           <thead>
@@ -445,16 +442,6 @@ export function AgentPage({
                         </Button>
                         <Button type="button" variant="danger" onClick={() => onEndShadowLog(log.id)}>
                           End Shadow
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="danger"
-                          onClick={() => {
-                            if (!window.confirm('Delete this shadow session? This cannot be undone.')) return
-                            onDeleteShadowLog(log.id)
-                          }}
-                        >
-                          Delete Session
                         </Button>
                       </div>
                     </>
