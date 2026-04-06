@@ -76,49 +76,58 @@ export function EodPage({
             </Select>
           </Field>
         </div>
-        <TableWrap>
-          <DataTable>
-            <thead>
-              <tr>
-                <th>Day</th>
-                <th className="text-right">Total Deals</th>
-                <th className="text-right">Total Marketing</th>
-                <th className="text-right">CPA</th>
-                <th className="text-right">Open</th>
-              </tr>
-            </thead>
-            <tbody>
-              {eodWeeklyRows.map((row) => (
-                <tr key={row.dateKey}>
-                  <td>{row.dayLabel}</td>
-                  <td className="text-right tabular-nums">{row.deals}</td>
-                  <td className="text-right tabular-nums">${formatNum(row.marketing, 0)}</td>
-                  <td className="text-right tabular-nums">{row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}</td>
-                  <td className="text-right">
-                    <Button type="button" variant="secondary" onClick={() => setExpandedEodDateKey(row.dateKey)}>
-                      Open
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-              <tr>
-                <td>
-                  <strong>EOW Summary</strong>
-                </td>
-                <td className="text-right tabular-nums">
-                  <strong>{eodWeeklySummary.deals}</strong>
-                </td>
-                <td className="text-right tabular-nums">
-                  <strong>${formatNum(eodWeeklySummary.marketing, 0)}</strong>
-                </td>
-                <td className="text-right tabular-nums">
-                  <strong>{eodWeeklySummary.cpa === null ? 'N/A' : `$${formatNum(eodWeeklySummary.cpa)}`}</strong>
-                </td>
-                <td />
-              </tr>
-            </tbody>
-          </DataTable>
-        </TableWrap>
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-3 xl:grid-cols-5">
+          {eodWeeklyRows.map((row) => (
+            <div key={row.dateKey} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900">
+              <div className="mb-2 flex items-start justify-between border-b border-slate-200 pb-2">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-slate-500">{row.dayLabel.slice(0, 3)}</p>
+                  <p className="text-[11px] text-slate-500">{row.dateKey}</p>
+                </div>
+                <p className="text-base font-semibold leading-none text-slate-900">{row.deals}</p>
+              </div>
+              <div className="space-y-1 text-[11px] text-slate-700">
+                <p className="flex items-center justify-between">
+                  <span className="text-slate-500">Deals</span>
+                  <span className="tabular-nums">{row.deals}</span>
+                </p>
+                <p className="flex items-center justify-between">
+                  <span className="text-slate-500">Mkt</span>
+                  <span className="tabular-nums">${formatNum(row.marketing, 0)}</span>
+                </p>
+                <p className="flex items-center justify-between">
+                  <span className="text-slate-500">CPA</span>
+                  <span className="tabular-nums">{row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}</span>
+                </p>
+              </div>
+              <div className="mt-2 border-t border-slate-200 pt-2 text-right">
+                <Button type="button" variant="secondary" className="h-7 px-2.5 py-1 text-xs" onClick={() => setExpandedEodDateKey(row.dateKey)}>
+                  Open
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card className="w-full max-w-md space-y-2 border-slate-200 shadow-sm">
+        <CardTitle>EOW Summary</CardTitle>
+        <div className="space-y-1 text-sm text-slate-700">
+          <p className="flex items-center justify-between">
+            <span className="text-slate-500">Total Deals</span>
+            <span className="tabular-nums font-semibold text-slate-900">{eodWeeklySummary.deals}</span>
+          </p>
+          <p className="flex items-center justify-between">
+            <span className="text-slate-500">Total Marketing</span>
+            <span className="tabular-nums font-semibold text-slate-900">${formatNum(eodWeeklySummary.marketing, 0)}</span>
+          </p>
+          <p className="flex items-center justify-between">
+            <span className="text-slate-500">CPA</span>
+            <span className="tabular-nums font-semibold text-slate-900">
+              {eodWeeklySummary.cpa === null ? 'N/A' : `$${formatNum(eodWeeklySummary.cpa)}`}
+            </span>
+          </p>
+        </div>
         <p className="text-xs text-slate-500">
           {eodWeeklySummary.finalized
             ? `Summary last refreshed: ${formatTimestamp(eodWeeklySummary.updatedAt)}`
