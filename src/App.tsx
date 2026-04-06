@@ -127,7 +127,7 @@ function App() {
 
   const [uiError, setUiError] = useState<string | null>(null)
 
-  const { runExport, clearHistory } = useSettingsActions(store, exportFlags, todayKey, setUiError)
+  const { runExport } = useSettingsActions(store, exportFlags, todayKey, setUiError)
   const taskActions = useTaskActions(
     store,
     { todayKey, currentWeekKey, selectedAttendanceWeekKey, activeAgents },
@@ -543,7 +543,6 @@ function App() {
             setExportFlags={setExportFlags}
             onAddAgent={handleAddAgent}
             onRunExport={runExport}
-            onClearHistory={clearHistory}
           />
         )}
       </main>
