@@ -23,7 +23,8 @@ type Props = {
   shadowLogsByDateForAgent: Map<string, ShadowLog[]>
   onStartShadow: (managerName: string) => void
   onAddCall: () => void
-  onEndShadow: () => void
+  onEndShadowLog: (logId: string) => void
+  onDeleteShadowLog: (logId: string) => void
   onShadowInteraction: () => void
   onDeleteShadowCall: (logId: string, callId: string) => void
   onUpdateShadowCall: (
@@ -45,7 +46,8 @@ export function AgentPage({
   shadowLogsByDateForAgent,
   onStartShadow,
   onAddCall,
-  onEndShadow,
+  onEndShadowLog,
+  onDeleteShadowLog,
   onShadowInteraction,
   onDeleteShadowCall,
   onUpdateShadowCall,
@@ -162,7 +164,19 @@ export function AgentPage({
                             Manager: {log.managerName} | Start: {formatTimestamp(log.startedAt)} | End:{' '}
                             {formatTimestamp(log.endedAt)}
                           </p>
-                          <p className="text-xs text-slate-500">Last Saved: {formatTimestamp(log.updatedAt)}</p>
+                          <div className="row-wrap items-center gap-2">
+                            <p className="text-xs text-slate-500">Last Saved: {formatTimestamp(log.updatedAt)}</p>
+                            <Button
+                              type="button"
+                              variant="danger"
+                              onClick={() => {
+                                if (!window.confirm('Delete this shadow session? This cannot be undone.')) return
+                                onDeleteShadowLog(log.id)
+                              }}
+                            >
+                              Delete Session
+                            </Button>
+                          </div>
                         </div>
                         <TableWrap>
                           <DataTable>
@@ -281,11 +295,19 @@ export function AgentPage({
                         <Button type="button" variant="secondary" onClick={onAddCall}>
                           Add Call
                         </Button>
-                        {activeLog ? (
-                          <Button type="button" variant="danger" onClick={onEndShadow}>
-                            End Shadow
-                          </Button>
-                        ) : null}
+                        <Button type="button" variant="danger" onClick={() => onEndShadowLog(log.id)}>
+                          End Shadow
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="danger"
+                          onClick={() => {
+                            if (!window.confirm('Delete this shadow session? This cannot be undone.')) return
+                            onDeleteShadowLog(log.id)
+                          }}
+                        >
+                          Delete Session
+                        </Button>
                       </div>
                     </>
                   )}

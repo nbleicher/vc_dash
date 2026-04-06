@@ -232,7 +232,7 @@ function App() {
   ): void => {
     setShadowLogs((prev) =>
       prev.map((row) => {
-        if (row.id !== logId) return row
+        if (row.id !== logId || row.endedAt !== null) return row
         return {
           ...row,
           calls: row.calls.map((call) => (call.id === callId ? { ...call, ...patch } : call)),
@@ -255,11 +255,11 @@ function App() {
     )
     triggerShadowSave()
   }
-  const handleEndShadow = (): void => {
+  const handleEndShadowLog = (logId: string): void => {
     setShadowLogs((prev) => {
       const nowTs = new Date().toISOString()
       return prev.flatMap((row) => {
-        if (row.agentId !== agentPageAgentId || row.dateKey !== todayKey || row.endedAt !== null) return [row]
+        if (row.id !== logId || row.endedAt !== null) return [row]
         const hasExactlyOneBlankCall =
           row.calls.length === 1 &&
           row.calls[0].notes.trim() === '' &&
@@ -270,6 +270,10 @@ function App() {
         return [{ ...row, endedAt: nowTs, updatedAt: nowTs }]
       })
     })
+    triggerShadowSave()
+  }
+  const handleDeleteShadowLog = (logId: string): void => {
+    setShadowLogs((prev) => prev.filter((row) => row.id !== logId))
     triggerShadowSave()
   }
 
@@ -391,7 +395,8 @@ function App() {
             shadowLogsByDateForAgent={shadowLogsByDateForAgent}
             onStartShadow={handleStartShadow}
             onAddCall={handleAddShadowCall}
-            onEndShadow={handleEndShadow}
+            onEndShadowLog={handleEndShadowLog}
+            onDeleteShadowLog={handleDeleteShadowLog}
             onShadowInteraction={triggerShadowSave}
             onDeleteShadowCall={handleDeleteShadowCall}
             onUpdateShadowCall={handleUpdateShadowCall}
