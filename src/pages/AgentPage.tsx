@@ -59,7 +59,7 @@ type Props = {
 }
 
 const AGENT_TABS = [
-  { key: 'overview', label: 'Overview' },
+  { key: 'overview', label: 'Shadow' },
   { key: 'qa-history', label: 'Daily QA History' },
   { key: 'audit-history', label: 'Action Needed History' },
   { key: 'performance', label: 'Performance' },
@@ -269,15 +269,17 @@ export function AgentPage({
 
           <Card className="space-y-3.5">
         <CardTitle>Shadow Log</CardTitle>
-        <div className="row-wrap control-bar">
-          <Field className="w-full min-w-0 sm:min-w-[260px]">
-            <FieldLabel>Manager Name</FieldLabel>
-            <Input value={managerName} onChange={(e) => setManagerName(e.target.value)} placeholder="Enter manager name" />
-          </Field>
-          <Button type="button" onClick={() => onStartShadow(managerName)} disabled={!managerName.trim() || !!activeLog}>
-            Start Shadow
-          </Button>
-        </div>
+        {!activeLog ? (
+          <div className="row-wrap control-bar">
+            <Field className="w-full min-w-0 sm:min-w-[260px]">
+              <FieldLabel>Manager Name</FieldLabel>
+              <Input value={managerName} onChange={(e) => setManagerName(e.target.value)} placeholder="Enter manager name" />
+            </Field>
+            <Button type="button" onClick={() => onStartShadow(managerName)} disabled={!managerName.trim() || !!activeLog}>
+              Start Shadow
+            </Button>
+          </div>
+        ) : null}
         <p className="text-sm text-slate-600">Current agent: {selectedAgentName}</p>
 
         {groupedDates.map((dateKey) => {
@@ -369,6 +371,10 @@ export function AgentPage({
                         <p className="text-xs text-slate-500">
                           Manager: {log.managerName} | Start: {formatTimestamp(log.startedAt)} | End: Active
                         </p>
+                        <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
+                          <span className="h-2 w-2 rounded-full bg-red-500" />
+                          Live
+                        </span>
                         <p className="text-xs text-slate-500">Last Saved: {formatTimestamp(log.updatedAt)}</p>
                       </div>
                       <TableWrap>

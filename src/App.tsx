@@ -506,6 +506,7 @@ function App() {
             todayKey={todayKey}
             eodTodayTotals={eodTodayTotals}
             eodHistoryDays={eodHistoryDays}
+            agentPerformanceRows={agentPerformanceRows}
             onSaveEodReport={taskActions.handleSaveEodReport}
             activeAgents={activeAgents}
             setPerfHistory={setPerfHistory}

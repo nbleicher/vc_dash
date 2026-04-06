@@ -29,6 +29,15 @@ type Props = {
   todayKey: string
   eodTodayTotals: { sales: number; marketing: number; cpa: number | null }
   eodHistoryDays: EodHistoryDay[]
+  agentPerformanceRows: Array<{
+    agentId: string
+    agentName: string
+    calls: number
+    sales: number
+    marketing: number
+    cpa: number | null
+    cvr: number | null
+  }>
   onSaveEodReport: (weekKey: string, reportText: string, houseSales: number, houseCpa: number | null) => void
   activeAgents: Array<{ id: string; name: string }>
   setPerfHistory: React.Dispatch<React.SetStateAction<PerfHistory[]>>
@@ -45,6 +54,7 @@ export function EodPage({
   todayKey,
   eodTodayTotals,
   eodHistoryDays,
+  agentPerformanceRows,
   onSaveEodReport,
   activeAgents,
   setPerfHistory,
@@ -154,7 +164,9 @@ export function EodPage({
 
       {expandedEodDateKey && (() => {
         const day = eodHistoryDays.find((d) => d.dateKey === expandedEodDateKey)
-        if (!day) return null
+        const isToday = expandedEodDateKey === todayKey
+        if (!day && !isToday) return null
+        const displayRows = isToday ? agentPerformanceRows : (day?.agentRows ?? [])
         return (
           <div
             className="mobile-modal-scroll fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4"
@@ -168,27 +180,60 @@ export function EodPage({
               onClick={(e) => e.stopPropagation()}
             >
               <CardTitle id="eod-week-open-title" className="border-b border-slate-200 pb-3">
-                EOD Report - {formatDateKey(day.dateKey)}
+                EOD Report - {formatDateKey(expandedEodDateKey)}
               </CardTitle>
               <div className="mobile-modal-scroll flex-1 space-y-4 p-4">
                 <div className="grid max-w-md gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                     <p className="text-xs font-medium text-slate-500">House Sales</p>
-                    <p className="text-lg font-semibold text-slate-900">{day.houseSales}</p>
+                    <p className="text-lg font-semibold text-slate-900">{day?.houseSales ?? 'N/A'}</p>
                   </div>
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                     <p className="text-xs font-medium text-slate-500">House CPA</p>
                     <p className="text-lg font-semibold text-slate-900">
-                      {day.houseCpa === null ? 'N/A' : `$${formatNum(day.houseCpa)}`}
+                      {day?.houseCpa === null || day?.houseCpa === undefined ? 'N/A' : `$${formatNum(day.houseCpa)}`}
                     </p>
                   </div>
                 </div>
-                {day.reportText ? (
+                {day?.reportText ? (
                   <div>
                     <p className="mb-1 text-xs font-medium text-slate-500">Report</p>
                     <p className="whitespace-pre-wrap text-sm text-slate-700">{day.reportText}</p>
                   </div>
                 ) : null}
+                <div>
+                  <p className="mb-2 text-xs font-medium text-slate-500">Agent performance</p>
+                  {displayRows.length === 0 ? (
+                    <p className="text-sm text-slate-500">No performance data for this day.</p>
+                  ) : (
+                    <div className="overflow-x-auto rounded border border-slate-200">
+                      <table className="w-full text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-slate-200 bg-slate-50">
+                            <th className="p-2 font-medium text-slate-700">Agent</th>
+                            <th className="p-2 font-medium text-slate-700 text-right">CPA</th>
+                            <th className="p-2 font-medium text-slate-700 text-right">Sales</th>
+                            <th className="p-2 font-medium text-slate-700 text-right">Calls</th>
+                            <th className="p-2 font-medium text-slate-700 text-right">Marketing</th>
+                            <th className="p-2 font-medium text-slate-700 text-right">CVR</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {displayRows.map((row) => (
+                            <tr key={row.agentId} className="border-b border-slate-100">
+                              <td className="p-2 font-medium">{row.agentName}</td>
+                              <td className="p-2 text-right tabular-nums">{row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}</td>
+                              <td className="p-2 text-right tabular-nums">{row.sales}</td>
+                              <td className="p-2 text-right tabular-nums">{row.calls}</td>
+                              <td className="p-2 text-right tabular-nums">${formatNum(row.marketing, 0)}</td>
+                              <td className="p-2 text-right tabular-nums">{row.cvr === null ? 'N/A' : `${formatNum(row.cvr * 100)}%`}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="border-t border-slate-200 bg-slate-50 p-4">
                 <Button type="button" variant="secondary" onClick={() => setExpandedEodDateKey(null)}>
