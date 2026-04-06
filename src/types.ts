@@ -1,6 +1,5 @@
 export type TopPage = 'dashboard' | 'agent' | 'tasks' | 'metrics' | 'eod' | 'vault' | 'settings'
 export type TaskPage = 'spiff' | 'qa' | 'audit' | 'transfers' | 'targets'
-export type VaultHistoryView = 'attendance' | 'qa' | 'audit' | 'targets'
 export type VaultScope = 'agent' | 'house'
 export type MetricsScope = 'house' | 'agent'
 export type HistorySort = 'newest' | 'oldest'

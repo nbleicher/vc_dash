@@ -10,7 +10,6 @@ import type {
   Snapshot,
   TaskPage,
   TransferRecord,
-  VaultHistoryView,
   VaultScope,
 } from '../types'
 import {
@@ -31,8 +30,6 @@ import {
 /** First week for EOD/EOW weekly views: week containing January 5 (1/5). */
 const EOD_VIEWS_START_DATE_KEY = '2025-01-05'
 
-type SlotConfig = (typeof SLOT_CONFIG)[number]
-
 export function useAppData(store: DataStore) {
   const {
     agents,
@@ -43,13 +40,10 @@ export function useAppData(store: DataStore) {
     auditRecords,
     attendance,
     spiffRecords,
-    attendanceSubmissions,
-    intraSubmissions,
     weeklyTargets,
     transfers,
     shadowLogs,
     setPerfHistory,
-    setSnapshots,
     houseMarketing,
   } = store
 
@@ -57,12 +51,9 @@ export function useAppData(store: DataStore) {
   const [taskPage, setTaskPage] = useState<TaskPage>('spiff')
   const [metricsScope, setMetricsScope] = useState<MetricsScope>('house')
   const [metricsAgentId, setMetricsAgentId] = useState('')
-  const [vaultAgentId, setVaultAgentId] = useState('')
-  const [vaultHistoryView, setVaultHistoryView] = useState<VaultHistoryView>('qa')
   const [vaultScope, setVaultScope] = useState<VaultScope>('house')
   const [historySort, setHistorySort] = useState<HistorySort>('newest')
   const [rankMetric, setRankMetric] = useState<RankMetric>('Sales')
-  const [rankPeriod, setRankPeriod] = useState<RankPeriod>('day')
   const [kpiPeriod, setKpiPeriod] = useState<RankPeriod>('day')
   const [metricsDateStart, setMetricsDateStart] = useState<string | null>(null)
   const [metricsDateEnd, setMetricsDateEnd] = useState<string | null>(null)
@@ -216,10 +207,6 @@ export function useAppData(store: DataStore) {
       ),
     [auditRecords],
   )
-  const incompleteQaAgentsToday = useMemo(() => {
-    const completed = new Set(qaRecords.filter((r) => r.dateKey === todayKey).map((r) => r.agentId))
-    return activeAgents.filter((agent) => !completed.has(agent.id))
-  }, [activeAgents, qaRecords, todayKey])
   const incompleteAuditAgentsToday = useMemo(() => {
     const completed = new Set(auditRecords.filter((r) => r.discoveryTs.slice(0, 10) === todayKey).map((r) => r.agentId))
     return activeAgents.filter((agent) => !completed.has(agent.id))
@@ -274,11 +261,6 @@ export function useAppData(store: DataStore) {
   }, [activeAgents, houseMarketing, liveByAgent, perfHistory, snapshots, todayKey, weekDates, weekTarget])
 
   const currentMinuteOfDay = est.hour * 60 + est.minute
-  const attendanceSubmittedToday = useMemo(
-    () => attendanceSubmissions.some((submission) => submission.dateKey === todayKey),
-    [attendanceSubmissions, todayKey],
-  )
-  const attendanceAlert = currentMinuteOfDay >= 17 * 60 + 30 && activeAgents.length > 0 && !attendanceSubmittedToday
   const effectiveMetricsAgentId = useMemo(
     () => (activeAgents.some((a) => a.id === metricsAgentId) ? metricsAgentId : activeAgents[0]?.id ?? ''),
     [activeAgents, metricsAgentId],
@@ -521,30 +503,6 @@ export function useAppData(store: DataStore) {
     [kpiPeriod, effectiveMetricsDateKey, metricsWeekDatesForPeriod, metricsMonthPrefix, metricsDateStart, metricsDateEnd],
   )
 
-  const qaPassRate = useMemo(() => {
-    const rows = qaRecords.filter((record) => {
-      if (!activeIds.has(record.agentId)) return false
-      if (metricsScope === 'agent' && record.agentId !== effectiveMetricsAgentId) return false
-      return isInKpiPeriod(record.dateKey)
-    })
-    if (rows.length === 0) return null
-    return rows.filter((r) => r.decision === 'Good Sale').length / rows.length
-  }, [qaRecords, activeIds, metricsScope, effectiveMetricsAgentId, isInKpiPeriod])
-  const auditRecoveryHours = useMemo(() => {
-    const rows = auditRecords.filter((record) => {
-      if (!record.resolutionTs) return false
-      if (!activeIds.has(record.agentId)) return false
-      if (metricsScope === 'agent' && record.agentId !== effectiveMetricsAgentId) return false
-      return isInKpiPeriod(record.discoveryTs.slice(0, 10))
-    })
-    if (rows.length === 0) return null
-    const sum = rows.reduce(
-      (acc, row) =>
-        acc + Math.max(0, (new Date(row.resolutionTs!).getTime() - new Date(row.discoveryTs).getTime()) / 3_600_000),
-      0,
-    )
-    return sum / rows.length
-  }, [auditRecords, activeIds, metricsScope, effectiveMetricsAgentId, isInKpiPeriod])
   const activeAuditCount = useMemo(() => {
     return auditRecords.filter((record) => {
       if (!activeIds.has(record.agentId)) return false
@@ -844,16 +802,7 @@ export function useAppData(store: DataStore) {
     }
   }, [currentMinuteOfDay, effectiveEodWeekKey, eodWeeklyRows, todayKey])
 
-  const monthLabel = useMemo(() => {
-    const parts = effectiveEodWeekKey.split('-').map(Number)
-    const date = new Date(Date.UTC(parts[0], (parts[1] ?? 1) - 1, parts[2] ?? 1))
-    return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(date)
-  }, [effectiveEodWeekKey])
-
-  const effectiveVaultAgentId = useMemo(
-    () => (activeAgents.some((a) => a.id === vaultAgentId) ? vaultAgentId : activeAgents[0]?.id ?? ''),
-    [activeAgents, vaultAgentId],
-  )
+  const effectiveVaultAgentId = useMemo(() => activeAgents[0]?.id ?? '', [activeAgents])
   const selectedVaultAgent = useMemo(
     () => agents.find((a) => a.id === effectiveVaultAgentId) ?? null,
     [agents, effectiveVaultAgentId],
@@ -882,80 +831,8 @@ export function useAppData(store: DataStore) {
         ),
     [auditRecords, sortNewest],
   )
-  const weeklyTargetHistory = useMemo(
-    () =>
-      [...weeklyTargets]
-        .sort((a, b) => (sortNewest ? b.weekKey.localeCompare(a.weekKey) : a.weekKey.localeCompare(b.weekKey)))
-        .map((target) => {
-          const dates = monFriDatesForWeek(target.weekKey)
-          const isCurrentWeek = target.weekKey === currentWeekKey
-          let actualSales = 0
-          let actualMarketing = 0
-          for (const row of perfHistory) {
-            if (!dates.includes(row.dateKey)) continue
-            if (isCurrentWeek && row.dateKey === todayKey && liveByAgent.has(row.agentId)) continue
-            actualSales += row.sales
-            actualMarketing += row.marketing
-          }
-          if (isCurrentWeek) {
-            for (const snap of liveByAgent.values()) {
-              actualSales += snap.sales
-              actualMarketing += snap.marketing ?? snap.billableCalls * 15
-            }
-          }
-          const actualCpa = actualSales > 0 ? actualMarketing / actualSales : null
-          const salesDeltaPct =
-            target.targetSales > 0 ? ((actualSales - target.targetSales) / target.targetSales) * 100 : null
-          const cpaDeltaPct =
-            target.targetCpa > 0 && actualCpa !== null
-              ? ((actualCpa - target.targetCpa) / target.targetCpa) * 100
-              : null
-          return {
-            weekKey: target.weekKey,
-            targetSales: target.targetSales,
-            targetCpa: target.targetCpa,
-            actualSales,
-            actualCpa,
-            salesHit: actualSales >= target.targetSales,
-            cpaHit: actualCpa !== null ? actualCpa <= target.targetCpa : false,
-            salesDeltaPct,
-            cpaDeltaPct,
-            setAt: target.setAt,
-          }
-        }),
-    [weeklyTargets, perfHistory, currentWeekKey, liveByAgent, sortNewest, todayKey],
-  )
-
-  const upsertSnapshot = (slot: SlotConfig, agentId: string, calls: number, sales: number): void => {
-    setSnapshots((prev) => {
-      const existing = prev.find((s) => s.dateKey === todayKey && s.slot === slot.key && s.agentId === agentId)
-      if (existing) {
-        return prev.map((s) =>
-          s.id === existing.id
-            ? { ...s, billableCalls: calls, sales, updatedAt: new Date().toISOString() }
-            : s,
-        )
-      }
-      return [
-        ...prev,
-        {
-          id: uid('snap'),
-          dateKey: todayKey,
-          slot: slot.key,
-          slotLabel: slot.label,
-          agentId,
-          billableCalls: calls,
-          sales,
-          marketing: null,
-          updatedAt: new Date().toISOString(),
-        },
-      ]
-    })
-  }
-
   return {
     now,
-    est,
     todayKey,
     currentWeekKey,
     weekDates,
@@ -964,7 +841,6 @@ export function useAppData(store: DataStore) {
     attendanceWeekDates,
     attendanceWeekOptions,
     activeAgents,
-    agents,
     todaysSnapshots,
     lastSnapshotLabel,
     liveByAgent,
@@ -972,12 +848,10 @@ export function useAppData(store: DataStore) {
     agentPerformanceRows,
     actionQa,
     actionAudit,
-    incompleteQaAgentsToday,
     incompleteAuditAgentsToday,
     floorCapacity,
     weekTarget,
     weekTrend,
-    attendanceAlert,
     taskPage,
     setTaskPage,
     selectedEodWeekKey: effectiveEodWeekKey,
@@ -993,7 +867,6 @@ export function useAppData(store: DataStore) {
     eodWeeklySummary,
     eodTodayTotals,
     eodHistoryDays,
-    monthLabel,
     metricsScope,
     setMetricsScope,
     metricsAgentId,
@@ -1004,35 +877,21 @@ export function useAppData(store: DataStore) {
     rankRowsTransferAdjusted,
     rankMetric,
     setRankMetric,
-    rankPeriod,
-    setRankPeriod,
     kpiPeriod,
     setKpiPeriod,
     metricsDateStart,
     metricsDateEnd,
     setMetricsDateStart,
     setMetricsDateEnd,
-    qaPassRate,
-    auditRecoveryHours,
     activeAuditCount,
-    vaultAgentId,
-    setVaultAgentId,
-    vaultHistoryView,
-    setVaultHistoryView,
     vaultScope,
     setVaultScope,
     historySort,
     setHistorySort,
-    effectiveVaultAgentId,
     selectedVaultAgent,
     vaultAttendanceHistory,
     vaultQaHistory,
     vaultAuditHistory,
-    weeklyTargetHistory,
     snapshots,
-    attendanceSubmissions,
-    intraSubmissions,
-    store,
-    upsertSnapshot,
   }
 }
