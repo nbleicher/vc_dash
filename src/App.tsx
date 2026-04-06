@@ -10,7 +10,6 @@ import {
   DashboardPage,
   AgentPage,
   EodPage,
-  MetricsPage,
   SettingsPage,
   TasksPage,
   VaultPage,
@@ -20,7 +19,6 @@ function pathToTopPage(path: string): TopPage | null {
   if (path === '/' || path === '/dashboard') return 'dashboard'
   if (path === '/agent') return 'agent'
   if (path === '/tasks') return 'tasks'
-  if (path === '/metrics') return 'metrics'
   if (path === '/eod') return 'eod'
   if (path === '/vault') return 'vault'
   if (path === '/settings') return 'settings'
@@ -86,22 +84,10 @@ function App() {
     eodTodayTotals,
     eodHistoryDays,
     monthLabel,
-    metricsScope,
-    setMetricsScope,
-    setMetricsAgentId,
-    effectiveMetricsAgentId,
-    metricsScopeData,
     rankRows,
     rankRowsTransferAdjusted,
     rankMetric,
     setRankMetric,
-    kpiPeriod,
-    setKpiPeriod,
-    metricsDateStart,
-    metricsDateEnd,
-    setMetricsDateStart,
-    setMetricsDateEnd,
-    activeAuditCount,
     setVaultAgentId,
     vaultHistoryView,
     setVaultHistoryView,
@@ -514,29 +500,6 @@ function App() {
           />
         )}
 
-        {topPage === 'metrics' && (
-          <MetricsPage
-            metricsScope={metricsScope}
-            setMetricsScope={setMetricsScope}
-            setMetricsAgentId={setMetricsAgentId}
-            effectiveMetricsAgentId={effectiveMetricsAgentId}
-            activeAgents={activeAgents}
-            metricsScopeData={metricsScopeData}
-            metricsScopeDataCustom={metricsScopeData.custom}
-            activeAuditCount={activeAuditCount}
-            rankRows={rankRows}
-            rankRowsTransferAdjusted={rankRowsTransferAdjusted}
-            rankMetric={rankMetric}
-            setRankMetric={setRankMetric}
-            kpiPeriod={kpiPeriod}
-            setKpiPeriod={setKpiPeriod}
-            metricsDateStart={metricsDateStart}
-            metricsDateEnd={metricsDateEnd}
-            setMetricsDateStart={setMetricsDateStart}
-            setMetricsDateEnd={setMetricsDateEnd}
-          />
-        )}
-
         {topPage === 'eod' && (
           <EodPage
             selectedEodWeekKey={selectedEodWeekKey}
@@ -550,8 +513,6 @@ function App() {
             eodTodayTotals={eodTodayTotals}
             eodHistoryDays={eodHistoryDays}
             onSaveEodReport={taskActions.handleSaveEodReport}
-            agentPerformanceRows={agentPerformanceRows}
-            lastSnapshotLabel={lastSnapshotLabel}
             activeAgents={activeAgents}
             setPerfHistory={setPerfHistory}
           />
@@ -588,6 +549,10 @@ function App() {
             onUpdateSnapshot={vaultActions.handleSnapshotUpdate}
             onUpdateMeeting={vaultActions.handleMeetingUpdate}
             transfers={transfers}
+            rankRows={rankRows}
+            rankRowsTransferAdjusted={rankRowsTransferAdjusted}
+            rankMetric={rankMetric}
+            setRankMetric={setRankMetric}
           />
         )}
 

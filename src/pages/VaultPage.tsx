@@ -4,8 +4,8 @@ import { Badge, Button, Card, CardTitle, DataTable, Field, FieldLabel, Input, Se
 import { POLICY_STATUSES } from '../constants'
 
 const AUDIT_STATUS_OPTIONS = [...POLICY_STATUSES, 'no_action_needed']
-import type { AuditRecord, QaRecord, VaultHistoryView, VaultScope, VaultMeeting } from '../types'
-import { estDateKey, formatDateKey, formatLastParsedDate, formatNum, formatPctDelta, formatTimestamp } from '../utils'
+import type { AuditRecord, QaRecord, RankMetric, VaultHistoryView, VaultScope, VaultMeeting } from '../types'
+import { formatDateKey, formatLastParsedDate, formatNum, formatPctDelta, formatTimestamp } from '../utils'
 
 type Props = {
   vaultScope: VaultScope
@@ -76,6 +76,10 @@ type Props = {
     patch: Pick<VaultMeeting, 'dateKey' | 'meetingType' | 'notes' | 'actionItems'>,
   ) => void
   transfers: DataStore['transfers']
+  rankRows: Array<{ agentId: string; agentName: string; sales: number; cpa: number | null; cvr: number | null }>
+  rankRowsTransferAdjusted: Array<{ agentId: string; agentName: string; sales: number; cpa: number | null; cvr: number | null }>
+  rankMetric: RankMetric
+  setRankMetric: (m: RankMetric) => void
 }
 
 const PAGE_SIZE = 50
@@ -108,16 +112,19 @@ export function VaultPage({
   onUpdateQaRecord,
   onUpdateAuditRecord,
   onDeleteAuditRecord,
-  onUpdateSnapshot,
+  onUpdateSnapshot: _onUpdateSnapshot,
   onUpdateMeeting,
-  transfers,
+  transfers: _transfers,
+  rankRows,
+  rankRowsTransferAdjusted,
+  rankMetric,
+  setRankMetric,
 }: Props) {
   const [fullTableMode, setFullTableMode] = useState<'qa' | 'audit' | null>(null)
   const [popupSearch, setPopupSearch] = useState('')
   const [popupPage, setPopupPage] = useState(1)
   const [editingQaId, setEditingQaId] = useState<string | null>(null)
   const [editingAuditId, setEditingAuditId] = useState<string | null>(null)
-  const [editingSnapshotId, setEditingSnapshotId] = useState<string | null>(null)
   const [editingMeetingId, setEditingMeetingId] = useState<string | null>(null)
   const [qaDraft, setQaDraft] = useState<Pick<QaRecord, 'agentId' | 'dateKey' | 'clientName' | 'decision' | 'status' | 'notes'> | null>(
     null,
@@ -125,26 +132,13 @@ export function VaultPage({
   const [auditDraft, setAuditDraft] = useState<
     Pick<AuditRecord, 'agentId' | 'discoveryTs' | 'carrier' | 'clientName' | 'currentStatus' | 'resolutionTs' | 'notes'> | null
   >(null)
-  const [snapshotDraft, setSnapshotDraft] = useState<Pick<DataStore['snapshots'][number], 'billableCalls' | 'sales'> | null>(null)
   const [meetingDraft, setMeetingDraft] = useState<
     Pick<VaultMeeting, 'dateKey' | 'meetingType' | 'notes' | 'actionItems'> | null
   >(null)
   const [editError, setEditError] = useState<string | null>(null)
-  const [houseIntraDay, setHouseIntraDay] = useState<string>(() => estDateKey(new Date()))
   useEffect(() => {
     if (vaultScope !== 'house') setVaultScope('house')
   }, [vaultScope, setVaultScope])
-
-  const { sentTransfersForAgent, receivedTransfersForAgent } = useMemo(() => {
-    if (!effectiveVaultAgentId) return { sentTransfersForAgent: 0, receivedTransfersForAgent: 0 }
-    let sent = 0
-    let received = 0
-    for (const t of transfers) {
-      if (t.fromAgentId === effectiveVaultAgentId) sent += 1
-      if (t.toAgentId === effectiveVaultAgentId) received += 1
-    }
-    return { sentTransfersForAgent: sent, receivedTransfersForAgent: received }
-  }, [effectiveVaultAgentId, transfers])
 
   const agentNameById = useMemo(() => new Map(agents.map((agent) => [agent.id, agent.name])), [agents])
   const agentName = useCallback((agentId: string): string => agentNameById.get(agentId) ?? 'Unknown', [agentNameById])
@@ -192,23 +186,6 @@ export function VaultPage({
   const auditPagedRows = auditFilteredRows.slice(start, start + PAGE_SIZE)
 
   const canEditHistory = true
-  const recentHouseDayOptions = useMemo(() => {
-    const options: string[] = []
-    const now = new Date()
-    for (let i = 0; i < 14; i += 1) {
-      const d = new Date(now)
-      d.setDate(now.getDate() - i)
-      options.push(estDateKey(d))
-    }
-    return options
-  }, [])
-  const intraRowsForDay = useMemo(
-    () =>
-      snapshots
-        .filter((row) => row.dateKey === houseIntraDay && row.slot === '17:00')
-        .sort((a, b) => agentName(a.agentId).localeCompare(agentName(b.agentId))),
-    [snapshots, houseIntraDay, agentName],
-  )
 
   const toLocalDateTimeInput = (iso: string | null): string => {
     if (!iso) return ''
@@ -280,26 +257,6 @@ export function VaultPage({
     }
     onUpdateAuditRecord(editingAuditId, { ...auditDraft, clientName, carrier })
     cancelAuditEdit()
-  }
-
-  const startSnapshotEdit = (row: DataStore['snapshots'][number]): void => {
-    setEditingSnapshotId(row.id)
-    setSnapshotDraft({ billableCalls: row.billableCalls, sales: row.sales })
-    setEditError(null)
-  }
-
-  const cancelSnapshotEdit = (): void => {
-    setEditingSnapshotId(null)
-    setSnapshotDraft(null)
-    setEditError(null)
-  }
-
-  const saveSnapshotEdit = (): void => {
-    if (!editingSnapshotId || !snapshotDraft) return
-    const billableCalls = Math.max(0, Math.round(snapshotDraft.billableCalls))
-    const sales = Math.max(0, Math.round(snapshotDraft.sales))
-    onUpdateSnapshot(editingSnapshotId, { billableCalls, sales })
-    cancelSnapshotEdit()
   }
 
   const startMeetingEdit = (m: VaultMeeting): void => {
@@ -673,99 +630,6 @@ export function VaultPage({
     )
   }
 
-  const renderHouseIntraDayHistoryCard = () => (
-    <Card>
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <h3>Intra-Day Performance Entry History</h3>
-        <p className="text-sm text-slate-500">{formatDateKey(houseIntraDay)}</p>
-      </div>
-      <TableWrap>
-        <DataTable>
-          <thead>
-            <tr>
-              <th>Agent</th>
-              <th>Slot</th>
-              <th>Billable Calls</th>
-              <th>Sales</th>
-              <th>Updated</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {intraRowsForDay.length === 0 && (
-              <tr>
-                <td colSpan={6}>No 5:00 PM entry for this day.</td>
-              </tr>
-            )}
-            {intraRowsForDay.map((row) => (
-              <tr key={row.id}>
-                <td>{agentName(row.agentId)}</td>
-                <td>{row.slotLabel || row.slot}</td>
-                <td>
-                  {editingSnapshotId === row.id && snapshotDraft ? (
-                    <Input
-                      type="number"
-                      min={0}
-                      value={snapshotDraft.billableCalls}
-                      onChange={(e) =>
-                        setSnapshotDraft((prev) =>
-                          prev ? { ...prev, billableCalls: Number.isFinite(Number(e.target.value)) ? Number(e.target.value) : 0 } : prev,
-                        )
-                      }
-                    />
-                  ) : (
-                    row.billableCalls
-                  )}
-                </td>
-                <td>
-                  {editingSnapshotId === row.id && snapshotDraft ? (
-                    <Input
-                      type="number"
-                      min={0}
-                      value={snapshotDraft.sales}
-                      onChange={(e) =>
-                        setSnapshotDraft((prev) =>
-                          prev ? { ...prev, sales: Number.isFinite(Number(e.target.value)) ? Number(e.target.value) : 0 } : prev,
-                        )
-                      }
-                    />
-                  ) : (
-                    row.sales
-                  )}
-                </td>
-                <td>{formatTimestamp(row.updatedAt)}</td>
-                <td>
-                  {editingSnapshotId === row.id ? (
-                    <div className="flex gap-2">
-                      <Button variant="default" onClick={saveSnapshotEdit}>
-                        Save
-                      </Button>
-                      <Button variant="secondary" onClick={cancelSnapshotEdit}>
-                        Cancel
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="secondary"
-                      onClick={() => startSnapshotEdit(row)}
-                      disabled={
-                        !!editingQaId ||
-                        !!editingAuditId ||
-                        (editingSnapshotId !== null && editingSnapshotId !== row.id)
-                      }
-                    >
-                      Edit
-                    </Button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </DataTable>
-      </TableWrap>
-    </Card>
-  )
-
   const renderAgentHistorySection = () => (
     <>
       {vaultHistoryView === 'attendance' && (
@@ -856,16 +720,6 @@ export function VaultPage({
     <Card className="space-y-4">
       <CardTitle>Vault</CardTitle>
       <div className="row-wrap control-bar">
-        <Field className="w-full min-w-0 sm:min-w-[220px]">
-          <FieldLabel>Day</FieldLabel>
-          <Select value={houseIntraDay} onChange={(e) => setHouseIntraDay(e.target.value)}>
-            {recentHouseDayOptions.map((dateKey) => (
-              <option key={dateKey} value={dateKey}>
-                {formatDateKey(dateKey)}
-              </option>
-            ))}
-          </Select>
-        </Field>
         <Field className="w-full min-w-0 sm:min-w-[180px]">
           <FieldLabel>Sort</FieldLabel>
           <Select value={historySort} onChange={(e) => setHistorySort(e.target.value as 'newest' | 'oldest')}>
@@ -880,8 +734,87 @@ export function VaultPage({
           {renderQaHistoryCard(vaultQaHistory, true, canEditHistory)}
           {renderAuditHistoryCard(vaultAuditHistory, true, canEditHistory)}
         </div>
-        {renderHouseIntraDayHistoryCard()}
       </>
+
+      <Card className="space-y-4">
+        <CardTitle>Agent Ranking</CardTitle>
+        <div className="row-wrap control-bar">
+          <Field className="w-full min-w-0 sm:min-w-[180px]">
+            <FieldLabel>Metric</FieldLabel>
+            <Select value={rankMetric} onChange={(e) => setRankMetric(e.target.value as RankMetric)}>
+              <option>Sales</option>
+              <option>CPA</option>
+              <option>CVR</option>
+            </Select>
+          </Field>
+        </div>
+        <div className="grid gap-6 xl:grid-cols-2">
+          <div>
+            <h3 className="mb-3 text-sm font-semibold text-slate-800">Standard</h3>
+            <TableWrap>
+              <DataTable className="mx-auto w-full min-w-0 max-w-[900px] sm:min-w-[640px]">
+                <thead>
+                  <tr>
+                    <th className="border-b border-slate-200 px-2 py-1 text-left">Rank</th>
+                    <th className="border-b border-slate-200 px-2 py-1 text-left">Agent</th>
+                    <th className="border-b border-slate-200 px-2 py-1 text-right">Sales</th>
+                    <th className="border-b border-slate-200 px-2 py-1 text-right">CPA</th>
+                    <th className="border-b border-slate-200 px-2 py-1 text-right">CVR</th>
+                  </tr>
+                </thead>
+                <tbody className="[&_tr:nth-child(even)]:bg-transparent">
+                  {rankRows.length === 0 && (
+                    <tr>
+                      <td colSpan={5}>N/A</td>
+                    </tr>
+                  )}
+                  {rankRows.map((row, idx) => (
+                    <tr key={row.agentId}>
+                      <td className="px-2 py-1">{idx + 1}</td>
+                      <td className="px-2 py-1">{row.agentName}</td>
+                      <td className="px-2 py-1 text-right tabular-nums">{row.sales}</td>
+                      <td className="px-2 py-1 text-right tabular-nums">{row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}</td>
+                      <td className="px-2 py-1 text-right tabular-nums">{row.cvr === null ? 'N/A' : `${formatNum(row.cvr * 100)}%`}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </DataTable>
+            </TableWrap>
+          </div>
+          <div>
+            <h3 className="mb-3 text-sm font-semibold text-slate-800">Agent Ranking (transfer adjusted)</h3>
+            <TableWrap>
+              <DataTable className="mx-auto w-full min-w-0 max-w-[900px] sm:min-w-[640px]">
+                <thead>
+                  <tr>
+                    <th className="border-b border-slate-200 px-2 py-1 text-left">Rank</th>
+                    <th className="border-b border-slate-200 px-2 py-1 text-left">Agent</th>
+                    <th className="border-b border-slate-200 px-2 py-1 text-right">Sales</th>
+                    <th className="border-b border-slate-200 px-2 py-1 text-right">CPA</th>
+                    <th className="border-b border-slate-200 px-2 py-1 text-right">CVR</th>
+                  </tr>
+                </thead>
+                <tbody className="[&_tr:nth-child(even)]:bg-transparent">
+                  {rankRowsTransferAdjusted.length === 0 && (
+                    <tr>
+                      <td colSpan={5}>N/A</td>
+                    </tr>
+                  )}
+                  {rankRowsTransferAdjusted.map((row, idx) => (
+                    <tr key={row.agentId}>
+                      <td className="px-2 py-1">{idx + 1}</td>
+                      <td className="px-2 py-1">{row.agentName}</td>
+                      <td className="px-2 py-1 text-right tabular-nums">{row.sales}</td>
+                      <td className="px-2 py-1 text-right tabular-nums">{row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}</td>
+                      <td className="px-2 py-1 text-right tabular-nums">{row.cvr === null ? 'N/A' : `${formatNum(row.cvr * 100)}%`}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </DataTable>
+            </TableWrap>
+          </div>
+        </div>
+      </Card>
 
       {fullTableMode && (
         <div className="mobile-modal-scroll fixed inset-0 z-50 flex items-start justify-center bg-slate-950/45 p-4 sm:items-center">

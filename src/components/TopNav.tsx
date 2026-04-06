@@ -7,7 +7,6 @@ const items: Array<{ path: string; key: TopPage; label: string }> = [
   { path: '/dashboard', key: 'dashboard', label: 'Dashboard' },
   { path: '/agent', key: 'agent', label: 'Agent' },
   { path: '/tasks', key: 'tasks', label: 'Tasks' },
-  { path: '/metrics', key: 'metrics', label: 'Metrics' },
   { path: '/eod', key: 'eod', label: 'EOD' },
   { path: '/vault', key: 'vault', label: 'Vault' },
   { path: '/settings', key: 'settings', label: 'Settings' },

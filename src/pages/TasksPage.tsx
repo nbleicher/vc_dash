@@ -194,7 +194,7 @@ export function TasksPage({
     { key: 'spiff' as const, label: 'Spiff' },
     { key: 'qa' as const, label: 'Daily QA' },
     { key: 'audit' as const, label: 'Action Needed Audit' },
-    { key: 'transfers' as const, label: 'Transfers' },
+    // { key: 'transfers' as const, label: 'Transfers' }, // temporarily disabled
     { key: 'targets' as const, label: 'Weekly Targets' },
   ]
 
@@ -613,7 +613,8 @@ export function TasksPage({
         </Card>
       )}
 
-      {taskPage === 'transfers' && (
+      {/* Transfers temporarily disabled */}
+      {false && taskPage === 'transfers' && (
         <Card className="space-y-4">
           <CardTitle>Transfers</CardTitle>
           <p className="text-sm text-slate-500">

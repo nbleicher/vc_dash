@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Button, Card, CardTitle, Field, FieldLabel, Input, Textarea } from './ui'
 import { MetricCard } from './MetricCard'
 import type { PerfHistory } from '../types'
@@ -23,24 +23,12 @@ export type EodHistoryDay = {
   }>
 }
 
-type AgentPerformanceRow = {
-  agentId: string
-  agentName: string
-  calls: number
-  sales: number
-  marketing: number
-  cpa: number | null
-  cvr: number | null
-}
-
 type Props = {
   currentWeekKey: string
   todayKey: string
   eodTodayTotals: { sales: number; marketing: number; cpa: number | null }
   eodHistoryDays: EodHistoryDay[]
   onSaveEodReport: (weekKey: string, reportText: string, houseSales: number, houseCpa: number | null) => void
-  agentPerformanceRows: AgentPerformanceRow[]
-  lastSnapshotLabel: string
   activeAgents: Array<{ id: string; name: string }>
   setPerfHistory: React.Dispatch<React.SetStateAction<PerfHistory[]>>
 }
@@ -51,14 +39,10 @@ export function EodReportSection({
   eodTodayTotals,
   eodHistoryDays,
   onSaveEodReport,
-  agentPerformanceRows,
-  lastSnapshotLabel,
   activeAgents,
   setPerfHistory,
 }: Props) {
   const [eodReportText, setEodReportText] = useState('')
-  const [eodAgentSortBy, setEodAgentSortBy] = useState<'cpa' | 'sales'>('cpa')
-  const [eodAgentSortDir, setEodAgentSortDir] = useState<'asc' | 'desc'>('desc')
   const [expandedEodDateKey, setExpandedEodDateKey] = useState<string | null>(null)
   const [showAddPastDayForm, setShowAddPastDayForm] = useState(false)
   const [addPastDayDateKey, setAddPastDayDateKey] = useState('')
@@ -66,95 +50,10 @@ export function EodReportSection({
   const [editingEodDateKey, setEditingEodDateKey] = useState<string | null>(null)
   const [editEodRows, setEditEodRows] = useState<Record<string, { calls: string; sales: string; marketing: string }>>({})
 
-  const eodDisplayedAgentRows = useMemo(() => {
-    const rows = [...agentPerformanceRows]
-    if (eodAgentSortBy === 'cpa') {
-      rows.sort((a, b) => {
-        const va = a.cpa ?? -Infinity
-        const vb = b.cpa ?? -Infinity
-        return eodAgentSortDir === 'desc' ? vb - va : va - vb
-      })
-    } else {
-      rows.sort((a, b) => (eodAgentSortDir === 'desc' ? b.sales - a.sales : a.sales - b.sales))
-    }
-    return rows
-  }, [agentPerformanceRows, eodAgentSortBy, eodAgentSortDir])
-
   return (
     <Card className="space-y-4">
       <CardTitle>EOD Report</CardTitle>
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-        <div className="xl:col-span-1 space-y-2">
-          <h3 className="text-sm font-medium text-slate-700">Agent Performance</h3>
-          <p className="text-xs text-slate-500">Data: {lastSnapshotLabel}</p>
-          {agentPerformanceRows.length === 0 ? (
-            <p className="text-sm text-slate-500">No active agents.</p>
-          ) : (
-            <>
-              <div className="flex flex-wrap items-center gap-3">
-                <label className="flex items-center gap-2 text-sm text-slate-600">
-                  Sort by
-                  <select
-                    value={eodAgentSortBy}
-                    onChange={(e) => setEodAgentSortBy(e.target.value as 'cpa' | 'sales')}
-                    className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
-                  >
-                    <option value="cpa">CPA</option>
-                    <option value="sales">Sales</option>
-                  </select>
-                </label>
-                <label className="flex items-center gap-2 text-sm text-slate-600">
-                  Order
-                  <select
-                    value={eodAgentSortDir}
-                    onChange={(e) => setEodAgentSortDir(e.target.value as 'asc' | 'desc')}
-                    className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
-                  >
-                    <option value="desc">Descending (high first)</option>
-                    <option value="asc">Ascending (low first)</option>
-                  </select>
-                </label>
-              </div>
-              <div className="overflow-x-auto overflow-y-auto max-h-[500px] rounded border border-slate-200">
-                <table className="w-full text-left text-sm">
-                  <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.06)]">
-                    <tr className="border-b border-slate-200">
-                      <th className="pb-2 pt-2 pr-4 font-medium text-slate-700">Agent</th>
-                      <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">CPA</th>
-                      <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Sales</th>
-                      <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Calls</th>
-                      <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Marketing</th>
-                      <th className="pb-2 pt-2 text-right font-medium text-slate-700">CVR</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {eodDisplayedAgentRows.map((row) => {
-                      const cpaOverThreshold = row.cpa !== null && row.cpa > CPA_HIGHLIGHT_THRESHOLD
-                      return (
-                        <tr
-                          key={row.agentId}
-                          className={`border-b border-slate-100 ${cpaOverThreshold ? 'bg-red-500/10' : ''}`}
-                        >
-                          <td className="py-2 pr-4 font-medium">{row.agentName}</td>
-                          <td className="py-2 pr-4 text-right tabular-nums">
-                            {row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}
-                          </td>
-                          <td className="py-2 pr-4 text-right tabular-nums">{row.sales}</td>
-                          <td className="py-2 pr-4 text-right tabular-nums">{row.calls}</td>
-                          <td className="py-2 pr-4 text-right tabular-nums">${formatNum(row.marketing, 0)}</td>
-                          <td className="py-2 text-right tabular-nums">
-                            {row.cvr === null ? 'N/A' : `${formatNum(row.cvr * 100)}%`}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-        </div>
-        <div className="flex flex-col gap-5 xl:col-span-2">
+      <div className="flex flex-col gap-5">
           <p className="text-sm text-slate-500">House metrics for today (EOD). Write your report and submit to save to vault history.</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <MetricCard title="House Sales" value={eodTodayTotals.sales} />
