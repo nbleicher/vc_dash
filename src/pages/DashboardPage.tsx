@@ -221,7 +221,7 @@ export function DashboardPage({
                         return (
                           <tr
                             key={row.agentId}
-                            className={`border-b border-slate-100 ${cpaOverThreshold ? 'bg-red-500/10' : ''}`}
+                            className={`border-b border-slate-100 ${cpaOverThreshold ? '!bg-red-500/10 hover:!bg-red-500/15' : ''}`}
                           >
                             <td className="py-2 pr-4 font-medium">{row.agentName}</td>
                             <td className="py-2 pr-4 text-right tabular-nums">

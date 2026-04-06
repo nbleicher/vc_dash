@@ -53,7 +53,25 @@ describe('DashboardPage agent performance', () => {
     ]
     const { container } = render(<DashboardPage {...props} />)
     const row = container.querySelector('tbody tr')
-    expect(row).toHaveClass('bg-red-500/10')
+    expect(row).toHaveClass('!bg-red-500/10')
     expect(screen.getByText('High CPA Agent')).toBeInTheDocument()
+  })
+
+  it('highlights all rows with CPA over 130 across mixed positions', () => {
+    const props = baseProps()
+    props.agentPerformanceRows = [
+      { ...props.agentPerformanceRows[0], agentId: 'a1', agentName: 'Row 1 High', cpa: 140 },
+      { ...props.agentPerformanceRows[0], agentId: 'a2', agentName: 'Row 2 High', cpa: 131 },
+      { ...props.agentPerformanceRows[0], agentId: 'a3', agentName: 'Row 3 Normal', cpa: 90 },
+    ]
+    const { container } = render(<DashboardPage {...props} />)
+    const rows = Array.from(container.querySelectorAll('tbody tr'))
+    expect(rows).toHaveLength(3)
+    expect(rows[0]).toHaveClass('!bg-red-500/10')
+    expect(rows[1]).toHaveClass('!bg-red-500/10')
+    expect(rows[2]).not.toHaveClass('!bg-red-500/10')
+    expect(screen.getByText('Row 1 High')).toBeInTheDocument()
+    expect(screen.getByText('Row 2 High')).toBeInTheDocument()
+    expect(screen.getByText('Row 3 Normal')).toBeInTheDocument()
   })
 })
