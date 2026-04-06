@@ -858,27 +858,24 @@ export function useAppData(store: DataStore) {
   const vaultAttendanceHistory = useMemo(
     () =>
       attendance
-        .filter((a) => vaultScope === 'house' || (!!selectedVaultAgent && selectedVaultAgent.id === a.agentId))
         .sort((a, b) => (sortNewest ? b.dateKey.localeCompare(a.dateKey) : a.dateKey.localeCompare(b.dateKey))),
-    [attendance, selectedVaultAgent, vaultScope, sortNewest],
+    [attendance, sortNewest],
   )
   const vaultQaHistory = useMemo(
     () =>
       qaRecords
-        .filter((q) => vaultScope === 'house' || (!!selectedVaultAgent && selectedVaultAgent.id === q.agentId))
         .sort((a, b) => (sortNewest ? b.dateKey.localeCompare(a.dateKey) : a.dateKey.localeCompare(b.dateKey))),
-    [qaRecords, selectedVaultAgent, vaultScope, sortNewest],
+    [qaRecords, sortNewest],
   )
   const vaultAuditHistory = useMemo(
     () =>
       auditRecords
-        .filter((a) => vaultScope === 'house' || (!!selectedVaultAgent && selectedVaultAgent.id === a.agentId))
         .sort((a, b) =>
           sortNewest
             ? new Date(b.discoveryTs).getTime() - new Date(a.discoveryTs).getTime()
             : new Date(a.discoveryTs).getTime() - new Date(b.discoveryTs).getTime(),
         ),
-    [auditRecords, selectedVaultAgent, vaultScope, sortNewest],
+    [auditRecords, sortNewest],
   )
   const weeklyTargetHistory = useMemo(
     () =>

@@ -84,7 +84,7 @@ const QUICK_VIEW_ROWS = 5
 export function VaultPage({
   vaultScope,
   setVaultScope,
-  setVaultAgentId,
+  setVaultAgentId: _setVaultAgentId,
   effectiveVaultAgentId,
   selectedVaultAgent,
   activeAgents,
@@ -131,7 +131,9 @@ export function VaultPage({
   >(null)
   const [editError, setEditError] = useState<string | null>(null)
   const [houseIntraDay, setHouseIntraDay] = useState<string>(() => estDateKey(new Date()))
-  const scopeValue = vaultScope === 'house' ? '__house__' : effectiveVaultAgentId
+  useEffect(() => {
+    if (vaultScope !== 'house') setVaultScope('house')
+  }, [vaultScope, setVaultScope])
 
   const { sentTransfersForAgent, receivedTransfersForAgent } = useMemo(() => {
     if (!effectiveVaultAgentId) return { sentTransfersForAgent: 0, receivedTransfersForAgent: 0 }
@@ -854,61 +856,16 @@ export function VaultPage({
     <Card className="space-y-4">
       <CardTitle>Vault</CardTitle>
       <div className="row-wrap control-bar">
-        <Field className="w-full min-w-0 sm:min-w-[260px]">
-          <FieldLabel>Scope</FieldLabel>
-          <Select
-            value={scopeValue}
-            onChange={(e) => {
-              const next = e.target.value
-              if (next === '__house__') {
-                setVaultScope('house')
-                return
-              }
-              setVaultScope('agent')
-              setVaultAgentId(next)
-            }}
-          >
-            <option value="__house__">House (All Agents)</option>
-            {activeAgents.map((agent) => (
-              <option key={agent.id} value={agent.id}>
-                {agent.name}
+        <Field className="w-full min-w-0 sm:min-w-[220px]">
+          <FieldLabel>Day</FieldLabel>
+          <Select value={houseIntraDay} onChange={(e) => setHouseIntraDay(e.target.value)}>
+            {recentHouseDayOptions.map((dateKey) => (
+              <option key={dateKey} value={dateKey}>
+                {formatDateKey(dateKey)}
               </option>
             ))}
           </Select>
         </Field>
-        {vaultScope === 'agent' ? (
-          <>
-            <Field className="w-full min-w-0 sm:min-w-[260px]">
-              <FieldLabel>History Type</FieldLabel>
-              <Select
-                value={vaultHistoryView}
-                onChange={(e) => setVaultHistoryView(e.target.value as VaultHistoryView)}
-              >
-                <option value="attendance">Attendance History</option>
-                <option value="qa">Daily QA History</option>
-                <option value="audit">Action Needed History</option>
-                <option value="targets">Weekly Target History</option>
-              </Select>
-            </Field>
-            <div className="text-sm text-slate-600">
-              Transfers sent: <span className="font-semibold mr-3">{sentTransfersForAgent}</span>
-              Transfers received:{' '}
-              <span className="font-semibold">{receivedTransfersForAgent}</span>
-            </div>
-          </>
-        ) : null}
-        {vaultScope === 'house' ? (
-          <Field className="w-full min-w-0 sm:min-w-[220px]">
-            <FieldLabel>Day</FieldLabel>
-            <Select value={houseIntraDay} onChange={(e) => setHouseIntraDay(e.target.value)}>
-              {recentHouseDayOptions.map((dateKey) => (
-                <option key={dateKey} value={dateKey}>
-                  {formatDateKey(dateKey)}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        ) : null}
         <Field className="w-full min-w-0 sm:min-w-[180px]">
           <FieldLabel>Sort</FieldLabel>
           <Select value={historySort} onChange={(e) => setHistorySort(e.target.value as 'newest' | 'oldest')}>
@@ -918,205 +875,13 @@ export function VaultPage({
         </Field>
       </div>
       {editError ? <p className="text-sm text-red-600">{editError}</p> : null}
-      {vaultScope === 'house' ? (
-        <>
-          <div className="split">
-            {renderQaHistoryCard(vaultQaHistory, true, canEditHistory)}
-            {renderAuditHistoryCard(vaultAuditHistory, true, canEditHistory)}
-          </div>
-          {renderHouseIntraDayHistoryCard()}
-        </>
-      ) : !selectedVaultAgent ? (
-        <p className="text-sm text-slate-500">N/A - add/select an active agent.</p>
-      ) : (
-        <>
-          {renderAgentHistorySection()}
-          <Card className="bg-slate-50">
-            <h3>Performance Meeting</h3>
-            <form onSubmit={onAddMeeting} className="form-grid">
-                <Field>
-                  <FieldLabel>Date</FieldLabel>
-                  <Input
-                    value={meetingForm.dateKey}
-                    onChange={(e) => setMeetingForm((prev) => ({ ...prev, dateKey: e.target.value }))}
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel>Type</FieldLabel>
-                  <Select
-                    value={meetingForm.meetingType}
-                    onChange={(e) =>
-                      setMeetingForm((prev) => ({
-                        ...prev,
-                        meetingType: e.target.value as VaultMeeting['meetingType'],
-                      }))
-                    }
-                  >
-                    <option>Coaching</option>
-                    <option>Warning</option>
-                    <option>Review</option>
-                    <option>Transfer</option>
-                  </Select>
-                </Field>
-                <Field className="md:col-span-2">
-                  <FieldLabel>Notes</FieldLabel>
-                  <Textarea
-                    value={meetingForm.notes}
-                    onChange={(e) => setMeetingForm((prev) => ({ ...prev, notes: e.target.value }))}
-                  />
-                </Field>
-                <Field className="md:col-span-2">
-                  <FieldLabel>Action Items</FieldLabel>
-                  <Textarea
-                    value={meetingForm.actionItems}
-                    onChange={(e) => setMeetingForm((prev) => ({ ...prev, actionItems: e.target.value }))}
-                  />
-                </Field>
-                <Button type="submit" variant="default" className="w-fit">
-                  Save Meeting
-                </Button>
-            </form>
-          </Card>
-
-          <div className="split">
-            <Card className="space-y-3 bg-slate-50">
-              <h3>PDF Uploads</h3>
-              <Input type="file" accept=".pdf,application/pdf" onChange={onPdfUpload} className="h-auto py-2" />
-              <ul className="grid gap-2">
-                {vaultDocs.filter((d) => d.agentId === selectedVaultAgent.id).map((d) => (
-                  <li key={d.id} className="rounded-lg bg-white px-3 py-2 text-sm text-slate-600">
-                    {d.fileName} ({Math.round(d.fileSize / 1024)} KB) - {formatTimestamp(d.uploadedAt)}
-                  </li>
-                ))}
-                {vaultDocs.filter((d) => d.agentId === selectedVaultAgent.id).length === 0 && (
-                  <li className="rounded-lg bg-white px-3 py-2 text-sm text-slate-500">N/A</li>
-                )}
-              </ul>
-            </Card>
-            <Card className="space-y-3 bg-slate-50">
-              <h3>Meeting Log</h3>
-              <TableWrap>
-                <DataTable>
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Type</th>
-                      <th>Notes</th>
-                      <th>Action Items</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(() => {
-                      const meetingsForAgent = vaultMeetings
-                        .filter((m) => m.agentId === selectedVaultAgent.id)
-                        .sort((a, b) => b.dateKey.localeCompare(a.dateKey))
-                      if (meetingsForAgent.length === 0) {
-                        return (
-                          <tr>
-                            <td colSpan={5}>No meetings logged.</td>
-                          </tr>
-                        )
-                      }
-                      return meetingsForAgent.map((m) => (
-                        <tr key={m.id}>
-                          <td>
-                            {editingMeetingId === m.id && meetingDraft ? (
-                              <Input
-                                type="date"
-                                value={meetingDraft.dateKey}
-                                onChange={(e) =>
-                                  setMeetingDraft((prev) => (prev ? { ...prev, dateKey: e.target.value } : prev))
-                                }
-                              />
-                            ) : (
-                              formatDateKey(m.dateKey)
-                            )}
-                          </td>
-                          <td>
-                            {editingMeetingId === m.id && meetingDraft ? (
-                              <Select
-                                value={meetingDraft.meetingType}
-                                onChange={(e) =>
-                                  setMeetingDraft((prev) =>
-                                    prev
-                                      ? { ...prev, meetingType: e.target.value as VaultMeeting['meetingType'] }
-                                      : prev,
-                                  )
-                                }
-                              >
-                                <option value="Coaching">Coaching</option>
-                                <option value="Warning">Warning</option>
-                                <option value="Review">Review</option>
-                                <option value="Transfer">Transfer</option>
-                              </Select>
-                            ) : (
-                              m.meetingType
-                            )}
-                          </td>
-                          <td>
-                            {editingMeetingId === m.id && meetingDraft ? (
-                              <Textarea
-                                value={meetingDraft.notes}
-                                onChange={(e) =>
-                                  setMeetingDraft((prev) => (prev ? { ...prev, notes: e.target.value } : prev))
-                                }
-                                rows={2}
-                                className="min-w-[160px]"
-                              />
-                            ) : (
-                              m.notes || 'N/A'
-                            )}
-                          </td>
-                          <td>
-                            {editingMeetingId === m.id && meetingDraft ? (
-                              <Textarea
-                                value={meetingDraft.actionItems}
-                                onChange={(e) =>
-                                  setMeetingDraft((prev) => (prev ? { ...prev, actionItems: e.target.value } : prev))
-                                }
-                                rows={2}
-                                className="min-w-[160px]"
-                              />
-                            ) : (
-                              m.actionItems || 'N/A'
-                            )}
-                          </td>
-                          <td>
-                            {editingMeetingId === m.id ? (
-                              <div className="flex gap-2">
-                                <Button variant="default" onClick={saveMeetingEdit}>
-                                  Save
-                                </Button>
-                                <Button variant="secondary" onClick={cancelMeetingEdit}>
-                                  Cancel
-                                </Button>
-                              </div>
-                            ) : (
-                              <Button
-                                variant="secondary"
-                                onClick={() => startMeetingEdit(m)}
-                                disabled={
-                                  !!editingQaId ||
-                                  !!editingAuditId ||
-                                  editingSnapshotId !== null ||
-                                  (editingMeetingId !== null && editingMeetingId !== m.id)
-                                }
-                              >
-                                Edit
-                              </Button>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    })()}
-                  </tbody>
-                </DataTable>
-              </TableWrap>
-            </Card>
-          </div>
-        </>
-      )}
+      <>
+        <div className="split">
+          {renderQaHistoryCard(vaultQaHistory, true, canEditHistory)}
+          {renderAuditHistoryCard(vaultAuditHistory, true, canEditHistory)}
+        </div>
+        {renderHouseIntraDayHistoryCard()}
+      </>
 
       {fullTableMode && (
         <div className="mobile-modal-scroll fixed inset-0 z-50 flex items-start justify-center bg-slate-950/45 p-4 sm:items-center">

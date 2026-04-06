@@ -38,7 +38,9 @@ function App() {
     spiffRecords,
     setPerfHistory,
     vaultMeetings,
+    setVaultMeetings,
     vaultDocs,
+    setVaultDocs,
     transfers,
     setShadowLogs,
     flushShadowLogsSync,
@@ -176,6 +178,25 @@ function App() {
     const completed = new Set(qaRecords.filter((r) => r.dateKey === qaForm.dateKey).map((r) => r.agentId))
     return activeAgents.filter((agent) => !completed.has(agent.id))
   }, [activeAgents, qaRecords, qaForm.dateKey])
+  const sortNewestHistory = historySort === 'newest'
+  const agentQaHistoryRows = useMemo(
+    () =>
+      qaRecords
+        .filter((row) => row.agentId === agentPageAgentId)
+        .sort((a, b) => (sortNewestHistory ? b.dateKey.localeCompare(a.dateKey) : a.dateKey.localeCompare(b.dateKey))),
+    [qaRecords, agentPageAgentId, sortNewestHistory],
+  )
+  const agentAuditHistoryRows = useMemo(
+    () =>
+      auditRecords
+        .filter((row) => row.agentId === agentPageAgentId)
+        .sort((a, b) =>
+          sortNewestHistory
+            ? new Date(b.discoveryTs).getTime() - new Date(a.discoveryTs).getTime()
+            : new Date(a.discoveryTs).getTime() - new Date(b.discoveryTs).getTime(),
+        ),
+    [auditRecords, agentPageAgentId, sortNewestHistory],
+  )
 
   const triggerShadowSave = useCallback(() => {
     window.setTimeout(() => {
@@ -276,6 +297,49 @@ function App() {
     setShadowLogs((prev) => prev.filter((row) => row.id !== logId))
     triggerShadowSave()
   }
+  const handleAgentMeetingAdd = useCallback(
+    (e: React.FormEvent): void => {
+      e.preventDefault()
+      if (!agentPageAgentId) return
+      setVaultMeetings((prev) => [
+        ...prev,
+        {
+          id: uid('meet'),
+          agentId: agentPageAgentId,
+          dateKey: meetingForm.dateKey,
+          meetingType: meetingForm.meetingType,
+          notes: meetingForm.notes.trim(),
+          actionItems: meetingForm.actionItems.trim(),
+        },
+      ])
+      setMeetingForm({ dateKey: estDateKey(new Date()), meetingType: 'Coaching', notes: '', actionItems: '' })
+    },
+    [agentPageAgentId, setVaultMeetings, meetingForm, setMeetingForm],
+  )
+  const handleAgentPdfUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      if (!agentPageAgentId) return
+      const file = e.target.files?.[0]
+      if (!file) return
+      if (!file.name.toLowerCase().endsWith('.pdf')) {
+        setUiError('PDF only uploads are allowed.')
+        e.target.value = ''
+        return
+      }
+      setVaultDocs((prev) => [
+        ...prev,
+        {
+          id: uid('doc'),
+          agentId: agentPageAgentId,
+          fileName: file.name,
+          fileSize: file.size,
+          uploadedAt: new Date().toISOString(),
+        },
+      ])
+      e.target.value = ''
+    },
+    [agentPageAgentId, setVaultDocs],
+  )
 
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -392,7 +456,20 @@ function App() {
             setSelectedAgentWeekKey={setSelectedAgentWeekKey}
             eodWeekOptions={eodWeekOptions}
             agentWeekRows={agentWeekRows}
+            qaHistoryRows={agentQaHistoryRows}
+            auditHistoryRows={agentAuditHistoryRows}
+            vaultDocs={vaultDocs}
+            vaultMeetings={vaultMeetings}
+            meetingForm={meetingForm}
+            setMeetingForm={setMeetingForm}
             shadowLogsByDateForAgent={shadowLogsByDateForAgent}
+            lastPoliciesBotRun={store.lastPoliciesBotRun ?? null}
+            onUpdateQaRecord={taskActions.handleQaUpdate}
+            onUpdateAuditRecord={taskActions.handleAuditUpdate}
+            onDeleteAuditRecord={taskActions.handleAuditDelete}
+            onAddMeeting={handleAgentMeetingAdd}
+            onUpdateMeeting={vaultActions.handleMeetingUpdate}
+            onPdfUpload={handleAgentPdfUpload}
             onStartShadow={handleStartShadow}
             onAddCall={handleAddShadowCall}
             onEndShadowLog={handleEndShadowLog}
