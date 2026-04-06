@@ -110,21 +110,21 @@ export function EodPage({
 
       <Card className="w-full space-y-2 border-slate-200 shadow-sm">
         <CardTitle>EOW Summary</CardTitle>
-        <div className="space-y-1 text-sm text-slate-700">
-          <p className="flex items-center justify-between">
-            <span className="text-slate-500">Total Deals</span>
-            <span className="tabular-nums font-semibold text-slate-900">{eodWeeklySummary.deals}</span>
-          </p>
-          <p className="flex items-center justify-between">
-            <span className="text-slate-500">Total Marketing</span>
-            <span className="tabular-nums font-semibold text-slate-900">${formatNum(eodWeeklySummary.marketing, 0)}</span>
-          </p>
-          <p className="flex items-center justify-between">
-            <span className="text-slate-500">CPA</span>
-            <span className="tabular-nums font-semibold text-slate-900">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Total Deals</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">{eodWeeklySummary.deals}</p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Total Marketing</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">${formatNum(eodWeeklySummary.marketing, 0)}</p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">CPA</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">
               {eodWeeklySummary.cpa === null ? 'N/A' : `$${formatNum(eodWeeklySummary.cpa)}`}
-            </span>
-          </p>
+            </p>
+          </div>
         </div>
         <p className="text-xs text-slate-500">
           {eodWeeklySummary.finalized
