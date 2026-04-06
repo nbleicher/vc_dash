@@ -13,13 +13,14 @@ type Props<T extends string> = {
 
 export function Tabs<T extends string>({ value, onChange, items, className }: Props<T>) {
   return (
-    <div className={cn('flex flex-wrap gap-2 rounded-xl border border-border bg-slate-50 p-2', className)}>
+    <div className={cn('flex flex-nowrap gap-2 overflow-x-auto rounded-xl border border-border bg-slate-50 p-2', className)}>
       {items.map((item) => (
         <Button
           key={item.key}
           variant={value === item.key ? 'default' : 'ghost'}
+          size="sm"
           onClick={() => onChange(item.key)}
-          className="h-9"
+          className="shrink-0"
         >
           {item.label}
         </Button>

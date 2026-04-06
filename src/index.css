@@ -106,6 +106,14 @@
     @apply rounded-xl border border-slate-200 bg-slate-50 p-3;
   }
 
+  .control-strip {
+    @apply flex flex-nowrap items-end gap-2 overflow-x-auto;
+  }
+
+  .control-strip > * {
+    @apply shrink-0;
+  }
+
   .table-wrap {
     @apply overflow-x-auto rounded-xl border border-border bg-white;
   }

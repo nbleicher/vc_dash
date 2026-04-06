@@ -80,26 +80,28 @@ export function EodPage({
               <div className="mb-2 flex items-start justify-between border-b border-slate-200 pb-2">
                 <div>
                   <p className="text-[10px] uppercase tracking-wide text-slate-500">{row.dayLabel.slice(0, 3)}</p>
-                  <p className="text-[11px] text-slate-500">{row.dateKey}</p>
+                  <p className="text-[11px] font-medium text-slate-500">{row.dateKey}</p>
                 </div>
-                <p className="text-base font-semibold leading-none text-slate-900">{row.deals}</p>
+                <p className="text-xl font-semibold leading-none tabular-nums text-slate-900">{row.deals}</p>
               </div>
-              <div className="space-y-1 text-[11px] text-slate-700">
+              <div className="space-y-1.5 text-[11px] text-slate-700">
                 <p className="flex items-center justify-between">
                   <span className="text-slate-500">Deals</span>
-                  <span className="tabular-nums">{row.deals}</span>
+                  <span className="tabular-nums text-sm font-semibold text-slate-900">{row.deals}</span>
                 </p>
                 <p className="flex items-center justify-between">
                   <span className="text-slate-500">Mkt</span>
-                  <span className="tabular-nums">${formatNum(row.marketing, 0)}</span>
+                  <span className="tabular-nums text-sm font-semibold text-slate-900">${formatNum(row.marketing, 0)}</span>
                 </p>
                 <p className="flex items-center justify-between">
                   <span className="text-slate-500">CPA</span>
-                  <span className="tabular-nums">{row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}</span>
+                  <span className="tabular-nums text-sm font-semibold text-slate-900">
+                    {row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}
+                  </span>
                 </p>
               </div>
               <div className="mt-2 border-t border-slate-200 pt-2 text-right">
-                <Button type="button" variant="secondary" className="h-7 px-2.5 py-1 text-xs" onClick={() => setExpandedEodDateKey(row.dateKey)}>
+                <Button type="button" variant="secondary" size="sm" onClick={() => setExpandedEodDateKey(row.dateKey)}>
                   Open
                 </Button>
               </div>

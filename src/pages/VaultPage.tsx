@@ -549,7 +549,7 @@ export function VaultPage({
   return (
     <Card className="space-y-4">
       <CardTitle>Vault</CardTitle>
-      <div className="row-wrap control-bar">
+      <div className="control-bar control-strip">
         <Field className="w-full min-w-0 sm:min-w-[180px]">
           <FieldLabel>Sort</FieldLabel>
           <Select value={historySort} onChange={(e) => setHistorySort(e.target.value as 'newest' | 'oldest')}>
@@ -569,7 +569,7 @@ export function VaultPage({
       <Card className="space-y-4">
         <CardTitle>Agent Ranking</CardTitle>
         <p className="text-xs text-slate-500">Current year to date</p>
-        <div className="row-wrap control-bar">
+        <div className="control-bar control-strip">
           <Field className="w-full min-w-0 sm:min-w-[180px]">
             <FieldLabel>Metric</FieldLabel>
             <Select value={rankMetric} onChange={(e) => setRankMetric(e.target.value as RankMetric)}>
@@ -583,7 +583,7 @@ export function VaultPage({
           <div>
             <h3 className="mb-3 text-sm font-semibold text-slate-800">Standard</h3>
             <TableWrap>
-              <DataTable className="mx-auto w-full min-w-0 max-w-[900px] sm:min-w-[640px]">
+              <DataTable className="mx-auto w-full max-w-[900px]">
                 <thead>
                   <tr>
                     <th className="border-b border-slate-200 px-2 py-1 text-left">Rank</th>
@@ -615,7 +615,7 @@ export function VaultPage({
           <div>
             <h3 className="mb-3 text-sm font-semibold text-slate-800">Agent Ranking (transfer adjusted)</h3>
             <TableWrap>
-              <DataTable className="mx-auto w-full min-w-0 max-w-[900px] sm:min-w-[640px]">
+              <DataTable className="mx-auto w-full max-w-[900px]">
                 <thead>
                   <tr>
                     <th className="border-b border-slate-200 px-2 py-1 text-left">Rank</th>

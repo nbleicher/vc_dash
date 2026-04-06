@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Badge, Button, Card, CardTitle, MetricCard } from '../components'
+import { Badge, Button, Card, CardTitle, DataTable, MetricCard, Select, TableWrap } from '../components'
 import type { DataStore } from '../data'
 import { formatNum, formatTimestamp } from '../utils'
 
@@ -170,7 +170,7 @@ export function DashboardPage({
                 {lastFetchedAt != null && (
                   <span className="text-xs text-slate-400/90">Fetched: {formatTimestamp(lastFetchedAt)}</span>
                 )}
-                <Button variant="secondary" className="h-8 px-2.5 py-1 text-xs" onClick={onRefreshData}>
+                <Button variant="secondary" size="sm" onClick={onRefreshData}>
                   Refresh
                 </Button>
               </div>
@@ -179,32 +179,32 @@ export function DashboardPage({
               <p className="text-sm text-slate-500">No active agents.</p>
             ) : (
               <>
-                <div className="flex flex-wrap items-center gap-2.5">
+                <div className="control-strip">
                   <label className="flex items-center gap-2 text-sm text-slate-600">
                     Sort by
-                    <select
+                    <Select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value as 'cpa' | 'sales')}
-                      className="h-8 rounded border border-slate-300 bg-white px-2 text-sm"
+                      className="h-8 py-1 text-sm"
                     >
                       <option value="cpa">CPA</option>
                       <option value="sales">Sales</option>
-                    </select>
+                    </Select>
                   </label>
                   <label className="flex items-center gap-2 text-sm text-slate-600">
                     Order
-                    <select
+                    <Select
                       value={sortDir}
                       onChange={(e) => setSortDir(e.target.value as 'asc' | 'desc')}
-                      className="h-8 rounded border border-slate-300 bg-white px-2 text-sm"
+                      className="h-8 py-1 text-sm"
                     >
                       <option value="desc">Descending (high first)</option>
                       <option value="asc">Ascending (low first)</option>
-                    </select>
+                    </Select>
                   </label>
                 </div>
-                <div className="overflow-x-auto overflow-y-auto max-h-[500px] rounded-xl border border-slate-200">
-                  <table className="w-full text-left text-sm">
+                <TableWrap className="overflow-y-auto max-h-[500px]">
+                  <DataTable>
                     <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.06)]">
                       <tr className="border-b border-slate-200">
                         <th className="pb-2 pt-2 pr-4 font-medium text-slate-700">Agent</th>
@@ -237,8 +237,8 @@ export function DashboardPage({
                         )
                       })}
                     </tbody>
-                  </table>
-                </div>
+                  </DataTable>
+                </TableWrap>
               </>
             )}
           </Card>
@@ -261,7 +261,7 @@ export function DashboardPage({
                     <strong>{agents.find((a) => a.id === q.agentId)?.name ?? 'Unknown Agent'}</strong> - {q.clientName}
                   </p>
                   <p className="text-xs text-slate-500">Notes: {q.notes || 'N/A'}</p>
-                  <Button onClick={() => onResolveQa(q.id)} className="mt-2 h-8 px-2.5 py-1 text-xs" variant="default">
+                  <Button onClick={() => onResolveQa(q.id)} className="mt-2" size="sm" variant="default">
                     Mark Resolved & Archive
                   </Button>
                 </div>

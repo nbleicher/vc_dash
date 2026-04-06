@@ -2,9 +2,11 @@ import type { ButtonHTMLAttributes } from 'react'
 import { cn } from '../../lib/cn'
 
 type ButtonVariant = 'default' | 'secondary' | 'ghost' | 'danger'
+type ButtonSize = 'sm' | 'md'
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant
+  size?: ButtonSize
 }
 
 const variants: Record<ButtonVariant, string> = {
@@ -14,12 +16,18 @@ const variants: Record<ButtonVariant, string> = {
   danger: 'bg-white text-danger border-red-200 hover:bg-red-50',
 }
 
-export function Button({ className, variant = 'secondary', type = 'button', ...props }: Props) {
+const sizes: Record<ButtonSize, string> = {
+  sm: 'h-8 px-2.5 text-xs',
+  md: 'h-10 px-4 text-sm',
+}
+
+export function Button({ className, variant = 'secondary', size = 'md', type = 'button', ...props }: Props) {
   return (
     <button
       type={type}
       className={cn(
-        'inline-flex h-10 items-center justify-center rounded-lg border px-4 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60',
+        'inline-flex items-center justify-center rounded-lg border font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60',
+        sizes[size],
         variants[variant],
         className,
       )}

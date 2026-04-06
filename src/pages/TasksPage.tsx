@@ -207,7 +207,7 @@ export function TasksPage({
       {taskPage === 'spiff' && (
         <Card className="space-y-4">
           <CardTitle>Spiff (Mon-Fri)</CardTitle>
-          <div className="flex flex-wrap items-end gap-2">
+          <div className="control-strip">
             <Field className="max-w-xs">
               <FieldLabel>Week</FieldLabel>
               <Select value={selectedAttendanceWeekKey} onChange={(e) => setSelectedAttendanceWeekKey(e.target.value)}>
@@ -378,7 +378,7 @@ export function TasksPage({
               <p>All active agents have Action Needed Audit completed for today.</p>
             )}
           </div>
-          <div className="flex flex-wrap items-end gap-2">
+          <div className="control-strip">
             <Field>
               <FieldLabel>Agent</FieldLabel>
               <Select

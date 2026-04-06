@@ -243,22 +243,24 @@ export function AgentPage({
                   <div className="mb-2 flex items-start justify-between border-b border-slate-200 pb-2">
                     <div>
                       <p className="text-[10px] uppercase tracking-wide text-slate-500">{row.dayLabel.slice(0, 3)}</p>
-                      <p className="text-[11px] text-slate-500">{row.dateKey}</p>
+                      <p className="text-[11px] font-medium text-slate-500">{row.dateKey}</p>
                     </div>
-                    <p className="text-base font-semibold leading-none text-slate-900">{row.sales}</p>
+                    <p className="text-xl font-semibold leading-none tabular-nums text-slate-900">{row.sales}</p>
                   </div>
-                  <div className="space-y-1 text-[11px] text-slate-700">
+                  <div className="space-y-1.5 text-[11px] text-slate-700">
                     <p className="flex items-center justify-between">
                       <span className="text-slate-500">Calls</span>
-                      <span className="tabular-nums">{row.calls}</span>
+                      <span className="tabular-nums text-sm font-semibold text-slate-900">{row.calls}</span>
                     </p>
                     <p className="flex items-center justify-between">
                       <span className="text-slate-500">Mkt</span>
-                      <span className="tabular-nums">${formatNum(row.marketing, 0)}</span>
+                      <span className="tabular-nums text-sm font-semibold text-slate-900">${formatNum(row.marketing, 0)}</span>
                     </p>
                     <p className="flex items-center justify-between">
                       <span className="text-slate-500">CPA</span>
-                      <span className="tabular-nums">{row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}</span>
+                      <span className="tabular-nums text-sm font-semibold text-slate-900">
+                        {row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -523,13 +525,13 @@ export function AgentPage({
                     <td>
                       {editingQaId === row.id ? (
                         <div className="flex gap-2">
-                          <Button variant="default" className="h-8 px-2.5 py-1 text-xs" onClick={saveQaEdit}>Save</Button>
-                          <Button variant="secondary" className="h-8 px-2.5 py-1 text-xs" onClick={cancelQaEdit}>Cancel</Button>
+                          <Button variant="default" size="sm" onClick={saveQaEdit}>Save</Button>
+                          <Button variant="secondary" size="sm" onClick={cancelQaEdit}>Cancel</Button>
                         </div>
                       ) : (
                         <Button
                           variant="secondary"
-                          className="h-8 px-2.5 py-1 text-xs"
+                          size="sm"
                           onClick={() => {
                             setEditingQaId(row.id)
                             setQaDraft({
@@ -621,13 +623,13 @@ export function AgentPage({
                       <div className="flex flex-wrap gap-2">
                         {editingAuditId === row.id ? (
                           <>
-                            <Button variant="default" className="h-8 px-2.5 py-1 text-xs" onClick={saveAuditEdit}>Save</Button>
-                            <Button variant="secondary" className="h-8 px-2.5 py-1 text-xs" onClick={cancelAuditEdit}>Cancel</Button>
+                            <Button variant="default" size="sm" onClick={saveAuditEdit}>Save</Button>
+                            <Button variant="secondary" size="sm" onClick={cancelAuditEdit}>Cancel</Button>
                           </>
                         ) : (
                           <Button
                             variant="secondary"
-                            className="h-8 px-2.5 py-1 text-xs"
+                            size="sm"
                             onClick={() => {
                               setEditingAuditId(row.id)
                               setAuditDraft({
@@ -758,13 +760,13 @@ export function AgentPage({
                         <td>
                           {editingMeetingId === meeting.id ? (
                             <div className="flex gap-2">
-                              <Button variant="default" className="h-8 px-2.5 py-1 text-xs" onClick={saveMeetingEdit}>Save</Button>
-                              <Button variant="secondary" className="h-8 px-2.5 py-1 text-xs" onClick={cancelMeetingEdit}>Cancel</Button>
+                              <Button variant="default" size="sm" onClick={saveMeetingEdit}>Save</Button>
+                              <Button variant="secondary" size="sm" onClick={cancelMeetingEdit}>Cancel</Button>
                             </div>
                           ) : (
                             <Button
                               variant="secondary"
-                              className="h-8 px-2.5 py-1 text-xs"
+                              size="sm"
                               onClick={() => {
                                 setEditingMeetingId(meeting.id)
                                 setMeetingDraft({

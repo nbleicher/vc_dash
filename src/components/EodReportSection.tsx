@@ -426,7 +426,7 @@ export function EodReportSection({
               if (!day) return null
               return (
                 <div
-                  className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 overflow-y-auto"
+                  className="mobile-modal-scroll fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4"
                   role="dialog"
                   aria-modal="true"
                   aria-labelledby="eod-edit-title"
