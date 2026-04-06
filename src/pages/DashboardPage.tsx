@@ -97,102 +97,102 @@ export function DashboardPage({
     <div className="page-grid">
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
         <div className="xl:col-span-1">
-      <Card className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle>Agent Performance</CardTitle>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500">Data: {lastSnapshotLabel}</span>
-            {todaySnapshotCount > 0 && (
-              <span className="text-xs text-slate-400">({todaySnapshotCount} snapshots for today)</span>
-            )}
-            {lastFetchedAt != null && (
-              <span className="text-xs text-slate-400">Fetched: {formatTimestamp(lastFetchedAt)}</span>
-            )}
-            <Button variant="secondary" className="text-xs px-2 py-1.5 h-auto" onClick={onRefreshData}>
-              Refresh
-            </Button>
-          </div>
-        </div>
-        {agentPerformanceRows.length === 0 ? (
-          <p className="text-sm text-slate-500">No active agents.</p>
-        ) : (
-          <>
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="flex items-center gap-2 text-sm text-slate-600">
-                Sort by
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as 'cpa' | 'sales')}
-                  className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
-                >
-                  <option value="cpa">CPA</option>
-                  <option value="sales">Sales</option>
-                </select>
-              </label>
-              <label className="flex items-center gap-2 text-sm text-slate-600">
-                Order
-                <select
-                  value={sortDir}
-                  onChange={(e) => setSortDir(e.target.value as 'asc' | 'desc')}
-                  className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
-                >
-                  <option value="desc">Descending (high first)</option>
-                  <option value="asc">Ascending (low first)</option>
-                </select>
-              </label>
+          <Card className="space-y-4">
+            <CardTitle>House Pulse</CardTitle>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+              <MetricCard title="Total Sales" value={houseLive.totalSales} />
+              <MetricCard title="Total Billable Calls" value={houseLive.totalCalls} />
+              <MetricCard title="Total Marketing" value={`$${formatNum(houseLive.marketing, 0)}`} />
+              <MetricCard title="Floor CPA" value={houseLive.cpa === null ? 'N/A' : `$${formatNum(houseLive.cpa)}`} />
+              <MetricCard title="Floor CVR" value={houseLive.cvr === null ? 'N/A' : `${formatNum(houseLive.cvr * 100)}%`} />
+              <MetricCard title="Floor Capacity (Mon-Fri)" value={formatNum(floorCapacity, 2)} />
             </div>
-            <div className="overflow-x-auto overflow-y-auto max-h-[500px] rounded border border-slate-200">
-              <table className="w-full text-left text-sm">
-                <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.06)]">
-                  <tr className="border-b border-slate-200">
-                    <th className="pb-2 pt-2 pr-4 font-medium text-slate-700">Agent</th>
-                    <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">CPA</th>
-                    <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Sales</th>
-                    <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Calls</th>
-                    <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Marketing</th>
-                    <th className="pb-2 pt-2 text-right font-medium text-slate-700">CVR</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {displayedRows.map((row) => {
-                    const cpaOverThreshold = row.cpa !== null && row.cpa > CPA_HIGHLIGHT_THRESHOLD
-                    return (
-                      <tr
-                        key={row.agentId}
-                        className={`border-b border-slate-100 ${cpaOverThreshold ? 'bg-red-500/10' : ''}`}
-                      >
-                        <td className="py-2 pr-4 font-medium">{row.agentName}</td>
-                        <td className="py-2 pr-4 text-right tabular-nums">
-                          {row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}
-                        </td>
-                        <td className="py-2 pr-4 text-right tabular-nums">{row.sales}</td>
-                        <td className="py-2 pr-4 text-right tabular-nums">{row.calls}</td>
-                        <td className="py-2 pr-4 text-right tabular-nums">${formatNum(row.marketing, 0)}</td>
-                        <td className="py-2 text-right tabular-nums">
-                          {row.cvr === null ? 'N/A' : `${formatNum(row.cvr * 100)}%`}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </Card>
+          </Card>
         </div>
         <div className="flex flex-col gap-5 xl:col-span-2">
-      <Card className="space-y-4">
-        <CardTitle>House Pulse</CardTitle>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-          <MetricCard title="Total Sales" value={houseLive.totalSales} />
-          <MetricCard title="Total Billable Calls" value={houseLive.totalCalls} />
-          <MetricCard title="Total Marketing" value={`$${formatNum(houseLive.marketing, 0)}`} />
-          <MetricCard title="Floor CPA" value={houseLive.cpa === null ? 'N/A' : `$${formatNum(houseLive.cpa)}`} />
-          <MetricCard title="Floor CVR" value={houseLive.cvr === null ? 'N/A' : `${formatNum(houseLive.cvr * 100)}%`} />
-          <MetricCard title="Floor Capacity (Mon-Fri)" value={formatNum(floorCapacity, 2)} />
-        </div>
-      </Card>
+          <Card className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>Agent Performance</CardTitle>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">Data: {lastSnapshotLabel}</span>
+                {todaySnapshotCount > 0 && (
+                  <span className="text-xs text-slate-400">({todaySnapshotCount} snapshots for today)</span>
+                )}
+                {lastFetchedAt != null && (
+                  <span className="text-xs text-slate-400">Fetched: {formatTimestamp(lastFetchedAt)}</span>
+                )}
+                <Button variant="secondary" className="text-xs px-2 py-1.5 h-auto" onClick={onRefreshData}>
+                  Refresh
+                </Button>
+              </div>
+            </div>
+            {agentPerformanceRows.length === 0 ? (
+              <p className="text-sm text-slate-500">No active agents.</p>
+            ) : (
+              <>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="flex items-center gap-2 text-sm text-slate-600">
+                    Sort by
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as 'cpa' | 'sales')}
+                      className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                    >
+                      <option value="cpa">CPA</option>
+                      <option value="sales">Sales</option>
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-slate-600">
+                    Order
+                    <select
+                      value={sortDir}
+                      onChange={(e) => setSortDir(e.target.value as 'asc' | 'desc')}
+                      className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                    >
+                      <option value="desc">Descending (high first)</option>
+                      <option value="asc">Ascending (low first)</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="overflow-x-auto overflow-y-auto max-h-[500px] rounded border border-slate-200">
+                  <table className="w-full text-left text-sm">
+                    <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.06)]">
+                      <tr className="border-b border-slate-200">
+                        <th className="pb-2 pt-2 pr-4 font-medium text-slate-700">Agent</th>
+                        <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">CPA</th>
+                        <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Sales</th>
+                        <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Calls</th>
+                        <th className="pb-2 pt-2 pr-4 text-right font-medium text-slate-700">Marketing</th>
+                        <th className="pb-2 pt-2 text-right font-medium text-slate-700">CVR</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayedRows.map((row) => {
+                        const cpaOverThreshold = row.cpa !== null && row.cpa > CPA_HIGHLIGHT_THRESHOLD
+                        return (
+                          <tr
+                            key={row.agentId}
+                            className={`border-b border-slate-100 ${cpaOverThreshold ? 'bg-red-500/10' : ''}`}
+                          >
+                            <td className="py-2 pr-4 font-medium">{row.agentName}</td>
+                            <td className="py-2 pr-4 text-right tabular-nums">
+                              {row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}
+                            </td>
+                            <td className="py-2 pr-4 text-right tabular-nums">{row.sales}</td>
+                            <td className="py-2 pr-4 text-right tabular-nums">{row.calls}</td>
+                            <td className="py-2 pr-4 text-right tabular-nums">${formatNum(row.marketing, 0)}</td>
+                            <td className="py-2 text-right tabular-nums">
+                              {row.cvr === null ? 'N/A' : `${formatNum(row.cvr * 100)}%`}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </Card>
 
       <Card className="space-y-4">
         <CardTitle>Weekly Target Trend</CardTitle>
