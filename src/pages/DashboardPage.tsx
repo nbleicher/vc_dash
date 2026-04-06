@@ -59,7 +59,7 @@ export function DashboardPage({
   lastSnapshotLabel,
   lastFetchedAt,
   todaySnapshotCount,
-  floorCapacity: _floorCapacity,
+  floorCapacity,
   weekTarget,
   weekTrend,
   actionQa,
@@ -68,6 +68,7 @@ export function DashboardPage({
   onToggleAuditFlag,
   onRefreshData,
 }: Props) {
+  void floorCapacity
   const cpaCardToneClass =
     weekTrend.cpaDelta === null
       ? 'border-slate-200 bg-slate-50'
@@ -154,7 +155,7 @@ export function DashboardPage({
               <MetricCard title="Total Marketing" value={`$${formatNum(houseLive.marketing, 0)}`} />
               <MetricCard title="Billable Calls" value={houseLive.totalCalls} />
               <MetricCard title="Floor CVR" value={houseLive.cvr === null ? 'N/A' : `${formatNum(houseLive.cvr * 100)}%`} />
-              {/* <MetricCard title="Floor Capacity (Mon-Fri)" value={formatNum(_floorCapacity, 2)} /> */}
+              {/* <MetricCard title="Floor Capacity (Mon-Fri)" value={formatNum(floorCapacity, 2)} /> */}
             </div>
           </Card>
         </div>
