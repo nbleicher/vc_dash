@@ -64,7 +64,7 @@ export async function buildApp(config: AppConfig) {
 
   await healthRoutes(app)
   await authRoutes(app)
-  await stateRoutes(app)
+  await stateRoutes(app, { frontendOrigins: config.frontendOrigins })
 
   app.addHook('onClose', async () => {
     await store.close()
