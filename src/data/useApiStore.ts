@@ -234,6 +234,8 @@ export function useDataStore(): DataStore {
   }, [reloadFromApi])
 
   useEffect(() => {
+    if (typeof window.EventSource !== 'function') return
+
     const streamUrl = client.getStateStreamUrl()
     let closed = false
     let reconnectId: number | null = null
