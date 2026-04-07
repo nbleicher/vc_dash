@@ -81,7 +81,7 @@ export async function stateRoutes(app: FastifyInstance, config: StateRoutesConfi
     return reply.hijack()
   })
 
-  app.get('/state', async (_request, reply) => {
+  app.get('/state', { config: { rateLimit: { max: 240, timeWindow: '1 minute' } } }, async (_request, reply) => {
     reply.header('Cache-Control', 'no-store, no-cache, must-revalidate')
     reply.header('Pragma', 'no-cache')
     return reply.send({ data: await app.store.getState() })

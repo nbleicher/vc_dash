@@ -16,7 +16,9 @@ const keySchema = z.enum([
     'vaultDocs',
     'eodReports',
 ]);
-export async function stateRoutes(app) {
+export async function stateRoutes(app, config) {
+    const normalizeOrigin = (value) => value.trim().replace(/\/+$/, '');
+    const allowedOrigins = new Set(config.frontendOrigins.map(normalizeOrigin).filter(Boolean));
     const sseClients = new Set();
     const publishStateUpdate = (resource) => {
         if (sseClients.size === 0)
@@ -28,7 +30,21 @@ export async function stateRoutes(app) {
         }
         app.log.debug({ resource, clients: sseClients.size }, 'Broadcasted state update event.');
     };
-    app.get('/state/stream', async (_request, reply) => {
+    app.get('/state/stream', { config: { rateLimit: false } }, async (request, reply) => {
+        const originHeader = request.headers.origin;
+        const origin = typeof originHeader === 'string' ? normalizeOrigin(originHeader) : null;
+        if (origin && !allowedOrigins.has(origin)) {
+            return reply.code(403).send({
+                error: {
+                    code: 'CORS_ORIGIN_NOT_ALLOWED',
+                    message: 'Origin is not allowed.',
+                },
+            });
+        }
+        if (origin) {
+            reply.raw.setHeader('Access-Control-Allow-Origin', origin);
+            reply.raw.setHeader('Vary', 'Origin');
+        }
         reply.raw.setHeader('Content-Type', 'text/event-stream');
         reply.raw.setHeader('Cache-Control', 'no-cache, no-transform');
         reply.raw.setHeader('Connection', 'keep-alive');
@@ -50,7 +66,7 @@ export async function stateRoutes(app) {
         reply.raw.on('error', cleanup);
         return reply.hijack();
     });
-    app.get('/state', async (_request, reply) => {
+    app.get('/state', { config: { rateLimit: { max: 240, timeWindow: '1 minute' } } }, async (_request, reply) => {
         reply.header('Cache-Control', 'no-store, no-cache, must-revalidate');
         reply.header('Pragma', 'no-cache');
         return reply.send({ data: await app.store.getState() });

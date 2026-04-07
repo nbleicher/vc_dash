@@ -22,6 +22,8 @@ import { createApiClient } from './apiClient'
 import { estDateKey } from '../utils'
 
 type Setter<T> = React.Dispatch<SetStateAction<T>>
+const MIN_RELOAD_GAP_MS = 1500
+const RATE_LIMIT_BACKOFF_MS = 30_000
 
 function resolveNext<T>(next: SetStateAction<T>, current: T): T {
   return typeof next === 'function' ? (next as (value: T) => T)(current) : next
@@ -58,6 +60,8 @@ export function useDataStore(): DataStore {
   const reloadInFlightRef = useRef<Promise<void> | null>(null)
   const reloadQueuedRef = useRef(false)
   const sseDebounceTimerRef = useRef<number | null>(null)
+  const lastReloadAttemptAtRef = useRef(0)
+  const backoffUntilRef = useRef(0)
   const loadFromApi = useCallback(async () => {
     try {
       const state = await client.getState()
@@ -90,13 +94,26 @@ export function useDataStore(): DataStore {
       hasLoadedRemoteRef.current = true
       setError(null)
       setLastFetchedAt(new Date().toISOString())
+      backoffUntilRef.current = 0
     } catch (err) {
       hasLoadedRemoteRef.current = false
-      setError(err instanceof Error ? err.message : 'Failed to load data.')
+      const message = err instanceof Error ? err.message : 'Failed to load data.'
+      if (/429/.test(message)) {
+        backoffUntilRef.current = Date.now() + RATE_LIMIT_BACKOFF_MS
+      }
+      setError(message)
     }
   }, [client])
 
-  const reloadFromApi = useCallback(async () => {
+  const reloadFromApi = useCallback(async (options?: { force?: boolean }) => {
+    const force = options?.force === true
+    const now = Date.now()
+    if (!force) {
+      if (now < backoffUntilRef.current) return
+      if (now - lastReloadAttemptAtRef.current < MIN_RELOAD_GAP_MS) return
+    }
+    lastReloadAttemptAtRef.current = now
+
     if (reloadInFlightRef.current) {
       reloadQueuedRef.current = true
       await reloadInFlightRef.current
@@ -160,7 +177,7 @@ export function useDataStore(): DataStore {
     hydratingRef.current = true
     try {
       setLoggedInState(true)
-      await reloadFromApi()
+      await reloadFromApi({ force: true })
       setError(null)
     } finally {
       hydratingRef.current = false
@@ -224,7 +241,7 @@ export function useDataStore(): DataStore {
   useEffect(() => {
     const load = async () => {
       try {
-        await reloadFromApi()
+        await reloadFromApi({ force: true })
       } finally {
         hydratingRef.current = false
         setIsLoading(false)
@@ -348,7 +365,7 @@ export function useDataStore(): DataStore {
       setIsLoading(true)
       hydratingRef.current = true
       try {
-        await reloadFromApi()
+        await reloadFromApi({ force: true })
       } finally {
         hydratingRef.current = false
         setIsLoading(false)

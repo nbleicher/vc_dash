@@ -158,6 +158,15 @@ If the dashboard shows an old "Data" time (e.g. 3:06 PM) after the bot has pushe
 
 - If the request goes to Railway but the console shows a **CORS** error, set `FRONTEND_ORIGIN=https://value.jawnix.com` on Railway (exact, no trailing slash). Redeploy Railway after changing.
 
+**5.5. 429 Too Many Requests on `/state`**
+
+- If response headers show `x-ratelimit-limit: 60` and `x-ratelimit-remaining: 0`, your dashboard read traffic is hitting the global limiter.
+- Keep global rate limiting enabled for write/auth safety, but use route-level overrides:
+  - `/state/stream`: disable rate limit for SSE (`rateLimit: false`).
+  - `/state`: raise read-path limit (recommended `240/min`).
+- Frontend behavior should also avoid burst reloads: use a small reload cooldown and temporary backoff after 429 responses.
+- Redeploy backend and frontend after these updates, then confirm `/state` no longer returns 429 during normal tab focus/refresh usage.
+
 **6. 401 Unauthorized**
 
 - Log in again on the deployed site so the cookie is set by Railway. If you had logged in when the app pointed at the wrong host, clear cookies and log in again.
