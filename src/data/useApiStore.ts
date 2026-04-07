@@ -19,11 +19,18 @@ import type {
 } from '../types'
 import type { DataStore } from './store.types'
 import { createApiClient } from './apiClient'
+import type { StoreCollections } from './apiClient'
 import { estDateKey } from '../utils'
 
 type Setter<T> = React.Dispatch<SetStateAction<T>>
 const MIN_RELOAD_GAP_MS = 1500
 const RATE_LIMIT_BACKOFF_MS = 30_000
+const COLLECTION_SYNC_DEBOUNCE_MS = 600
+const HOT_COLLECTION_SYNC_DEBOUNCE_MS = 1500
+const COLLECTION_SYNC_BASE_RETRY_MS = 1500
+const COLLECTION_SYNC_MAX_RETRY_MS = 30_000
+const MAX_COLLECTION_RETRY_POWER = 5
+const HOT_COLLECTION_KEYS: ReadonlySet<keyof StoreCollections> = new Set(['attendance', 'transfers'])
 
 function resolveNext<T>(next: SetStateAction<T>, current: T): T {
   return typeof next === 'function' ? (next as (value: T) => T)(current) : next
@@ -61,6 +68,12 @@ export function useDataStore(): DataStore {
   const reloadQueuedRef = useRef(false)
   const lastReloadAttemptAtRef = useRef(0)
   const backoffUntilRef = useRef(0)
+  const pendingCollectionSyncRef = useRef<Partial<StoreCollections>>({})
+  const collectionSyncTimersRef = useRef<Partial<Record<keyof StoreCollections, ReturnType<typeof setTimeout>>>>({})
+  const collectionSyncInFlightRef = useRef<Partial<Record<keyof StoreCollections, boolean>>>({})
+  const collectionSyncQueuedRef = useRef<Partial<Record<keyof StoreCollections, boolean>>>({})
+  const collectionBackoffUntilRef = useRef<Partial<Record<keyof StoreCollections, number>>>({})
+  const collectionRetryCountRef = useRef<Partial<Record<keyof StoreCollections, number>>>({})
   const loadFromApi = useCallback(async () => {
     try {
       const state = await client.getState()
@@ -183,11 +196,73 @@ export function useDataStore(): DataStore {
   const syncCollection = useCallback(
     async <K extends Parameters<typeof client.putCollection>[0]>(key: K, value: Parameters<typeof client.putCollection<K>>[1]) => {
       if (hydratingRef.current || !hasLoadedRemoteRef.current) return
-      try {
-        await client.putCollection(key, value)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to sync data.')
+      const normalizeErrorMessage = (err: unknown): string =>
+        err instanceof Error ? err.message : 'Failed to sync data.'
+      const isRateLimitError = (message: string): boolean => /429|rate[\s-]?limit/i.test(message)
+      const getSyncDebounceMs = (collectionKey: keyof StoreCollections): number =>
+        HOT_COLLECTION_KEYS.has(collectionKey) ? HOT_COLLECTION_SYNC_DEBOUNCE_MS : COLLECTION_SYNC_DEBOUNCE_MS
+      const clearCollectionTimer = (collectionKey: keyof StoreCollections) => {
+        const timer = collectionSyncTimersRef.current[collectionKey]
+        if (!timer) return
+        clearTimeout(timer)
+        delete collectionSyncTimersRef.current[collectionKey]
       }
+      const scheduleCollectionFlush = (collectionKey: keyof StoreCollections, delayMs: number) => {
+        clearCollectionTimer(collectionKey)
+        collectionSyncTimersRef.current[collectionKey] = setTimeout(() => {
+          delete collectionSyncTimersRef.current[collectionKey]
+          void flushCollectionSync(collectionKey)
+        }, Math.max(delayMs, 0))
+      }
+
+      const flushCollectionSync = async (collectionKey: keyof StoreCollections) => {
+        if (hydratingRef.current || !hasLoadedRemoteRef.current) return
+        const now = Date.now()
+        const backoffUntil = collectionBackoffUntilRef.current[collectionKey] ?? 0
+        if (now < backoffUntil) {
+          scheduleCollectionFlush(collectionKey, backoffUntil - now)
+          return
+        }
+        if (collectionSyncInFlightRef.current[collectionKey]) {
+          collectionSyncQueuedRef.current[collectionKey] = true
+          return
+        }
+
+        collectionSyncInFlightRef.current[collectionKey] = true
+        try {
+          do {
+            collectionSyncQueuedRef.current[collectionKey] = false
+            const payload = pendingCollectionSyncRef.current[collectionKey] as StoreCollections[typeof collectionKey] | undefined
+            if (payload === undefined) break
+            delete pendingCollectionSyncRef.current[collectionKey]
+            try {
+              await client.putCollection(collectionKey, payload)
+              collectionRetryCountRef.current[collectionKey] = 0
+              collectionBackoffUntilRef.current[collectionKey] = 0
+              setError((current) => (current && /429|rate[\s-]?limit/i.test(current) ? null : current))
+            } catch (err) {
+              const message = normalizeErrorMessage(err)
+              pendingCollectionSyncRef.current[collectionKey] = payload
+              if (isRateLimitError(message)) {
+                const retryCount = Math.min((collectionRetryCountRef.current[collectionKey] ?? 0) + 1, MAX_COLLECTION_RETRY_POWER)
+                collectionRetryCountRef.current[collectionKey] = retryCount
+                const exponential = 2 ** (retryCount - 1)
+                const jitter = Math.floor(Math.random() * 500)
+                const retryMs = Math.min(COLLECTION_SYNC_BASE_RETRY_MS * exponential + jitter, COLLECTION_SYNC_MAX_RETRY_MS)
+                collectionBackoffUntilRef.current[collectionKey] = Date.now() + retryMs
+                scheduleCollectionFlush(collectionKey, retryMs)
+              }
+              setError(message)
+              break
+            }
+          } while (collectionSyncQueuedRef.current[collectionKey])
+        } finally {
+          collectionSyncInFlightRef.current[collectionKey] = false
+        }
+      }
+
+      pendingCollectionSyncRef.current[key] = value
+      scheduleCollectionFlush(key, getSyncDebounceMs(key))
     },
     [client],
   )
@@ -285,6 +360,15 @@ export function useDataStore(): DataStore {
   useEffect(() => {
     void flushShadowLogsSync()
   }, [flushShadowLogsSync])
+  useEffect(
+    () => () => {
+      for (const key of Object.keys(collectionSyncTimersRef.current) as Array<keyof StoreCollections>) {
+        const timer = collectionSyncTimersRef.current[key]
+        if (timer) clearTimeout(timer)
+      }
+    },
+    [],
+  )
 
   return {
     loggedIn,
