@@ -165,6 +165,7 @@ If the dashboard shows an old "Data" time (e.g. 3:06 PM) after the bot has pushe
   - `/state/stream`: disable rate limit for SSE (`rateLimit: false`).
   - `/state`: raise read-path limit (recommended `240/min`).
 - Frontend behavior should also avoid burst reloads: use a small reload cooldown and temporary backoff after 429 responses.
+- Production dashboard refresh should be SSE-driven (`/state/stream`) and event-based; disable focus/visibility/polling auto-reloads so `/state` is fetched only on initial load, manual refresh, and `state-updated` events.
 - Redeploy backend and frontend after these updates, then confirm `/state` no longer returns 429 during normal tab focus/refresh usage.
 
 **6. 401 Unauthorized**
