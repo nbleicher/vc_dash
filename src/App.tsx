@@ -44,7 +44,6 @@ function App() {
     flushShadowLogsSync,
     logout,
     reload,
-    lastFetchedAt,
     isLoading,
     error,
     clearError,
@@ -414,8 +413,6 @@ function App() {
             houseLive={houseLive}
             agentPerformanceRows={agentPerformanceRows}
             lastSnapshotLabel={lastSnapshotLabel}
-            lastFetchedAt={lastFetchedAt}
-            todaySnapshotCount={data.todaysSnapshots.length}
             floorCapacity={floorCapacity}
             weekTarget={weekTarget}
             weekTrend={weekTrend}

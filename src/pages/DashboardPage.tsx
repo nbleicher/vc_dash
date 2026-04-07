@@ -23,8 +23,6 @@ type Props = {
   houseLive: { totalCalls: number; totalSales: number; marketing: number; cpa: number | null; cvr: number | null }
   agentPerformanceRows: AgentPerformanceRow[]
   lastSnapshotLabel: string
-  lastFetchedAt: string | null
-  todaySnapshotCount: number
   floorCapacity: number
   weekTarget: { targetSales: number; targetCpa: number } | null
   weekTrend: {
@@ -57,8 +55,6 @@ export function DashboardPage({
   houseLive,
   agentPerformanceRows,
   lastSnapshotLabel,
-  lastFetchedAt,
-  todaySnapshotCount,
   floorCapacity,
   weekTarget,
   weekTrend,
