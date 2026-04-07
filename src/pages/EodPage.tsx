@@ -58,6 +58,7 @@ export function EodPage({
   setPerfHistory,
 }: Props) {
   const [expandedEodDateKey, setExpandedEodDateKey] = useState<string | null>(null)
+  const [agentSortMetric, setAgentSortMetric] = useState<'cpa' | 'sales'>('cpa')
   return (
     <div className="page-grid">
       <Card className="space-y-4">
@@ -76,7 +77,19 @@ export function EodPage({
         </div>
         <div className="grid grid-cols-1 gap-2 md:grid-cols-3 xl:grid-cols-5">
           {eodWeeklyRows.map((row) => (
-            <div key={row.dateKey} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900">
+            <div
+              key={row.dateKey}
+              className="cursor-pointer rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 transition hover:border-slate-300 hover:bg-slate-50"
+              onClick={() => setExpandedEodDateKey(row.dateKey)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setExpandedEodDateKey(row.dateKey)
+                }
+              }}
+            >
               <div className="mb-2 flex items-start justify-between border-b border-slate-200 pb-2">
                 <div>
                   <p className="text-[10px] uppercase tracking-wide text-slate-500">{row.dayLabel.slice(0, 3)}</p>
@@ -99,11 +112,6 @@ export function EodPage({
                     {row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}
                   </span>
                 </p>
-              </div>
-              <div className="mt-2 border-t border-slate-200 pt-2 text-right">
-                <Button type="button" variant="secondary" size="sm" onClick={() => setExpandedEodDateKey(row.dateKey)}>
-                  Open
-                </Button>
               </div>
             </div>
           ))}
@@ -150,6 +158,12 @@ export function EodPage({
         const isToday = expandedEodDateKey === todayKey
         if (!day && !isToday) return null
         const displayRows = isToday ? agentPerformanceRows : (day?.agentRows ?? [])
+        const sortedDisplayRows = [...displayRows].sort((a, b) => {
+          if (agentSortMetric === 'sales') return b.sales - a.sales
+          const aValue = a.cpa ?? Number.NEGATIVE_INFINITY
+          const bValue = b.cpa ?? Number.NEGATIVE_INFINITY
+          return bValue - aValue
+        })
         return (
           <div
             className="mobile-modal-scroll fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4"
@@ -185,8 +199,17 @@ export function EodPage({
                   </div>
                 ) : null}
                 <div>
-                  <p className="mb-2 text-xs font-medium text-slate-500">Agent performance</p>
-                  {displayRows.length === 0 ? (
+                  <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
+                    <p className="text-xs font-medium text-slate-500">Agent performance</p>
+                    <Field className="w-full min-w-0 sm:w-auto">
+                      <FieldLabel>Sort by</FieldLabel>
+                      <Select value={agentSortMetric} onChange={(e) => setAgentSortMetric(e.target.value as 'cpa' | 'sales')}>
+                        <option value="cpa">CPA</option>
+                        <option value="sales">Sales</option>
+                      </Select>
+                    </Field>
+                  </div>
+                  {sortedDisplayRows.length === 0 ? (
                     <p className="text-sm text-slate-500">No performance data for this day.</p>
                   ) : (
                     <div className="overflow-x-auto rounded border border-slate-200">
@@ -202,7 +225,7 @@ export function EodPage({
                           </tr>
                         </thead>
                         <tbody>
-                          {displayRows.map((row) => (
+                          {sortedDisplayRows.map((row) => (
                             <tr key={row.agentId} className="border-b border-slate-100">
                               <td className="p-2 font-medium">{row.agentName}</td>
                               <td className="p-2 text-right tabular-nums">{row.cpa === null ? 'N/A' : `$${formatNum(row.cpa)}`}</td>

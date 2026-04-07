@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Button, Card, CardTitle, Field, FieldLabel, Input, Textarea } from './ui'
+import { Button, Card, CardTitle, Field, FieldLabel, Input, Select, Textarea } from './ui'
 import { MetricCard } from './MetricCard'
 import type { PerfHistory } from '../types'
 import { formatDateKey, formatNum, uid } from '../utils'
@@ -44,6 +44,7 @@ export function EodReportSection({
 }: Props) {
   const [eodReportText, setEodReportText] = useState('')
   const [expandedEodDateKey, setExpandedEodDateKey] = useState<string | null>(null)
+  const [agentSortMetric, setAgentSortMetric] = useState<'cpa' | 'sales'>('cpa')
   const [showAddPastDayForm, setShowAddPastDayForm] = useState(false)
   const [addPastDayDateKey, setAddPastDayDateKey] = useState('')
   const [addPastDayRows, setAddPastDayRows] = useState<Record<string, { calls: string; sales: string; marketing: string }>>({})
@@ -334,6 +335,12 @@ export function EodReportSection({
             {expandedEodDateKey && (() => {
               const day = eodHistoryDays.find((d) => d.dateKey === expandedEodDateKey)
               if (!day) return null
+              const sortedAgentRows = [...day.agentRows].sort((a, b) => {
+                if (agentSortMetric === 'sales') return b.sales - a.sales
+                const aValue = a.cpa ?? Number.NEGATIVE_INFINITY
+                const bValue = b.cpa ?? Number.NEGATIVE_INFINITY
+                return bValue - aValue
+              })
               return (
                 <div
                   className="mobile-modal-scroll fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4"
@@ -364,8 +371,20 @@ export function EodReportSection({
                         </div>
                       ) : null}
                       <div>
-                        <p className="text-xs font-medium text-slate-500 mb-2">Agent performance</p>
-                        {day.agentRows.length === 0 ? (
+                        <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
+                          <p className="text-xs font-medium text-slate-500">Agent performance</p>
+                          <Field className="w-full min-w-0 sm:w-auto">
+                            <FieldLabel>Sort by</FieldLabel>
+                            <Select
+                              value={agentSortMetric}
+                              onChange={(e) => setAgentSortMetric(e.target.value as 'cpa' | 'sales')}
+                            >
+                              <option value="cpa">CPA</option>
+                              <option value="sales">Sales</option>
+                            </Select>
+                          </Field>
+                        </div>
+                        {sortedAgentRows.length === 0 ? (
                           <p className="text-sm text-slate-500">No performance data for this day.</p>
                         ) : (
                           <div className="overflow-x-auto rounded border border-slate-200">
@@ -381,7 +400,7 @@ export function EodReportSection({
                                 </tr>
                               </thead>
                               <tbody>
-                                {day.agentRows.map((row) => {
+                                {sortedAgentRows.map((row) => {
                                   const cpaOverThreshold = row.cpa !== null && row.cpa > CPA_HIGHLIGHT_THRESHOLD
                                   return (
                                     <tr
