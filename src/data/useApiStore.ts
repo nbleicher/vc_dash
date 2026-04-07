@@ -59,7 +59,6 @@ export function useDataStore(): DataStore {
   const shadowSyncLatestRef = useRef<ShadowLog[]>([])
   const reloadInFlightRef = useRef<Promise<void> | null>(null)
   const reloadQueuedRef = useRef(false)
-  const sseDebounceTimerRef = useRef<number | null>(null)
   const lastReloadAttemptAtRef = useRef(0)
   const backoffUntilRef = useRef(0)
   const loadFromApi = useCallback(async () => {
@@ -132,16 +131,6 @@ export function useDataStore(): DataStore {
       reloadInFlightRef.current = null
     }
   }, [loadFromApi])
-
-  const scheduleSignalReload = useCallback(() => {
-    if (sseDebounceTimerRef.current !== null) {
-      window.clearTimeout(sseDebounceTimerRef.current)
-    }
-    sseDebounceTimerRef.current = window.setTimeout(() => {
-      sseDebounceTimerRef.current = null
-      void reloadFromApi()
-    }, 2000)
-  }, [reloadFromApi])
 
   const hydratingRef = useRef(true)
 
@@ -249,38 +238,6 @@ export function useDataStore(): DataStore {
     }
     void load()
   }, [reloadFromApi])
-
-  useEffect(() => {
-    if (typeof window.EventSource !== 'function') return
-
-    const streamUrl = client.getStateStreamUrl()
-    let closed = false
-    let reconnectId: number | null = null
-    let stream: EventSource | null = null
-
-    const connect = () => {
-      if (closed) return
-      stream = new EventSource(streamUrl)
-      stream.addEventListener('state-updated', scheduleSignalReload)
-      stream.onerror = () => {
-        stream?.close()
-        if (closed) return
-        reconnectId = window.setTimeout(connect, 5000)
-      }
-    }
-
-    connect()
-
-    return () => {
-      closed = true
-      if (reconnectId !== null) window.clearTimeout(reconnectId)
-      if (sseDebounceTimerRef.current !== null) {
-        window.clearTimeout(sseDebounceTimerRef.current)
-        sseDebounceTimerRef.current = null
-      }
-      stream?.close()
-    }
-  }, [client, scheduleSignalReload])
 
   useEffect(() => {
     void syncCollection('agents', agentsState)

@@ -168,6 +168,14 @@ If the dashboard shows an old "Data" time (e.g. 3:06 PM) after the bot has pushe
 - Production dashboard refresh should be SSE-driven (`/state/stream`) and event-based; disable focus/visibility/polling auto-reloads so `/state` is fetched only on initial load, manual refresh, and `state-updated` events.
 - Redeploy backend and frontend after these updates, then confirm `/state` no longer returns 429 during normal tab focus/refresh usage.
 
+Temporary fallback mode (if 429 persists):
+
+- Disable all post-load auto-refresh behavior (including SSE-triggered reloads).
+- Keep only:
+  - initial page load fetch
+  - manual refresh button fetch
+- This mode reduces request volume to near-minimum while you stabilize production rate-limit settings.
+
 **6. 401 Unauthorized**
 
 - Log in again on the deployed site so the cookie is set by Railway. If you had logged in when the app pointed at the wrong host, clear cookies and log in again.
