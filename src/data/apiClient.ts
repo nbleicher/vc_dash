@@ -72,6 +72,10 @@ export class ApiClient {
     })
   }
 
+  getStateStreamUrl(): string {
+    return `${this.baseUrl}/state/stream`
+  }
+
   async putCollection<K extends keyof StoreCollections>(key: K, value: StoreCollections[K]): Promise<void> {
     await this.request(`/state/${String(key)}`, { method: 'PUT', body: value })
   }

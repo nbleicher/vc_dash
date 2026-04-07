@@ -55,6 +55,9 @@ export function useDataStore(): DataStore {
   const shadowSyncInFlightRef = useRef(false)
   const shadowSyncQueuedRef = useRef(false)
   const shadowSyncLatestRef = useRef<ShadowLog[]>([])
+  const reloadInFlightRef = useRef<Promise<void> | null>(null)
+  const reloadQueuedRef = useRef(false)
+  const sseDebounceTimerRef = useRef<number | null>(null)
   const loadFromApi = useCallback(async () => {
     try {
       const state = await client.getState()
@@ -93,6 +96,35 @@ export function useDataStore(): DataStore {
     }
   }, [client])
 
+  const reloadFromApi = useCallback(async () => {
+    if (reloadInFlightRef.current) {
+      reloadQueuedRef.current = true
+      await reloadInFlightRef.current
+      return
+    }
+    const run = (async () => {
+      do {
+        reloadQueuedRef.current = false
+        await loadFromApi()
+      } while (reloadQueuedRef.current)
+    })()
+    reloadInFlightRef.current = run
+    try {
+      await run
+    } finally {
+      reloadInFlightRef.current = null
+    }
+  }, [loadFromApi])
+
+  const scheduleSignalReload = useCallback(() => {
+    if (sseDebounceTimerRef.current !== null) {
+      window.clearTimeout(sseDebounceTimerRef.current)
+    }
+    sseDebounceTimerRef.current = window.setTimeout(() => {
+      sseDebounceTimerRef.current = null
+      void reloadFromApi()
+    }, 800)
+  }, [reloadFromApi])
 
   const hydratingRef = useRef(true)
 
@@ -128,12 +160,12 @@ export function useDataStore(): DataStore {
     hydratingRef.current = true
     try {
       setLoggedInState(true)
-      await loadFromApi()
+      await reloadFromApi()
       setError(null)
     } finally {
       hydratingRef.current = false
     }
-  }, [loadFromApi])
+  }, [reloadFromApi])
 
   const logout = useCallback(async () => {
     // No-op logout in no-auth mode; keep dashboard accessible
@@ -192,24 +224,53 @@ export function useDataStore(): DataStore {
   useEffect(() => {
     const load = async () => {
       try {
-        await loadFromApi()
+        await reloadFromApi()
       } finally {
         hydratingRef.current = false
         setIsLoading(false)
       }
     }
     void load()
-  }, [loadFromApi])
+  }, [reloadFromApi])
 
-  // Refetch state every 5 min so dashboard picks up bot snapshot updates
   useEffect(() => {
-    if (!hasLoadedRemoteRef.current) return
-    const intervalMs = 5 * 60 * 1000
+    const streamUrl = client.getStateStreamUrl()
+    let closed = false
+    let reconnectId: number | null = null
+    let stream: EventSource | null = null
+
+    const connect = () => {
+      if (closed) return
+      stream = new EventSource(streamUrl)
+      stream.addEventListener('state-updated', scheduleSignalReload)
+      stream.onerror = () => {
+        stream?.close()
+        if (closed) return
+        reconnectId = window.setTimeout(connect, 5000)
+      }
+    }
+
+    connect()
+
+    return () => {
+      closed = true
+      if (reconnectId !== null) window.clearTimeout(reconnectId)
+      if (sseDebounceTimerRef.current !== null) {
+        window.clearTimeout(sseDebounceTimerRef.current)
+        sseDebounceTimerRef.current = null
+      }
+      stream?.close()
+    }
+  }, [client, scheduleSignalReload])
+
+  // Fallback polling if SSE is unavailable or temporarily disconnected.
+  useEffect(() => {
+    const intervalMs = 10 * 60 * 1000
     const id = window.setInterval(() => {
-      void loadFromApi()
+      void reloadFromApi()
     }, intervalMs)
     return () => window.clearInterval(id)
-  }, [loadFromApi])
+  }, [reloadFromApi])
 
   useEffect(() => {
     void syncCollection('agents', agentsState)
@@ -267,7 +328,7 @@ export function useDataStore(): DataStore {
       setIsLoading(true)
       hydratingRef.current = true
       try {
-        await loadFromApi()
+        await reloadFromApi()
       } finally {
         hydratingRef.current = false
         setIsLoading(false)
