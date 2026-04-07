@@ -165,12 +165,6 @@ export function DashboardPage({
               <CardTitle>Agent Performance</CardTitle>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="text-xs font-semibold text-slate-500">Data: {lastSnapshotLabel}</span>
-                {todaySnapshotCount > 0 && (
-                  <span className="text-xs text-slate-400/90">({todaySnapshotCount} snapshots for today)</span>
-                )}
-                {lastFetchedAt != null && (
-                  <span className="text-xs text-slate-400/90">Fetched: {formatTimestamp(lastFetchedAt)}</span>
-                )}
                 <Button variant="secondary" size="sm" onClick={onRefreshData}>
                   Refresh
                 </Button>

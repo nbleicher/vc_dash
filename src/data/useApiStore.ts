@@ -265,11 +265,29 @@ export function useDataStore(): DataStore {
 
   // Fallback polling if SSE is unavailable or temporarily disconnected.
   useEffect(() => {
-    const intervalMs = 10 * 60 * 1000
+    const intervalMs = 5 * 60 * 1000
     const id = window.setInterval(() => {
       void reloadFromApi()
     }, intervalMs)
-    return () => window.clearInterval(id)
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void reloadFromApi()
+      }
+    }
+
+    const onFocus = () => {
+      void reloadFromApi()
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    window.addEventListener('focus', onFocus)
+
+    return () => {
+      window.clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('focus', onFocus)
+    }
   }, [reloadFromApi])
 
   useEffect(() => {
