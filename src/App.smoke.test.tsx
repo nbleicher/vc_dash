@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
@@ -66,10 +66,20 @@ describe('App smoke', () => {
     fireEvent.change(input, { target: { value: 'New Agent' } })
     fireEvent.click(screen.getByRole('button', { name: 'Add Agent' }))
 
-    const putCall = fetchMock.mock.calls.find(
-      (call) => String(call[0]).endsWith('/state/agents') && (call[1] as RequestInit)?.method === 'PUT',
+    let putCall: [RequestInfo | URL, RequestInit | undefined] | undefined
+    await waitFor(
+      () => {
+        putCall = fetchMock.mock.calls.find(
+          (call) => String(call[0]).endsWith('/state/agents') && (call[1] as RequestInit)?.method === 'PUT',
+        ) as [RequestInfo | URL, RequestInit | undefined] | undefined
+        expect(putCall).toBeTruthy()
+      },
+      { timeout: 2500 },
     )
-    expect(putCall).toBeTruthy()
+
+    const requestBody = (putCall?.[1]?.body as string | undefined) ?? '[]'
+    const parsedAgents = JSON.parse(requestBody) as Array<{ name?: string }>
+    expect(parsedAgents.some((agent) => agent.name === 'New Agent')).toBe(true)
   })
 
   it('does not expose clear history control in settings', async () => {
