@@ -207,7 +207,7 @@ export function useDataStore(): DataStore {
         clearTimeout(timer)
         delete collectionSyncTimersRef.current[collectionKey]
       }
-      const scheduleCollectionFlush = (collectionKey: keyof StoreCollections, delayMs: number) => {
+      const scheduleCollectionFlush = <K extends keyof StoreCollections>(collectionKey: K, delayMs: number) => {
         clearCollectionTimer(collectionKey)
         collectionSyncTimersRef.current[collectionKey] = setTimeout(() => {
           delete collectionSyncTimersRef.current[collectionKey]
@@ -215,7 +215,7 @@ export function useDataStore(): DataStore {
         }, Math.max(delayMs, 0))
       }
 
-      const flushCollectionSync = async (collectionKey: keyof StoreCollections) => {
+      const flushCollectionSync = async <K extends keyof StoreCollections>(collectionKey: K) => {
         if (hydratingRef.current || !hasLoadedRemoteRef.current) return
         const now = Date.now()
         const backoffUntil = collectionBackoffUntilRef.current[collectionKey] ?? 0
@@ -232,7 +232,7 @@ export function useDataStore(): DataStore {
         try {
           do {
             collectionSyncQueuedRef.current[collectionKey] = false
-            const payload = pendingCollectionSyncRef.current[collectionKey] as StoreCollections[typeof collectionKey] | undefined
+            const payload = pendingCollectionSyncRef.current[collectionKey] as StoreCollections[K] | undefined
             if (payload === undefined) break
             delete pendingCollectionSyncRef.current[collectionKey]
             try {

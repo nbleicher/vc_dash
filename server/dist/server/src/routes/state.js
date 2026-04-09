@@ -71,7 +71,7 @@ export async function stateRoutes(app, config) {
         reply.header('Pragma', 'no-cache');
         return reply.send({ data: await app.store.getState() });
     });
-    app.get('/state/:key', async (request, reply) => {
+    app.get('/state/:key', { config: { rateLimit: { max: 180, timeWindow: '1 minute' } } }, async (request, reply) => {
         const parse = keySchema.safeParse(request.params.key);
         if (!parse.success) {
             return reply.code(400).send({
@@ -83,7 +83,7 @@ export async function stateRoutes(app, config) {
         }
         return reply.send({ data: await app.store.getCollection(parse.data) });
     });
-    app.put('/state/:key', async (request, reply) => {
+    app.put('/state/:key', { config: { rateLimit: { max: 240, timeWindow: '1 minute' } } }, async (request, reply) => {
         const parse = keySchema.safeParse(request.params.key);
         if (!parse.success) {
             return reply.code(400).send({
